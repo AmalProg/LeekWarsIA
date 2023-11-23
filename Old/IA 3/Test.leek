@@ -1,0 +1,37 @@
+include("Map/Cell");
+include("Map/Map");
+include("IA");
+include("Item/Combo");
+include("Cerveau");
+
+Debug.enabledWarning = false;
+Debug.enabledError = false;
+Debug.enabledLogC = false;
+Debug.enabledLog = false;
+Debug.enabledOp = false;
+global abc = new IA();
+
+abc.start();
+
+abc.execute();
+
+var me = Entity.get(getEntity());
+
+var item = Weapon.get(WEAPON_M_LASER);
+var cells = [];
+//Map.getCellsToUseLaserOnCell(cells, Cell.get(20), item)
+//Map.getStarArea(cells, Cell.get(getCell()), 6, 10);
+//Map.getAreaLos(cells, Cell.get(getCell()), 0, 2);
+var op = getOperations()
+cells = Map.getCellsAccessibleWithTeleportation(me.cell, 10, Chip.get(CHIP_TELEPORTATION));
+//Map.markCells(cells, COLOR_RED);
+var cellsId = [];
+for(var cObj in cells) {
+	push(cellsId, cObj.cell.id);
+	markText(cObj.cell.id, cObj.mp)
+} 
+mark(cellsId, color, 1);
+//debug(cells);
+debug(getOperations() - op)
+pause()
+

@@ -1,0 +1,25 @@
+include("TerrainFightInit");
+include("MapAnalysis");
+include("Displacement");
+include("Item");
+include("Leek");
+include("Outils");
+include("Bulb");
+
+if (getTurn() == 1) {
+	initTerrainGlobales(getCell());
+	initProtectionMap();
+}
+
+var weapon = WEAPON_GAZOR;
+var cellFocus = randInt(0, 613);
+var cells = [];
+
+debug("cell focus : " + cellFocus);
+debug("weapon : " + weapon);
+cells = getCellsToUseItemOnCell(weapon, cellFocus, 1);
+debug("cells : " + cells);
+
+for(var cell: var x in cells) {
+	mark(cell, getColor(255, 0, 0));
+}

@@ -1,0 +1,34 @@
+include("../Utils/Debug");
+include("Entity");
+
+class Turret extends AbstractEntity {
+	/** Turrets pool **/
+	private static final Map<integer, Turret> turrets = [:];
+	public static initTurrets(Array<integer> entitiesId) {
+		for (integer turretId in entitiesId) {
+			if (getType(turretId) == ENTITY_TURRET) {
+				turrets[turretId] = new Turret(turretId);
+				AbstractEntity.entities[turretId] = turrets[turretId];
+			}
+		}
+	}
+	public static get(integer id) {
+		return Turret.turrets[id];
+	}
+	/** fin turrets pool **/
+
+	constructor(integer id) {
+		super(id);
+	}
+	
+	public static updateTurretsStats() {
+		for (var turret in Turret.turrets) {
+			turret.updateStats();
+		}
+	}
+	protected void updateStats() {
+		super.updateStats();
+		// can't move
+		this._stats.useMP(this._stats.getMP());
+	}
+}

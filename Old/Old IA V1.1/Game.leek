@@ -1,0 +1,688 @@
+include("Debug");
+include("Entity/EntitiesGroup");
+include("Entity/Leek");
+include("Item/Chip");
+include("Item/Weapon");
+include("Item/ItemScore");
+include("Effect/EffectScoreMultiplier");
+include("Map/DangerMap");
+include("Map/AccessibleMap");
+
+class Game {
+	private entities;
+	private enemies;
+	private allies;
+	private me;
+	private dangerMap;
+	private accessibleMap;
+	private leeksOrder = [];
+	private itemsScore = [];
+
+	constructor() {
+		Debug.debugCodePosition("Creating Game object", COLOR_GREEN);
+
+		// game initialisation
+		this.dangerMap = new DangerMap();
+		this.dangerMap.initCells();
+		this.dangerMap.initNeighbors();
+		this.accessibleMap = new AccessibleMap(this.dangerMap.cells);
+		Leek.initLeeks(getAllies() + getEnemies(), dangerMap);
+		Bulb.initBulbs(getAllies() + getEnemies(), dangerMap);
+		Turret.initTurrets([getAlliedTurret()] + [getEnemyTurret()], dangerMap);
+
+		this.enemies = new EntitiesGroup(getEnemies());
+		this.allies = new EntitiesGroup(getAllies());
+		this.entities = new EntitiesGroup(getAllies() + getEnemies());
+		var entityType = getType(this.me);
+		if (entityType == ENTITY_LEEK) {
+			this.me = Leek.get(getEntity());
+		} else if (entityType == ENTITY_BULB) {
+			this.me = Bulb.get(getEntity());
+		} else if (entityType == ENTITY_TURRET) {
+			this.me = Turret.get(getEntity());
+		}
+	}
+
+	public turn() {
+		this.updateLeeksOrder();
+				
+		var canDoSomething;
+		var loops = 0;
+		do {
+			loops++;
+			
+			canDoSomething = false;
+			
+			Leek.updateLeeksStats(dangerMap);
+			Bulb.updateBulbsStats(dangerMap);
+			Turret.updateTurretsStats();
+			this.dangerMap.initTypeOnCell();
+			
+			this.me.cell.setSelfCell();
+			
+			//debug(this.me);
+			//debug(Entity.get(getNearestEnemy()));
+
+			this.itemsScore = [];
+
+			var op = getOperations();
+			for(var e in this.entities.entities) {
+				e.calculateScore(this);
+				//Debug.log(e);
+			}
+			debug("EntitiesScore : " + (getOperations() - op))
+			
+			if(loops == 1) {
+				dangerMap.initDamageMap(this);
+				//Debug.log("danger scores : " + dangerMap.scores);
+			}
+
+			op = getOperations();
+			this.calculateItemsScore();
+			debug("calculateItemsScore : " + (getOperations() - op))
+			this.itemsScore = arrayFilter(this.itemsScore, function(k, s) {
+				return s.score > 30;
+			})
+			this.itemsScore = arraySort(this.itemsScore, function(s1, s2) {
+				if (s1.score == s2.score) 
+					return s1.item.id - s2.item.id;
+				return s2.score - s1.score;
+			})
+			// range les itemsScore par score (si egal)
+			var lastScoreSorted = -1;
+			var lastItemSorted = -1;
+			var unsortedItems = this.itemsScore;
+			var sortedItemsScore = [];
+			var j = 0;
+			for (var itemScore in this.itemsScore) {
+				if (lastScoreSorted != itemScore.score or lastItemSorted != itemScore.item.id) {
+					lastScoreSorted = itemScore.score;
+					lastItemSorted = itemScore.item.id;
+					sortedItemsScore[lastScoreSorted] = [];
+					for (var k = j; j < count(this.itemsScore); j++) {
+						var iScore = this.itemsScore[j];
+						if (iScore.score == lastScoreSorted and iScore.item.id == lastItemSorted) {
+							push(sortedItemsScore[lastScoreSorted], iScore);
+						} else {
+							break;
+						}
+					}
+				}
+			}
+			keySort(sortedItemsScore, SORT_DESC);
+			debug("itemsScore : " + (getOperations() - op))
+			Debug.log(this.itemsScore);
+			
+			
+			var cellsAccessible = [];
+			Map.getCellsAccessible(cellsAccessible, this.me.cell, this.me.mp);
+			
+			
+			var myCell = this.me.cell;
+			var myMp = this.me.mp;
+			
+			for (var citemsScore in sortedItemsScore) {
+				var item = citemsScore[0].item;
+				var cellsToUse = [];
+				var itemScorePerCell = [];
+				var cellsToUseForItemScore;
+				// tous ces itemScores sont pour le même item et le même score
+				for (var itemScore in citemsScore) {
+					var cellTarget = itemScore.cell;
+					var cellFrom = itemScore.cellFrom;
+					if (cellFrom != null) {
+						if (cellsAccessible[cellFrom.id] != null) {
+							cellsToUseForItemScore = [cellFrom.id: cellFrom];
+						} else {
+							cellsToUseForItemScore = [];
+						}
+					} else if (cellTarget == null) {
+						cellsToUseForItemScore = [];
+					} else if (cellTarget.id == myCell.id) {
+						cellsToUseForItemScore = [myCell.id: myCell];
+					} else {
+						cellsToUseForItemScore = Map.getCellsToUseItemOnCell(cellsAccessible, item, cellTarget);
+					}
+					for (var c in cellsToUseForItemScore) {
+						itemScorePerCell[c.id] = itemScore;
+					}
+					Cell.add(cellsToUse, cellsToUseForItemScore);
+				}
+				
+				var bestCellToUse = null;
+				var lowestDist = 99999999;
+				for (var cellId : var cell in cellsToUse) {
+					var currentItemScore = itemScorePerCell[cellId];
+					// la distance à laquelle on veut se faire toucher pour les dégâts aoe
+					var selfAoeWanted = currentItemScore.aoeDist;
+					// TODO : chercher la meilleure cell
+					var distFromDamages = getCellDistance(currentItemScore.cell.id, cellId);
+					// si on est à la bonne distance d'aoe
+					if (selfAoeWanted == null or distFromDamages == selfAoeWanted) {
+						var dist = getPathLength(myCell.id, cellId);
+						if (dist < lowestDist) {
+							lowestDist = dist;
+							bestCellToUse = cell;
+						}
+					}
+				}
+
+				// si une cell est trouvé on simule l'action
+				if (bestCellToUse != null) {
+					var bestItemScore = itemScorePerCell[bestCellToUse.id];
+					
+					// détermine le score minimal sur lequel on peut finir sans téléportation
+					var lowestScoreAll = 99999999;
+					if (loops == 1) {
+						for (var c in cellsAccessible) {
+							if (dangerMap.scores[c.id] < lowestScoreAll) {
+								lowestScoreAll = dangerMap.scores[c.id];
+							}
+						}
+					}
+					
+					// détermine si il y a une cell potable sur laquelle on pourra finir
+					var lowestScore = 99999999;
+					var mpLeft = this.me.mp - lowestDist;
+					for (var c in Map.getCellsAccessible([], bestCellToUse, mpLeft)) {
+						if (dangerMap.scores[c.id] < lowestScore) {
+							lowestScore = dangerMap.scores[c.id];
+						}
+					}
+				
+					Debug.log("lowestScore : " + lowestScore);
+					Debug.log("bestItemScore.score : " + bestItemScore.score);
+					if (bestItemScore.score * 1.3 >= lowestScore or lowestScoreAll * 1.2 > lowestScore) {
+						var cellTarget = bestItemScore.cell;
+						debug("item to use : " + citemsScore)
+						debug("on cell : " + cellTarget)
+						/*if(cellFrom != null)
+							debug("from cell : " + cellFrom)*/
+
+						this.me.move(bestCellToUse, lowestDist);
+						applyItem(item, cellTarget, bestCellToUse);
+						//debug(this.me);
+						//debug(Entity.get(getNearestEnemy()));
+
+						moveTowardCell(bestCellToUse.id)
+						var actionResult = item.use(cellTarget);
+						Debug.error(actionResult);
+						if (actionResult == USE_CRITICAL or actionResult == USE_SUCCESS)
+							canDoSomething = true;
+						// on passe au calcul de la prochaine action
+						break;
+					}
+				}
+			}
+		} while (canDoSomething && this.itemsScore != []);
+		
+		endTurnMove();
+	}
+	
+	private endTurnMove() {
+		var cellsAccessible = [];
+		Map.getCellsAccessible(cellsAccessible, this.me.cell, this.me.mp);
+			
+		var enemiesC = [];
+		for (var e in enemies.leeks) {
+			push(enemiesC, e.cell);
+		}
+		var enemiesBarycenterCId = Cell.getBarycenterId(enemiesC);
+		
+		var alliesC = [];
+		for (var a in allies.leeks) {
+			push(alliesC, a.cell);
+		}
+		var alliesBarycenterCId = Cell.getBarycenterId(alliesC);
+		
+		dangerMap.resetScores();
+		for(var c in cellsAccessible) {
+			// chercher les cellules précises pouvant être touchées
+			var distWantedToEnemy = 12;
+			dangerMap.scores[c.id] += abs(getCellDistance(c.id, enemiesBarycenterCId) - distWantedToEnemy);
+			var distWantedToAlly = 3;
+			dangerMap.scores[c.id] += abs(getCellDistance(c.id, alliesBarycenterCId) - distWantedToAlly);
+			
+			for (var a in allies.leeks) {
+				if (a.turnOrder != 1 and Cell.sameLine(a.cell, c)) {
+					dangerMap.scores[c.id] += 3;
+				}
+			}
+		}
+		
+		
+		cellsAccessible = arraySort(cellsAccessible, function(c1, c2) {
+			return dangerMap.scores[c1.id] - dangerMap.scores[c2.id];
+		})
+		
+		clearMarks();
+		for(var c in cellsAccessible) {
+			markText(c.id, dangerMap.scores[c.id]);
+		}
+		
+		for (var cellAccessible in cellsAccessible) {
+			moveTowardCell(cellAccessible.id);
+			break;
+		}
+	}
+	
+	private applyItem(item, cellTarget, cellFrom) {
+		var targets = item.getItemTargets(cellTarget, cellFrom);
+		
+		for (var target in targets) {
+			target.applyItem(item, this.me, cellTarget, getCellDistance(target.cell.id, cellTarget.id));
+		}
+	}
+	
+	/**
+	 * Calcul un score pour chaque item utilisé sur chaque entité selon ces stats et les stats de l'entité actuelle
+	 **/
+	private calculateItemsScore() {
+		for (var item in this.me.items) {
+			var cost = item.cost;
+			// si ce n'est pas l'arme qu'on a actuellement ça coûte 1 de plus
+			if (item instanceof Weapon and this.me.equippedWeaponId != item.id) {
+				cost++;
+			}
+			
+			// si j'ai assez de TP et qu'il n'y a plus de cooldown
+			if (item.cooldown == 0 && this.me.tp >= cost) {
+				// multiplicateur de score en fonction du coût en TP
+				var costMult = 1 - item.cost / 40;
+				
+				var cellsCanHit = [];
+				var cellsFrom = [];
+				
+				if (item.id == CHIP_ROCKY_BULB or item.id == CHIP_ICED_BULB or item.id == CHIP_HEALER_BULB or item.id == CHIP_FIRE_BULB or item.id == CHIP_WIZARD_BULB or item.id == CHIP_METALLIC_BULB or item.id == CHIP_SAVANT_BULB or item.id == CHIP_TACTICIAN_BULB or item.id == CHIP_LIGHTNING_BULB) {
+					push(this.itemsScore, calculateItemScore(item, null, null, costMult, false));
+					
+				} else {
+					for (var e in this.entities.leeks) {
+						// si on ne peut pas self cast l'item
+						if ((e.id == this.me.id && item.minRange > 0) or !e.alive) continue;
+
+						if(item.areaType == AREA_LASER_LINE) {
+							// pour toutes les cells ou je peux utiliser le laser sur l'ennemi
+							for (var cellToUse in Map.getCellsToUseLaserOnCell([], e.cell, item)) {
+								var cellToHit = Map.getCellToHitLaser(item, e.cell, cellToUse);
+								var key = cellToUse.id << 10 | cellToHit.id;
+								if(cellsCanHit[key] == null)
+									cellsCanHit[key] = cellToHit;
+							}
+						} else {
+							var affectedCells = item.getEffectiveArea(e.cell, null);
+							for (var cell in affectedCells) {
+								if(cellsCanHit[cell.id] == null)
+									cellsCanHit[cell.id] = cell;
+							}
+						}
+					}
+				
+
+					if(item.areaType == AREA_LASER_LINE) {
+						for (var ids : var cell in cellsCanHit) {
+							push(this.itemsScore, calculateItemScore(item, cell, dangerMap.getCell(ids >> 10), costMult, false));
+						}
+					} else {
+						var canHitSelf = item.getAreaSize() >= item.minRange;
+						for (var cell in cellsCanHit) {
+							if (canHitSelf and item.areaType != AREA_POINT) {
+								// si on peut se toucher soi même avec l'aoe, on calcul un score pour toutes les dist d'aoe possible
+								for (var i = item.minRange; i <= min(item.maxRange, item.getAreaSize()); i++) {
+									var itemScore = calculateItemScore(item, cell, null, costMult, true);
+									itemScore.score += calculateItemScoreOnSelf(item, cell, null, costMult, item.getAoeMult(i));
+									itemScore.aoeDist = i;
+									push(this.itemsScore, itemScore);
+								}
+								// faire un calcul sans être présent dans l'aoe également
+								var itemScore = calculateItemScore(item, cell, null, costMult, false);
+								push(this.itemsScore, itemScore);
+							} else {
+								push(this.itemsScore, calculateItemScore(item, cell, null, costMult, false));
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	private calculateItemScore(item, cell, cellFrom, costMult, aoeManagement) {
+		var itemScore = new ItemScore(item, cell, cellFrom)
+
+		for (var eff in item.effects) {
+			if (eff.multByTargets && eff.affectCaster) {
+				calculateEffectScore(itemScore, item, eff, this.me, cell, costMult, 1)
+			} else if (eff.type == EFFECT_SUMMON) {
+				calculateEffectScore(itemScore, item, eff, this.me, cell, costMult, 1);
+			} else {
+				var targets = item.getItemTargets(cell, cellFrom);
+				for (var target in targets) {
+					if (target == null) {
+						Debug.error("oops : " + targets + " | " + item.name);
+					} else if (eff.canTarget(target) and (!aoeManagement or target != this.me)) {
+						var affectedEntity = eff.affectCaster ? this.me : target;
+
+						if (eff.notReplaceable and affectedEntity.hasEffectOn(eff)) {
+							// On ne peut pas remplacer l'effet déjà en place
+							continue;
+						}
+						var effsToReplace = null;
+						if (!eff.stackable) {
+							// cet effet va remplacer un même effet déjà présent
+							effsToReplace = affectedEntity.getEffectsOn(eff);
+						}
+						
+						var aoeMult = item.getAoeMult(getCellDistance(cell.id, target.cell.id));
+						calculateEffectScore(itemScore, item, eff, affectedEntity, cell, costMult, aoeMult);
+					}
+				}
+			}
+		}
+
+		itemScore.score = round(itemScore.score);
+		return itemScore;
+	}
+	private calculateItemScoreOnSelf(item, cell, cellFrom, costMult, aoeMult) {
+		var itemScore = new ItemScore(item, cell, cellFrom)
+
+		for (var eff in item.effects) {
+			if (eff.canTarget(this.me)) {
+				if (eff.notReplaceable and this.me.hasEffectOn(eff)) {
+					// On ne peut pas remplacer l'effet déjà en place
+					continue;
+				}
+				var effsToReplace = null;
+				if (!eff.stackable) {
+					// cet effet va remplacer un même effet déjà présent
+					effsToReplace = this.me.getEffectsOn(eff);
+				}
+
+				calculateEffectScore(itemScore, item, eff, this.me, cell, costMult, aoeMult);
+			}
+		}
+
+		return round(itemScore.score);
+	}
+	private calculateEffectScore(itemScore, item, eff, entity, cell, costMult, aoeMult) {
+		var nbrTargetsMult = 0;
+		if (eff.multByTargets) {
+			for (var target in item.getItemTargets(cell, null)) {
+				if(eff.canTarget(target))
+					nbrTargetsMult++;
+			}
+		} else {
+			nbrTargetsMult = 1;
+		}
+		
+		var allyMult = 1;
+		if (entity != null && !entity.isAnAlly)
+			allyMult = -1;
+		
+		var baseEffValue = eff.meanValue * nbrTargetsMult * (1 + eff.turns / 9) * costMult * aoeMult;
+		
+		if(eff.type == EFFECT_DAMAGE) {
+			var baseDmg = baseEffValue * this.me.strengthMult;
+			var dmgReturn = round(baseDmg * entity.dmgReturn / 100);
+			var dmg = round(baseDmg * (1 - entity.rel / 100) - entity.abso);
+			if (dmg > 0)
+				calculateDmgScores(EFFECT_DAMAGE, dmg, entity, itemScore, allyMult);
+			if (this.me.id != entity.id) {
+				if (dmg > 0)
+					calculateHealScores(dmg * 0.10, this.me, itemScore, 1);
+				if (dmgReturn > 0) {
+					calculateDmgScores(EFFECT_DAMAGE, dmgReturn, this.me, itemScore, 1);
+				}
+			}
+	
+		} else if(eff.type == EFFECT_POISON) {
+			itemScore.score += baseEffValue * this.me.magicMult * EffectScoreMultiplier.poison * entity.scores.poison * -allyMult;
+
+		} else if(eff.type == EFFECT_LIFE_DAMAGE) {
+			var baseDmg = baseEffValue / 100 * this.me.life;
+			var dmgReturn = round(baseDmg * entity.dmgReturn / 100);
+			var dmg = round(baseDmg * (1 - entity.rel / 100) - entity.abso);
+			if (dmg > 0)
+				calculateDmgScores(EFFECT_LIFE_DAMAGE, dmg, entity, itemScore, allyMult);
+			if (this.me.id != entity.id) {
+				if (dmg > 0)
+					calculateHealScores(dmg * 0.10, this.me, itemScore, 1);
+				if (dmgReturn > 0) {
+					calculateDmgScores(EFFECT_DAMAGE, dmgReturn, this.me, itemScore, 1);
+				}
+			}
+
+		} else if(eff.type == EFFECT_NOVA_DAMAGE) {
+			var value = baseEffValue * this.me.scienceMult;
+			var overErode = entity.maxLife - value - entity.life;  
+			// si on érode plus que la vie actuelle
+			if (overErode < 0) {
+				// on retire du score
+				itemScore.score += overErode * 0.5 * EffectScoreMultiplier.novaDamage * entity.scores.novaDamage * -allyMult;
+			}
+
+			itemScore.score += value * EffectScoreMultiplier.novaDamage * entity.scores.novaDamage * -allyMult;
+
+		} else if(eff.type == EFFECT_HEAL) {
+			calculateHealScores(baseEffValue * this.me.wisdomMult, entity, itemScore, 1);
+
+		} else if(eff.type == EFFECT_NOVA_VITALITY) {
+			itemScore.score += baseEffValue * this.me.scienceMult * EffectScoreMultiplier.novaVitality * entity.scores.novaVitality * allyMult;
+
+		} else if(eff.type == EFFECT_BOOST_MAX_LIFE) {
+			itemScore.score += baseEffValue * this.me.wisdomMult * EffectScoreMultiplier.boostMaxLife * entity.scores.boostMaxLife * allyMult;
+
+		} else if(eff.type == EFFECT_BUFF_AGILITY) {
+			itemScore.score += baseEffValue * this.me.scienceMult * EffectScoreMultiplier.buffAgility * entity.scores.buffAgility * allyMult;
+
+		} else if(eff.type == EFFECT_BUFF_RESISTANCE) {
+			itemScore.score += baseEffValue * this.me.scienceMult * EffectScoreMultiplier.buffResistance * entity.scores.buffResistance * allyMult;
+
+		} else if(eff.type == EFFECT_BUFF_WISDOM) {
+			itemScore.score += baseEffValue * this.me.scienceMult * EffectScoreMultiplier.buffWisdom * entity.scores.buffWisdom * allyMult;
+
+		} else if(eff.type == EFFECT_BUFF_MP) {
+			itemScore.score += baseEffValue * this.me.scienceMult * EffectScoreMultiplier.buffMp * entity.scores.buffMp * allyMult;
+
+		} else if(eff.type == EFFECT_BUFF_TP) {
+			itemScore.score += baseEffValue * this.me.scienceMult * EffectScoreMultiplier.buffTp * entity.scores.buffTp * allyMult;
+
+		} else if(eff.type == EFFECT_BUFF_STRENGTH) {
+			itemScore.score += baseEffValue * this.me.scienceMult * EffectScoreMultiplier.buffStrength * entity.scores.buffStrength * allyMult;
+
+		} else if(eff.type == EFFECT_RAW_BUFF_AGILITY) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.rawBuffAgility * entity.scores.rawBuffAgility * allyMult;
+
+		} else if(eff.type == EFFECT_RAW_BUFF_RESISTANCE) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.rawBuffResistance * entity.scores.rawBuffResistance * allyMult;
+
+		} else if(eff.type == EFFECT_RAW_BUFF_WISDOM) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.rawBuffWisdom * entity.scores.rawBuffWisdom * allyMult;
+
+		} else if(eff.type == EFFECT_RAW_BUFF_MP) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.rawBuffMp * entity.scores.rawBuffMp * allyMult;
+
+		} else if(eff.type == EFFECT_RAW_BUFF_TP) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.rawBuffTp * entity.scores.rawBuffTp * allyMult;
+
+		} else if(eff.type == EFFECT_RAW_BUFF_STRENGTH) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.rawBuffStrength * entity.scores.rawBuffStrength * allyMult;
+
+		} else if(eff.type == EFFECT_RAW_BUFF_MAGIC) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.rawBuffMagic * entity.scores.rawBuffMagic * allyMult;
+
+		} else if(eff.type == EFFECT_SHACKLE_AGILITY) {
+			itemScore.score += baseEffValue * this.me.magicMult * EffectScoreMultiplier.shackleAgility * entity.scores.shackleAgility * -allyMult;
+
+		} else if(eff.type == EFFECT_SHACKLE_WISDOM) {
+			itemScore.score += baseEffValue * this.me.magicMult * EffectScoreMultiplier.shackleWisdom * entity.scores.shackleWisdom * -allyMult;
+
+		} else if(eff.type == EFFECT_SHACKLE_MP) {
+			itemScore.score += baseEffValue * this.me.magicMult * EffectScoreMultiplier.shackleMp * entity.scores.shackleMp * -allyMult;
+
+		} else if(eff.type == EFFECT_SHACKLE_TP) {
+			itemScore.score += baseEffValue * this.me.magicMult * EffectScoreMultiplier.shackleTp * entity.scores.shackleTp * -allyMult;
+
+		} else if(eff.type == EFFECT_SHACKLE_STRENGTH) {
+			itemScore.score += baseEffValue * this.me.magicMult * EffectScoreMultiplier.shackleStrength * entity.scores.shackleStrength * -allyMult;
+
+		} else if(eff.type == EFFECT_SHACKLE_MAGIC) {
+			itemScore.score += baseEffValue * this.me.magicMult * EffectScoreMultiplier.shackleMagic * entity.scores.shackleMagic * -allyMult;
+
+		} else if(eff.type == EFFECT_REMOVE_SHACKLES) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.removeShackles * entity.scores.removeShackles * allyMult;
+
+		} else if(eff.type == EFFECT_ABSOLUTE_SHIELD) {
+			itemScore.score += baseEffValue * this.me.resistanceMult * EffectScoreMultiplier.abso * entity.scores.abso * allyMult;
+
+		} else if(eff.type == EFFECT_RELATIVE_SHIELD) {
+			itemScore.score += baseEffValue * this.me.resistanceMult * EffectScoreMultiplier.rel * entity.scores.rel * allyMult;
+
+		} else if(eff.type == EFFECT_ABSOLUTE_VULNERABILITY) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.absoVulnerability * entity.scores.absoVulnerability * -allyMult;
+
+		} else if(eff.type == EFFECT_VULNERABILITY) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.relVulnerability * entity.scores.relVulnerability * -allyMult;
+
+		} else if(eff.type == EFFECT_STEAL_ABSOLUTE_SHIELD) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.stealAbso * entity.scores.stealAbso * -allyMult;
+
+		} else if(eff.type == EFFECT_DAMAGE_RETURN) {
+			itemScore.score += baseEffValue * this.me.agilityMult * EffectScoreMultiplier.damageReturn * entity.scores.damageReturn * allyMult;
+
+		} else if(eff.type == EFFECT_AFTEREFFECT) {
+			itemScore.score += baseEffValue * this.me.scienceMult * EffectScoreMultiplier.afterEffect * entity.scores.afterEffect * -allyMult;
+
+		} else if(eff.type == EFFECT_ANTIDOTE) {
+			itemScore.score += costMult * aoeMult * EffectScoreMultiplier.antidote * entity.scores.antidote * allyMult;
+
+		} else if(eff.type == EFFECT_DEBUFF) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.debuff * entity.scores.debuff * -allyMult;
+
+		} else if(eff.type == EFFECT_TELEPORT) {
+			itemScore.score += costMult * aoeMult * EffectScoreMultiplier.teleport * entity.scores.teleport;
+
+		} else if(eff.type == EFFECT_INVERT) {
+			itemScore.score += costMult * aoeMult * EffectScoreMultiplier.invert * entity.scores.invert;
+
+		} else if(eff.type == EFFECT_RESURRECT) {
+			itemScore.score += costMult * aoeMult * EffectScoreMultiplier.ressurect * entity.scores.ressurect * allyMult;
+
+		} else if(eff.type == EFFECT_SUMMON) {
+			var summonScore = 1;
+			if (item.id == CHIP_HEALER_BULB)
+				summonScore = entity.scores.summonHeal;
+			else if (item.id == CHIP_METALLIC_BULB)
+				summonScore = entity.scores.summonRes;
+			else if (item.id == CHIP_LIGHTNING_BULB or item.id == CHIP_FIRE_BULB or item.id == CHIP_ICED_BULB or item.id == CHIP_ROCKY_BULB)
+				summonScore = entity.scores.summonDamage;
+			else if (item.id == CHIP_WIZARD_BULB)
+				summonScore = entity.scores.summonPoison;
+			else if (item.id == CHIP_TACTICIAN_BULB)
+				summonScore = entity.scores.summonMove;
+			else if (item.id == CHIP_SAVANT_BULB)
+				summonScore = entity.scores.summonNova;
+			itemScore.score += costMult * aoeMult * EffectScoreMultiplier._summon * summonScore;
+
+		} else if(eff.type == EFFECT_KILL) {
+			itemScore.score += costMult * aoeMult * EffectScoreMultiplier.kill * entity.scores.kill;
+
+		} else if(eff.type == EFFECT_ATTRACT) {
+			itemScore.score += costMult * aoeMult* EffectScoreMultiplier.attract * entity.scores.attract;
+
+		} else if(eff.type == EFFECT_PUSH) {
+			itemScore.score += costMult * aoeMult * EffectScoreMultiplier._push * entity.scores._push;
+
+		} else if(eff.type == EFFECT_DAMAGE_TO_ABSOLUTE_SHIELD) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.damageToAbso * entity.scores.damageToAbso * allyMult;
+
+		} else if(eff.type == EFFECT_DAMAGE_TO_STRENGTH) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.damageToStrength * entity.scores.damageToStrength * allyMult;
+
+		} else if(eff.type == EFFECT_POISON_TO_SCIENCE) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.poisonToScience * entity.scores.poisonToScience * allyMult;
+
+		} else if(eff.type == EFFECT_NOVA_DAMAGE_TO_MAGIC) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.novaDamageToMagic * entity.scores.novaDamageToMagic * allyMult;
+
+		} else if(eff.type == EFFECT_PROPAGATION) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.propagation * entity.scores.propagation * allyMult;
+
+		} else if(eff.type == EFFECT_MOVED_TO_MP) {
+			itemScore.score += baseEffValue * EffectScoreMultiplier.movedToMp * entity.scores.movedToMp * allyMult;
+		}
+	}
+	private calculateDmgScores(type, value, target, itemScore, allyMult) {
+		// si on tue la cible
+		if (value > target.life) {
+			itemScore.score += EffectScoreMultiplier.kill * target.scores.kill * -allyMult;
+			// si c'est un ennemi et qu'on overKill
+			var overKill = value - target.life;
+			if (overKill > 0 and allyMult == -1)
+				// on retire du score si on fait beaucoup plus de dégâts que la vie restante
+				itemScore.score -= overKill * 0.5 * EffectScoreMultiplier.damage * target.scores.damage;
+		}
+
+		if (value > 0) {
+			itemScore.score += value * EffectScoreMultiplier.damage * target.scores.damage * -allyMult;
+			var erosionMult = type == EFFECT_POISON ? 0.10 : 0.05;
+			itemScore.score += value * erosionMult * EffectScoreMultiplier.novaDamage * target.scores.novaDamage * -allyMult;
+		}
+	}
+	
+	private calculateHealScores(value, target, itemScore, allyMult) {
+		var overHeal = target.life + value - target.maxLife;
+		// si on heal plus que la vie max
+		if (overHeal > 0 and allyMult == 1) {
+			// on diminue le score en conséquence
+			itemScore.score -= max(0, overHeal * 0.75 * EffectScoreMultiplier.heal * target.scores.heal);
+		}
+		itemScore.score += value * EffectScoreMultiplier.heal * target.scores.heal * allyMult;
+	}
+	
+	/**
+	 * Met à jour l'ordre de jeu des entités par rapport à l'entité actuelle 
+	 **/
+	private updateLeeksOrder() {
+		for(var e in this.entities.leeks) {
+			leeksOrder[e.turnOrder] = e;
+		}
+		this.leeksOrder = arraySort(leeksOrder, function(id1, e1, id2, e2) {
+			if(id1 < id2) {
+				if(id1 < 0 and id2 < 0)
+					return -1;
+				else if(id1 < 0)
+					return 1;
+				else
+					return -1;
+			} else if(id1 > id2) {
+				if(id1 < 0 and id2 < 0)
+					return 1;
+				else if(id2 < 0)
+					return -1;
+				else
+					return 1;
+			}
+		})
+		
+		var tmpLeeksOrder = clone(leeksOrder);
+		this.leeksOrder = [];
+		var i = 0;
+		for(var e in tmpLeeksOrder) {
+			this.leeksOrder[i] = e;
+			e.turnOrder = i;
+			i++;
+		}
+	}
+	
+	public static markCells(cells) {
+		var cellsId = [];
+		for(var c in cells) {
+			push(cellsId, c.id);
+		}
+		mark(cellsId, COLOR_RED, 2);
+	}
+
+	print() {
+		Debug.log(this)
+	}
+}

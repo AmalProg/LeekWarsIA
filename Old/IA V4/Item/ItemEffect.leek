@@ -1,0 +1,703 @@
+include("../Debug");
+include("../CellContent/Obstacle");
+include("../CellContent/Entity");
+
+class ItemEffect {
+	public static buffEffects = [EFFECT_BUFF_AGILITY: true, EFFECT_BUFF_MP: true, EFFECT_BUFF_RESISTANCE: true, EFFECT_BUFF_STRENGTH: true, EFFECT_BUFF_TP: true, EFFECT_BUFF_WISDOM: true];
+	public static rawBuffEffects = [EFFECT_RAW_BUFF_AGILITY: true, EFFECT_RAW_BUFF_MAGIC: true, EFFECT_RAW_BUFF_MP: true, EFFECT_RAW_BUFF_POWER: true, EFFECT_RAW_BUFF_RESISTANCE: true, EFFECT_RAW_BUFF_SCIENCE: true, EFFECT_RAW_BUFF_STRENGTH: true, EFFECT_RAW_BUFF_TP: true, EFFECT_RAW_BUFF_WISDOM: true];
+	public static shieldEffects = [EFFECT_ABSOLUTE_SHIELD: true, EFFECT_RELATIVE_SHIELD: true, EFFECT_STEAL_ABSOLUTE_SHIELD: true];
+public static rawShieldEffects = [EFFECT_RAW_ABSOLUTE_SHIELD, EFFECT_RAW_RELATIVE_SHIELD];
+	public static damageEffects = [EFFECT_AFTEREFFECT: true, EFFECT_DAMAGE: true, EFFECT_LIFE_DAMAGE: true, EFFECT_POISON: true];
+	public static maxLifeDamageEffects = [EFFECT_NOVA_DAMAGE: true];
+	public static dmgReturnEffects = [EFFECT_DAMAGE_RETURN: true];
+	public static healEffects = [EFFECT_HEAL: true, EFFECT_RAW_HEAL: true, EFFECT_BOOST_MAX_LIFE: true];
+	public static maxLifeEffects = [EFFECT_BOOST_MAX_LIFE: true, EFFECT_NOVA_VITALITY: true];
+	public static shackleEffects = [EFFECT_SHACKLE_AGILITY: true, EFFECT_SHACKLE_MAGIC: true, EFFECT_SHACKLE_MP: true, EFFECT_SHACKLE_STRENGTH: true, EFFECT_SHACKLE_TP: true, EFFECT_SHACKLE_WISDOM: true];
+	public static movementEffects = [EFFECT_ATTRACT: true, EFFECT_PUSH: true, EFFECT_INVERT: true, EFFECT_TELEPORT: true];
+	public static vulnerabilityEffects = [EFFECT_VULNERABILITY: true, EFFECT_ABSOLUTE_VULNERABILITY: true];
+	public static antidoteEffects = [EFFECT_ANTIDOTE: true];
+	public static removeShackleEffects = [EFFECT_REMOVE_SHACKLES: true];
+
+	public type;
+	public minValue;
+	public maxValue;
+	public meanValue;
+	public myValue;
+	public turns;
+	public targets;
+	public modifiers;
+	public item;
+	
+	public notReplaceable;
+	public affectCaster;
+	public stackable;
+	public multByTargets;
+	public irreductible;
+
+	constructor(effectArray, item) {
+		this.type = effectArray[0];
+		this.minValue = effectArray[1];
+		this.maxValue = effectArray[2];
+		this.meanValue = this.minValue * 0.5 + this.maxValue * 0.5;
+		this.myValue = this.minValue * 0.7 + this.maxValue * 0.3;
+		this.turns = effectArray[3];
+		this.targets = effectArray[4];
+		this.modifiers = effectArray[5];
+		this.item = item;
+		
+		this.notReplaceable = this.modifiers & EFFECT_MODIFIER_NOT_REPLACEABLE;
+		this.affectCaster = this.modifiers & EFFECT_MODIFIER_ON_CASTER;
+		this.stackable = this.modifiers & EFFECT_MODIFIER_STACKABLE;
+		this.multByTargets = this.modifiers & EFFECT_MODIFIER_MULTIPLIED_BY_TARGETS;
+		this.irreductible = this.modifiers & EFFECT_MODIFIER_IRREDUCTIBLE;
+	}
+	
+	public getTargets(cell, from, caster) {
+		var targets = [];
+		
+		for (var cId : var c in this.item.getEffectiveArea(cell, from)) {
+			if (c.hasEntity and c.content.alive() and this.canTarget(c.content, caster)) {
+				targets[c.content.id] = c.content;
+			};
+		}
+		return targets;
+	}
+
+	public canTarget(target, caster) {
+		if (target instanceof Obstacle) return false;
+		if (!(this.targets & EFFECT_TARGET_ALLIES) && target.teamId == caster.teamId) return false;
+		if (!(this.targets & EFFECT_TARGET_CASTER) && target === caster) return false;
+		if (!(this.targets & EFFECT_TARGET_ENEMIES) && target.teamId != caster.teamId) return false;
+		if (!(this.targets & EFFECT_TARGET_NON_SUMMONS) && !target.isASummon) return false;
+		if (!(this.targets & EFFECT_TARGET_SUMMONS) && target.isASummon) return false;
+		return true;
+	}
+	
+	public canApplyTo(target, caster) {
+		var selfCast = caster.id == target.id;
+		
+		if (this.affectCaster && !selfCast) {
+			return false;
+		}
+		
+		if (this.notReplaceable) {
+			// On ne peut pas remplacer l'effet déjà en place
+			if (target.hasEffectOn(this)) 
+				return false;
+		}
+		
+		return true;
+	}
+
+	public applyTo(target, caster, cellTarget, dist) {
+		if (!this.canTarget(target, caster)) {
+			return null;
+		}
+
+		var aoeMult = item.getAoeMult(dist);
+		var casterStats = caster.getStats();
+		var selfCast = caster.id == target.id;
+
+		var nbrTargetsMult = 1;
+		if (this.multByTargets) {
+			// l'effet de base est multiplié par le nombre d'entités touchées
+			var targets = this.getTargets(cellTarget, null, caster);
+			nbrTargetsMult = count(targets);
+		}
+		
+		// l'entité qui sera affecté par l'effet
+		var affectedEntity = target;
+		if (this.affectCaster) {
+			affectedEntity = caster;
+			selfCast = true;
+			aoeMult = 1;
+		}
+		var affectedEntityStats = affectedEntity.stats;
+		
+		if (this.notReplaceable) {
+			// On ne peut pas remplacer l'effet déjà en place
+			if (affectedEntityStats.hasEffectOn(this)) return;
+		}
+		
+		if (!this.stackable) {
+			// on retire l'effet qui va être remplacé
+			affectedEntityStats.removeEffects(affectedEntityStats.getEffectsOn(this));
+		}		
+		
+		var baseValue = this.myValue * nbrTargetsMult * aoeMult;
+		var finalValue = baseValue;
+		if (this.type == EFFECT_DAMAGE) {
+			var baseDmg = baseValue * casterStats.strengthMult * casterStats.powerMult;
+			var dmgReturn = round(baseDmg * affectedEntityStats.getDmgReturn() / 100);
+			var dmg = round(baseDmg * (1 - affectedEntityStats.getRel() / 100) - affectedEntityStats.getAbso());
+			
+			if (dmg > 0) {
+				affectedEntityStats.removeLife(dmg, EFFECT_DAMAGE);
+				affectedEntity.updateAliveState(caster);
+			}
+			if (!selfCast) {
+				if (dmg > 0)
+					casterStats.addLife(dmg * casterStats.getWisdom() / 1000);
+				if (dmgReturn > 0) {
+					casterStats.removeLife(dmgReturn, EFFECT_DAMAGE);
+					caster.updateAliveState(caster);	
+				}
+			}
+			
+		} else if (this.type == EFFECT_POISON) {
+			finalValue = round(baseValue * casterStats.magicMult * casterStats.powerMult);
+			
+		} else if (this.type == EFFECT_LIFE_DAMAGE) {
+			var baseDmg = baseValue / 100 * casterStats.life * casterStats.powerMult;
+			var dmgReturn = round(baseDmg * affectedEntityStats.getDmgReturn() / 100);
+			var dmg = round(baseDmg * (1 - affectedEntityStats.getRel() / 100) - affectedEntityStats.getAbso());
+			
+			if (dmg > 0) {
+				affectedEntityStats.removeLife(dmg, EFFECT_LIFE_DAMAGE);
+				affectedEntity.updateAliveState(caster);
+			}
+			if (!selfCast) {
+				if (dmgReturn > 0) {
+					casterStats.removeLife(dmgReturn, EFFECT_DAMAGE);
+					caster.updateAliveState(caster);
+				}
+			}
+			
+		} else if (this.type == EFFECT_NOVA_DAMAGE) {
+			var baseDmg = baseValue * casterStats.scienceMult * casterStats.powerMult;
+			var dmg = round(baseDmg * (1 - affectedEntityStats.getRel() / 100) - affectedEntityStats.getAbso());
+			if (dmg > affectedEntityStats.getMaxLife() - affectedEntityStats.getLife()) {
+				dmg = affectedEntityStats.getMaxLife() - affectedEntityStats.getLife();
+			}
+			
+			if (dmg > 0) {
+				affectedEntityStats.removeMaxLife(finalValue);
+			}
+			
+		} else if (this.type == EFFECT_HEAL) {
+			finalValue = round(baseValue * casterStats.wisdomMult);
+			if (turns == 0) {
+				affectedEntityStats.addLife(finalValue);
+			}
+			
+		} else if (this.type == EFFECT_RAW_HEAL) {
+			finalValue = baseValue;
+			if (turns == 0) {
+				affectedEntityStats.addLife(finalValue);
+			}
+			
+		} else if (this.type == EFFECT_NOVA_VITALITY) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addMaxLife(finalValue);
+			
+		} else if (this.type == EFFECT_BOOST_MAX_LIFE) {
+			finalValue = round(baseValue * casterStats.wisdomMult);
+			affectedEntityStats.addMaxLife(finalValue);
+			affectedEntityStats.addLife(finalValue);
+			
+		} else if (this.type == EFFECT_BUFF_AGILITY) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);
+		} else if (this.type == EFFECT_BUFF_RESISTANCE) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);
+		} else if (this.type == EFFECT_BUFF_WISDOM) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);
+		
+		} else if (this.type == EFFECT_BUFF_MP) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_BUFF_TP) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_BUFF_STRENGTH) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_AGILITY) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_RESISTANCE) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_WISDOM) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_MP) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_TP) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_STRENGTH) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_MAGIC) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_SHACKLE_AGILITY) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_SHACKLE_WISDOM) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_SHACKLE_MP) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_SHACKLE_TP) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);
+
+		} else if (this.type == EFFECT_SHACKLE_STRENGTH) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_SHACKLE_MAGIC) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_REMOVE_SHACKLES) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+		
+		} else if (this.type == EFFECT_ABSOLUTE_SHIELD) {
+			finalValue = round(baseValue * casterStats.resistanceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RELATIVE_SHIELD) {
+			finalValue = round(baseValue * casterStats.resistanceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_ABSOLUTE_VULNERABILITY) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_VULNERABILITY) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_STEAL_ABSOLUTE_SHIELD) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_ABSOLUTE_SHIELD) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_DAMAGE_RETURN) {
+			finalValue = round(baseValue * casterStats.agilityMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_AFTEREFFECT) {
+			var dmg = round(baseValue * casterStats.scienceMult);
+			if (dmg > 0) {
+				affectedEntityStats.removeLife(dmg, EFFECT_AFTEREFFECT);
+				affectedEntity.updateAliveState(caster);
+			}
+			
+		} else if (this.type == EFFECT_ANTIDOTE) {
+			affectedEntityStats.removePoisons();
+		
+		} else if (this.type == EFFECT_DEBUFF) {
+			affectedEntityStats.debuff(finalValue);
+			
+		} else if (this.type == EFFECT_TELEPORT) {
+			affectedEntity.teleport(cellTarget);
+			
+		} else if (this.type == EFFECT_INVERT) {
+			Entity.invert(caster, affectedEntity);
+			
+		} else if (this.type == EFFECT_RESURRECT) {
+			affectedEntity.resurrection(cellTarget);
+			
+		} else if (this.type == EFFECT_KILL) {
+			affectedEntity.kill(this);
+			
+		} else if (this.type == EFFECT_ATTRACT) {
+			affectedEntity.attract(cellTarget);
+			
+		} else if (this.type == EFFECT_PUSH) {
+			affectedEntity.pushTo(cellTarget);
+			
+		}
+		
+		affectedEntity.stats.triggerPassive(1, EFFECT_CRITICAL_TO_HEAL);
+		
+		affectedEntityStats.updateMults();
+	}
+	
+	public applyToForKillCombo(target, caster, targetStats, casterStats, cellTarget, dist) {
+		if (!this.canTarget(target, caster)) {
+			return null;
+		}
+
+		var aoeMult = item.getAoeMult(dist);
+		var selfCast = caster.id == target.id;
+		
+		var nbrTargetsMult = 1;
+		if (this.multByTargets) {
+			// l'effet de base est multiplié par le nombre d'entités touchées
+			var targets = this.getTargets(cellTarget, null, caster);
+			nbrTargetsMult = count(targets);
+		}
+		
+		// l'entité qui sera affecté par l'effet
+		var affectedEntityStats = targetStats;
+		if (this.affectCaster) {
+			affectedEntityStats = casterStats;
+			selfCast = true;
+		}
+		
+		if (this.notReplaceable) {
+			// On ne peut pas remplacer l'effet déjà en place
+			if (affectedEntityStats.hasEffectOn(this)) return;
+		}
+		
+		if (!this.stackable) {
+			// on retire l'effet qui va être remplacé
+			affectedEntityStats.removeEffects(affectedEntityStats.getEffectsOn(this));
+		}
+
+		var baseValue = this.myValue * nbrTargetsMult * aoeMult;
+		var finalValue = baseValue;
+		if (this.type == EFFECT_DAMAGE) {
+			var baseDmg = baseValue * casterStats.strengthMult * casterStats.powerMult;
+			var dmgReturn = round(baseDmg * affectedEntityStats.getDmgReturn() / 100);
+			var dmg = round(baseDmg * (1 - affectedEntityStats.getRel() / 100) - affectedEntityStats.getAbso());
+			
+			if (dmg > 0)
+				affectedEntityStats.removeLife(dmg, EFFECT_DAMAGE);
+			if (!selfCast) {
+				if (dmg > 0)
+					casterStats.addLife(dmg * casterStats.getWisdom() / 1000);
+				if (dmgReturn > 0)
+					casterStats.removeLife(dmgReturn, EFFECT_DAMAGE);
+			}
+			
+		} else if (this.type == EFFECT_POISON) {
+			finalValue = round(baseValue * casterStats.magicMult * casterStats.powerMult);
+			
+		} else if (this.type == EFFECT_LIFE_DAMAGE) {
+			var baseDmg = baseValue / 100 * casterStats.life * casterStats.powerMult;
+			var dmgReturn = round(baseDmg * affectedEntityStats.getDmgReturn() / 100);
+			var dmg = round(baseDmg * (1 - affectedEntityStats.getRel() / 100) - affectedEntityStats.getAbso());
+			
+			if (dmg > 0)
+				affectedEntityStats.removeLife(dmg, EFFECT_LIFE_DAMAGE);
+			if (!selfCast) {
+				if (dmgReturn > 0)
+					casterStats.removeLife(dmgReturn, EFFECT_DAMAGE);
+			}
+			
+		} else if (this.type == EFFECT_NOVA_DAMAGE) {
+			var baseDmg = baseValue * casterStats.scienceMult * casterStats.powerMult;
+			var dmg = round(baseDmg * (1 - affectedEntityStats.getRel() / 100) - affectedEntityStats.getAbso());
+			if (dmg > affectedEntityStats.getMaxLife() - affectedEntityStats.getLife()) {
+				dmg = affectedEntityStats.getMaxLife() - affectedEntityStats.getLife();
+			}
+			
+			if (dmg > 0) {
+				affectedEntityStats.removeMaxLife(finalValue);
+			}
+			
+		} else if (this.type == EFFECT_HEAL) {
+			finalValue = round(baseValue * casterStats.wisdomMult);
+			if (turns == 0) {
+				affectedEntityStats.addLife(finalValue);
+			}
+			
+		} else if (this.type == EFFECT_RAW_HEAL) {
+			finalValue = baseValue;
+			if (turns == 0) {
+				affectedEntityStats.addLife(finalValue);
+			}
+			
+		} else if (this.type == EFFECT_NOVA_VITALITY) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addMaxLife(finalValue);
+			
+		} else if (this.type == EFFECT_BOOST_MAX_LIFE) {
+			finalValue = round(baseValue * casterStats.wisdomMult);
+			affectedEntityStats.addMaxLife(finalValue);
+			affectedEntityStats.addLife(finalValue);
+			
+		} else if (this.type == EFFECT_BUFF_AGILITY) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);
+		} else if (this.type == EFFECT_BUFF_RESISTANCE) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);
+		} else if (this.type == EFFECT_BUFF_WISDOM) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);
+		
+		} else if (this.type == EFFECT_BUFF_MP) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_BUFF_TP) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_BUFF_STRENGTH) {
+			finalValue = round(baseValue * casterStats.scienceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_AGILITY) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_RESISTANCE) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_WISDOM) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_MP) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_TP) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_STRENGTH) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_BUFF_MAGIC) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_SHACKLE_AGILITY) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_SHACKLE_WISDOM) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_SHACKLE_MP) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_SHACKLE_TP) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_SHACKLE_STRENGTH) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_SHACKLE_MAGIC) {
+			finalValue = round(baseValue * casterStats.magicMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+
+		} else if (this.type == EFFECT_REMOVE_SHACKLES) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+		
+		} else if (this.type == EFFECT_ABSOLUTE_SHIELD) {
+			finalValue = round(baseValue * casterStats.resistanceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RELATIVE_SHIELD) {
+			finalValue = round(baseValue * casterStats.resistanceMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_ABSOLUTE_VULNERABILITY) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_VULNERABILITY) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_STEAL_ABSOLUTE_SHIELD) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_RAW_ABSOLUTE_SHIELD) {
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_DAMAGE_RETURN) {
+			finalValue = round(baseValue * casterStats.agilityMult);
+			affectedEntityStats.addEffect(this.type, finalValue, caster, this.turns, false, this.item.id, target, this.modifiers);		
+			
+		} else if (this.type == EFFECT_AFTEREFFECT) {
+			var dmg = round(baseValue * casterStats.scienceMult);
+			if (dmg > 0)
+				affectedEntityStats.removeLife(dmg, EFFECT_AFTEREFFECT);
+			
+		} else if (this.type == EFFECT_ANTIDOTE) {
+			affectedEntityStats.removePoisons();
+		
+		} else if (this.type == EFFECT_DEBUFF) {
+			affectedEntityStats.debuff(finalValue);
+			
+		}
+		
+		affectedEntityStats.updateMults();
+	}
+
+
+	/**
+	 * Renvoi la valeur du l'effet appliqué à target par caster
+	 **/
+	public getAppliedValue(target, caster, cellTarget, aoeMult) {
+		if (!this.canTarget(target, caster)) { debug("krfgfjier");return 0;}
+		
+		var casterStats = caster.getStats();
+		var targetStats = target.getStats();
+		
+		if (this.notReplaceable) {
+			// On ne peut pas remplacer l'effet déjà en place
+			if (targetStats.hasEffectOn(this)) return 0;
+		}
+		
+		// l'entité affecté est le caster, donc rien sur la target
+		if (this.affectCaster and target.id != caster.id) {
+			return 0;
+		}
+		
+		var nbrTargetsMult = 1;
+		if (this.multByTargets) {
+			nbrTargetsMult = count(this.getTargets(cellTarget, null, caster));
+		}
+		
+		var baseEffValue = this.myValue * nbrTargetsMult * aoeMult;
+		var totalValue = 0;
+		if(this.type == EFFECT_DAMAGE) {
+			var baseDmg = baseEffValue * casterStats.strengthMult * casterStats.powerMult;
+			totalValue = round(baseDmg * (1 - targetStats.getRel()  / 100) - targetStats.getAbso());
+
+		} else if(this.type == EFFECT_POISON) {
+			totalValue = baseEffValue * casterStats.magicMult * casterStats.powerMult;
+
+		} else if(this.type == EFFECT_LIFE_DAMAGE) {
+			var baseDmg = baseEffValue / 100 * casterStats.life * casterStats.powerMult;
+			totalValue = round(baseDmg * (1 - targetStats.getRel() / 100) - targetStats.getAbso());
+
+		} else if(this.type == EFFECT_NOVA_DAMAGE) {
+			totalValue = baseEffValue * casterStats.scienceMult * casterStats.powerMult;
+
+		} else if(this.type == EFFECT_HEAL) {
+			totalValue = baseEffValue * casterStats.wisdomMult;
+ 
+		} else if (this.type == EFFECT_RAW_HEAL) {
+			totalValue = baseEffValue;
+			
+		} else if(this.type == EFFECT_NOVA_VITALITY) {
+			totalValue = baseEffValue * casterStats.scienceMult;
+
+		} else if(this.type == EFFECT_BOOST_MAX_LIFE) {
+			totalValue = baseEffValue * casterStats.wisdomMult;
+
+		} else if(this.type == EFFECT_BUFF_AGILITY) {
+			totalValue = baseEffValue * casterStats.scienceMult;
+
+		} else if(this.type == EFFECT_BUFF_RESISTANCE) {
+			totalValue = baseEffValue * casterStats.scienceMult;
+
+		} else if(this.type == EFFECT_BUFF_WISDOM) {
+			totalValue = baseEffValue * casterStats.scienceMult;
+
+		} else if(this.type == EFFECT_BUFF_MP) {
+			totalValue = baseEffValue * casterStats.scienceMult;
+
+		} else if(this.type == EFFECT_BUFF_TP) {
+			totalValue = baseEffValue * casterStats.scienceMult;
+
+		} else if(this.type == EFFECT_BUFF_STRENGTH) {
+			totalValue = baseEffValue * casterStats.scienceMult;
+
+		} else if(this.type == EFFECT_RAW_BUFF_AGILITY) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_RAW_BUFF_RESISTANCE) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_RAW_BUFF_WISDOM) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_RAW_BUFF_MP) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_RAW_BUFF_TP) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_RAW_BUFF_STRENGTH) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_RAW_BUFF_MAGIC) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_SHACKLE_AGILITY) {
+			totalValue = baseEffValue * casterStats.magicMult;
+
+		} else if(this.type == EFFECT_SHACKLE_WISDOM) {
+			totalValue = baseEffValue * casterStats.magicMult;
+
+		} else if(this.type == EFFECT_SHACKLE_MP) {
+			totalValue = baseEffValue * casterStats.magicMult;
+
+		} else if(this.type == EFFECT_SHACKLE_TP) {
+			totalValue = baseEffValue * casterStats.magicMult;
+
+		} else if(this.type == EFFECT_SHACKLE_STRENGTH) {
+			totalValue = baseEffValue * casterStats.magicMult;
+
+		} else if(this.type == EFFECT_SHACKLE_MAGIC) {
+			totalValue = baseEffValue * casterStats.magicMult;
+
+		} else if(this.type == EFFECT_ABSOLUTE_SHIELD) {
+			totalValue = baseEffValue * casterStats.resistanceMult;
+
+		} else if(this.type == EFFECT_RELATIVE_SHIELD) {
+			totalValue = baseEffValue * casterStats.resistanceMult;
+
+		} else if(this.type == EFFECT_ABSOLUTE_VULNERABILITY) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_VULNERABILITY) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_STEAL_ABSOLUTE_SHIELD) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_DAMAGE_RETURN) {
+			totalValue = baseEffValue * casterStats.agilityMult;
+
+		} else if(this.type == EFFECT_AFTEREFFECT) {
+			totalValue = baseEffValue * casterStats.scienceMult;
+
+		} else if(this.type == EFFECT_PROPAGATION) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_DAMAGE_TO_ABSOLUTE_SHIELD) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_DAMAGE_TO_STRENGTH) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_POISON_TO_SCIENCE) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_NOVA_DAMAGE_TO_MAGIC) {
+			totalValue = baseEffValue;
+
+		} else if(this.type == EFFECT_MOVED_TO_MP) {
+			totalValue = baseEffValue;
+			
+		} else if(this.type == EFFECT_ALLY_KILLED_TO_AGILITY) {
+			totalValue = baseEffValue;
+			
+		} else if(this.type == EFFECT_KILL_TO_TP) {
+			totalValue = baseEffValue;
+			
+		} else if(this.type == EFFECT_CRITICAL_TO_HEAL) {
+			totalValue = baseEffValue;
+		}
+		
+		return totalValue;
+	}
+	
+	public string() {
+		return 	"{ type: " + this.type +
+				" | meanValue: " + this.meanValue +
+				" | turns: " + this.turns +
+				" | item: " + this.item.name + " }";
+	}
+}

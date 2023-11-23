@@ -1,0 +1,51 @@
+include("../Debug");
+include("Entity");
+
+class Leek extends Entity {
+	/** leeks pool **/
+	private static leeks = [];
+	public static initLeeks(entitiesId, map) {
+		for (var leekId in entitiesId) {
+			if(getType(leekId) == ENTITY_LEEK) {
+				leeks[leekId] = new Leek(leekId, map);
+				Entity.entities[leekId] = leeks[leekId];
+			}
+		}
+	}
+	public static get(id) {
+		return Leek.leeks[id];
+	}
+	/** fin leeks pool **/
+
+	private weapons;
+	private equippedWeaponId;
+
+	constructor(id, map) {
+		Debug.debugCodePosition("Creating Leek object for id : " + id, COLOR_GREEN);
+
+		super(id, map);
+
+		this.id = id;
+		initBaseStats();
+	}
+
+	public initBaseStats() {
+		for(var wepId in getWeapons(this.id)) {
+			push(this.items, new Weapon(wepId, this));
+		}
+	}
+
+	public static updateLeeksStats(map) {
+		for (var leek in Leek.leeks) {
+			leek.updateStats(map);
+		}
+	}
+	public updateStats(map) {
+		this.equippedWeaponId = getWeapon();
+		super.updateStats(map);
+	}
+
+	public print() {
+		super.print();
+	}
+}

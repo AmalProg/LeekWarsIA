@@ -1,0 +1,45 @@
+include("Cell");
+
+class AccessibleCells {
+	private final Set<Cell> cells; public Set<Cell> getCells() { return this.cells; }
+	private final Map<Cell, MoveCell> moveCells; public Map<Cell, MoveCell> getMoveCells() { return this.moveCells; }
+
+	constructor() {
+		this.cells = <>;
+		this.moveCells = [:];
+	}
+	
+	public void addMoveCell(MoveCell moveCell) {
+		setPut(this.cells, moveCell.cell);
+		mapPut(this.moveCells, moveCell.cell, moveCell);
+	}
+	public void removeMoveCell(Cell cell) {
+		setRemove(this.cells, cell);
+		mapRemove(this.moveCells, cell);
+	}
+	
+	public Array<MoveCell> getOrderedPerMpUsedMoveCell(boolean isAsc) {
+		if (isAsc) {
+			return arraySort(mapValues(this.moveCells), function(MoveCell mc1, MoveCell mc2) => integer {
+				return mc1.mpUsed - mc2.mpUsed;
+			}) as Array<MoveCell>;
+		} else {
+			return arraySort(mapValues(this.moveCells), function(MoveCell mc1, MoveCell mc2) => integer {
+				return mc2.mpUsed - mc1.mpUsed;
+			}) as Array<MoveCell>;
+		}
+	}
+	
+	public MoveCell? getMoveCell(Cell cell) {
+		return mapGet(this.moveCells, cell, null) as MoveCell;
+	}
+	public boolean hasCell(Cell cell) {
+		return mapContainsKey(this.moveCells, cell);
+	}
+	
+	public integer? getMpUsed(Cell cell) {
+		if (mapContainsKey(this.moveCells, cell))
+			return this.moveCells[cell]!.mpUsed;	
+		return null;
+	}
+}

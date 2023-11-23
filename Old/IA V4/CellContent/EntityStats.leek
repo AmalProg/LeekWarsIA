@@ -1,0 +1,458 @@
+class EntityStats {
+	public maxLife; public getMaxLife() { return this.maxLife; }
+	public life; public getLife() { return this.life; }
+	public strength; public getStrength() { return this.strength; }
+	public wisdom; public getWisdom() { return this.wisdom; }
+	public agility; public getAgility() { return this.agility; }
+	public resistance; public getResistance() { return this.resistance; }
+	public science; public getScience() { return this.science; }
+	public magic; public getMagic() { return this.magic; }
+	public power; public getPower() { return this.power; }
+	public frequency; public getFrequency() { return this.frequency; }
+	public tp; public getTP() { return this.tp; }
+	public mp; public getMP() { return this.mp; }
+	public abso; public getAbso() { return this.abso; }
+	public rel; public getRel() { return this.rel; }
+	public dmgReturn; public getDmgReturn() { return this.dmgReturn; }
+	
+	public strengthMult; public getStrengthMult() { return this.strengthMult; }
+	public wisdomMult; public getWisdomMult() { return this.wisdomMult; }
+	public agilityMult; public getAgilityMult() { return this.agilityMult; }
+	public resistanceMult; public getResistanceMult() { return this.resistanceMult; }
+	public scienceMult; public getScienceMult() { return this.scienceMult; }
+	public magicMult; public getMagicMult() { return this.magicMult; }
+	public powerMult; public getPowerMult() { return this.powerMult; }
+	
+	public effects = []; public getEffects() { return this.effects; }	
+	
+	public entity;
+
+	constructor(entity) {
+		this.initStats(entity.id);
+		this.entity = entity;
+	}
+	
+	public copy(stats) {
+		this.maxLife = stats.maxLife;
+		this.life = stats.life;
+		this.strength = stats.strength;
+		this.wisdom = stats.wisdom;
+		this.agility = stats.agility;
+		this.resistance = stats.resistance;
+		this.science = stats.science;
+		this.magic = stats.magic;
+		this.power = stats.power;
+		this.frequency = stats.frequency;
+		this.tp = stats.tp;
+		this.mp = stats.mp;
+		this.abso = stats.abso;
+		this.rel = stats.rel;
+		this.dmgReturn = stats.dmgReturn;
+		
+		this.strengthMult = stats.strengthMult;
+		this.wisdomMult = stats.wisdomMult;
+		this.agilityMult = stats.agilityMult;
+		this.resistanceMult = stats.resistanceMult;
+		this.scienceMult = stats.scienceMult;
+		this.magicMult = stats.magicMult;
+		this.powerMult = stats.powerMult;
+		
+		this.effects = clone(stats.effects);
+		
+		this.entity = stats.entity;
+	}
+	
+	public initStats(entityId) {
+		this.maxLife = getTotalLife(entityId);
+		this.life = getLife(entityId);
+		this.strength = getStrength(entityId);
+		this.wisdom = getWisdom(entityId);
+		this.agility = getAgility(entityId);
+		this.resistance = getResistance(entityId);
+		this.science = getScience(entityId);
+		this.magic = getMagic(entityId);
+		this.power = getPower(entityId);
+		this.frequency = getFrequency(entityId);
+		this.tp = getTP(entityId);
+		if (this.tp < 0)
+			this.tp = 0;
+		this.mp = getMP(entityId);
+		if (this.mp < 0)
+			this.mp = 0;
+		this.abso = getAbsoluteShield(entityId);
+		this.rel = getRelativeShield(entityId);
+		this.dmgReturn = getDamageReturn(entityId);
+		
+		this.effects = [];
+		for (var effect in getEffects(entityId) + getPassiveEffects(entityId)) {
+			push(this.effects, EntityEffect(effect));
+		}
+		
+		updateMults();
+	}
+	
+	public updateMults() {
+		this.strengthMult = (1 + (this.getStrength() >= 0 ? this.getStrength() : 0) / 100);
+		this.wisdomMult = (1 + (this.getWisdom() >= 0 ? this.getWisdom() : 0) / 100);
+		this.agilityMult = (1 + (this.getAgility() >= 0 ? this.getAgility() : 0) / 100);
+		this.resistanceMult = (1 + (this.getResistance() >= 0 ? this.getResistance() : 0) / 100);
+		this.scienceMult = (1 + (this.getScience() >= 0 ? this.getScience() : 0) / 100);
+		this.magicMult = (1 + (this.getMagic() >= 0 ? this.getMagic() : 0) / 100);
+		this.powerMult = (1 + (this.getPower() >= 0 ? this.getPower() : 0) / 100);	
+	}
+	
+	public addEffect(type, value, caster, turns, critical, itemId, target, modifiers) {
+		if (turns != 0) {
+			var effect = new EntityEffect(type, value, caster, turns, critical, itemId, target, modifiers);
+			//debug("adding effect " + effect + " to " + this.name)
+			push(this.effects, effect);
+			effect.applyTo(this);
+		}
+	}
+	public addEffect(effect) {
+		if (effect.turns != 0) {
+			//debug("adding effect " + effect + " to " + this.name)
+			push(this.effects, effect);
+			effect.applyTo(this);
+		}
+	}
+	public addEffects(effects) {
+		for (var effect in effects) {
+			if (effect.turns != 0) {
+				//debug("adding effect " + effect + " to " + this.name)
+				push(this.effects, effect);
+				effect.applyTo(this);
+			}
+		}
+	}
+	
+	public removeEffect(effect) {
+		if (effect != null) {
+			//debug("removing effect " + effect + " to " + this.name)
+			removeElement(this.effects, effect);
+			effect.removeTo(this);
+		}
+	}
+	public removeEffects(effects) {
+		if (effects != null or effects != []) {
+			for (var effect in effects) {
+				//debug("removing effect " + effect + " to " + this.name)
+				removeElement(this.effects, effect);
+				effect.removeTo(this);
+			}
+		}
+	}
+	
+	/**
+	 * Test si l'effet affecte l'entité, corespondant au type et à l'item de l'effet donné
+	 * 
+	 * @param eff : l'effet recherché
+	 * 
+	 * @return true si l'entité est affecté par l'effet
+	 * 
+	 **/
+	public hasEffectOn(eff) {
+		for (var effect in this.effects) {
+			if (effect.type == eff.type && effect.itemId == eff.item.id)
+				return true;
+		}
+		return false;
+	}
+	
+	public hasEffectType(effType) {
+		for (var effect in this.effects) {
+			if (effect.type == effType)
+				return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Récupère l'effet qui affecte l'entité, corespondant au type et à l'item de l'effet donné
+	 * 
+	 * @param eff : l'effet recherché
+	 * 
+	 * @return la liste des effets correspondant à 'eff'
+	 **/
+	public getEffectsOn(eff) {
+		var effectsMatching = [];
+		for (var effect in this.effects) {
+			if (effect.type == eff.type && effect.itemId == eff.item.id)
+				push(effectsMatching, effect);
+		}
+		return effectsMatching;
+	}
+	
+		
+	/**
+	 * Récupère les effets qui affecteront encore l'entité dans x tour
+	 * 
+	 * @param turns : le nombre de tours
+	 * 
+	 * @return la liste des effets
+	 **/
+	public getEffectsInTurns(turns, entity) {
+		var effectsInTurns = [];
+		for (var effect in this.effects) {
+			if (effect.turns == -1 || effect.turns > turns || (effect.turns == turns && effect.caster.turnOrder > entity.turnOrder))
+				push(effectsInTurns, effect);
+		}
+		return effectsInTurns;
+	}
+	
+	public removeShackles() {
+		var effectsToRemove = [];
+		for (var eff in this.effects) {
+			if (ItemEffect.shackleEffects[eff.type]) {
+				eff.caster.removeLaunchedEffect(eff);
+				push(effectsToRemove, eff);
+			}
+		}
+		this.removeEffects(this.effects);
+	}
+	
+	public removePoisons() {
+		var effectsToRemove = [];
+		for (var eff in this.effects) {
+			if (eff.type == EFFECT_POISON) {
+				if (eff.caster) {
+					eff.caster.removeLaunchedEffect(eff);
+				} else {
+					debug("pas de caster: " + eff)
+				}
+				push(effectsToRemove, eff);
+			}
+		}
+		this.removeEffects(this.effects);
+	}
+	
+	public debuff(value) {
+		var newEffects = [];
+		for (var eff in this.effects) {
+			if (eff.irreductible) continue;
+			
+			var newValue = round(eff.value * (1 - (value / 100)));
+			if (newValue > 0) {
+				push(newEffects, new EntityEffect(eff.type, newValue, eff.caster, eff.turns, eff.critical, eff.itemId, eff.target, eff.modifiers));
+			}
+		}
+		this.removeEffects(this.effects);
+		this.addEffects(newEffects);
+	}
+	
+	public triggerPassive(value, type) {
+		if (!(this.entity instanceof Leek)) return;
+		
+		var eff = null;
+		if ((eff = this.entity.passiveItemEffects[EFFECT_DAMAGE_TO_ABSOLUTE_SHIELD]) != null && type == EFFECT_DAMAGE) {
+            var val = value * eff.myValue / 100;
+            this.addEffect(EFFECT_RAW_ABSOLUTE_SHIELD, val, this.entity, eff.turns, false, eff.item.id, this.entity, eff.modifiers);
+
+        } else if((eff = this.entity.passiveItemEffects[EFFECT_DAMAGE_TO_STRENGTH]) != null && type == EFFECT_DAMAGE) {
+            var val = value * eff.myValue / 100;
+            this.addEffect(EFFECT_RAW_BUFF_STRENGTH, val, this.entity, eff.turns, false, eff.item.id, this.entity, eff.modifiers);
+
+        } else if((eff = this.entity.passiveItemEffects[EFFECT_POISON_TO_SCIENCE]) != null && type == EFFECT_POISON) {
+            var val = value * eff.myValue / 100;
+            this.addEffect(EFFECT_RAW_BUFF_SCIENCE, val, this.entity, eff.turns, false, eff.item.id, this.entity, eff.modifiers);
+
+        } else if((eff = this.entity.passiveItemEffects[EFFECT_NOVA_DAMAGE_TO_MAGIC]) != null && type == EFFECT_NOVA_DAMAGE) {
+            var val = value * eff.myValue / 100;
+            this.addEffect(EFFECT_RAW_BUFF_MAGIC, val, this.entity, eff.turns, false, eff.item.id, this.entity, eff.modifiers);
+
+        } else if((eff = this.entity.passiveItemEffects[EFFECT_MOVED_TO_MP]) != null && (type == EFFECT_PUSH or type == EFFECT_ATTRACT)) {
+            var val = value * eff.myValue;
+            this.addEffect(EFFECT_RAW_BUFF_MP, val, this.entity, eff.turns, false, eff.item.id, this.entity, eff.modifiers);
+
+        } else if((eff = this.entity.passiveItemEffects[EFFECT_ALLY_KILLED_TO_AGILITY]) != null && type == EFFECT_ALLY_KILLED_TO_AGILITY) {
+            var val = value * eff.myValue;
+            this.addEffect(EFFECT_RAW_BUFF_AGILITY, val, this.entity, eff.turns, false, eff.item.id, this.entity, eff.modifiers);
+
+        } else if((eff = this.entity.passiveItemEffects[EFFECT_KILL_TO_TP]) != null && type == EFFECT_KILL) {
+            var val = value * eff.myValue;
+            this.addEffect(EFFECT_RAW_BUFF_TP, val, this.entity, eff.turns, false, eff.item.id, this.entity, eff.modifiers);
+
+        } else if((eff = this.entity.passiveItemEffects[EFFECT_CRITICAL_TO_HEAL]) != null && rand() < this.agility/1000) {
+            var val = value * eff.myValue;
+            this.addLife(val);
+
+        }
+	}
+	
+	public addMaxLife(value) {	
+		this.maxLife += value;
+		//Debug.info("adding max life " + value + " life to " + this.entity.name + " who has " + this.life + " / " + this.maxLife);
+	}
+	
+	public removeMaxLife(value) {
+		this.maxLife -= value;
+		this.triggerPassive(value, EFFECT_NOVA_DAMAGE);
+		//Debug.info("removing " + value + " max life from " + this.entity.name + " who has " + this.life + " / " + this.maxLife);
+	}
+	
+	public addLife(value) {
+		this.life += value;
+		if (this.life > this.maxLife)
+			this.life = this.maxLife;
+		//Debug.info("healing " + value + " life to " + this.entity.name + " who has " + this.life + " / " + this.maxLife);
+	}
+	
+	public removeLife(value, type) {
+		this.life -= value;
+		this.triggerPassive(value, type);
+
+		var erosionMult = type == EFFECT_POISON ? 0.10 : 0.05;
+		var erosionValue = round(value * erosionMult);
+		this.removeMaxLife(erosionValue);
+		
+		//Debug.info("removing " + value + " life from " + this.entity.name + " who has " + this.life + " / " + this.maxLife);
+	}
+	
+	public addStrength(value) {
+		this.strength += value;
+		//Debug.info("add " + value + " strength to " + this.entity.name);
+	}
+	
+	public removeStrength(value) {
+		this.strength -= value;
+		//Debug.info("remove " + value + " strength to " + this.entity.name);
+	}
+	
+	public addWisdom(value) {
+		this.wisdom += value;
+		//Debug.info("add " + value + " wisdom to " + this.entity.name);
+	}
+	
+	public removeWisdom(value) {
+		this.wisdom -= value;
+		//Debug.info("remove " + value + " wisdom to " + this.entity.name);
+	}
+	
+	public addAgility(value) {
+		this.agility += value;
+		//Debug.info("add " + value + " agility to " + this.entity.name);
+	}
+	
+	public removeAgility(value) {
+		this.agility -= value;
+		//Debug.info("remove " + value + " agility to " + this.entity.name);
+	}
+	
+	public addResistance(value) {
+		this.resistance += value;
+		//Debug.info("add " + value + " resistance to " + this.entity.name);
+	}
+	
+	public removeResistance(value) {
+		this.resistance -= value;
+		//Debug.info("remove " + value + " resistance to " + this.entity.name);
+	}
+	
+	public addScience(value) {
+		this.science += value;
+		//Debug.info("add " + value + " science to " + this.entity.name);
+	}
+	
+	public removeScience(value) {
+		this.science -= value;
+		//Debug.info("remove " + value + " science to " + this.entity.name);
+	}
+	
+	public addMagic(value) {
+		this.magic += value;
+		//Debug.info("add " + value + " magic to " + this.entity.name);
+	}
+	
+	public removeMagic(value) {
+		this.magic -= value;
+		//Debug.info("remove " + value + " magic to " + this.entity.name);
+	}
+	
+	public addPower(value) {
+		this.power += value;
+		//Debug.info("add " + value + " power to " + this.entity.name);
+	}
+	
+	public removePower(value) {
+		this.power -= value;
+		//Debug.info("remove " + value + " power to " + this.entity.name);
+	}
+	
+	public addAbso(value) {
+		this.abso += value;
+		//Debug.info("add " + value + " abso to " + this.entity.name);
+	}
+	
+	public removeAbso(value) {
+		this.abso -= value;
+		//Debug.info("remove " + value + " abso to " + this.entity.name);
+	}
+	
+	public addRel(value) {
+		this.rel += value;
+		//Debug.info("add " + value + " rel to " + this.entity.name);
+	}
+	
+	public removeRel(value) {
+		this.rel -= value;
+		//Debug.info("remove " + value + " rel to " + this.entity.name);
+	}
+	
+	public addDmgReturn(value) {
+		this.dmgReturn += value;
+		//Debug.info("add " + value + " dmg return to " + this.entity.name);
+	}
+	
+	public removeDmgReturn(value) {
+		this.dmgReturn -= value;
+		//Debug.info("remove " + value + " dmg return to " + this.entity.name);
+	}
+	
+	public addTP(value) {
+		this.tp += value;
+		//Debug.info("add " + value + " tp to " + this.entity.name);
+	}
+	
+	public removeTP(value) {
+		this.tp -= value;
+		//Debug.info("remove " + value + " tp to " + this.entity.name);		
+	}
+	
+	public useTP(value) {
+		this.tp -= value;
+		//Debug.info("using " + value + " tp to " + this.entity.name);
+	}
+	
+	public addMP(value) {
+		this.mp += value;
+		//Debug.info("add " + value + " mp to " + this.entity.name);
+	}
+	
+	public removeMP(value) {
+		this.mp -= value;
+		//Debug.info("remove " + value + " mp to " + this.entity.name);		
+	}
+	
+	public useMP(value) {
+		this.mp -= value;
+		//Debug.info("using " + value + " mp to " + this.entity.name);
+	}
+	
+	public string() {
+		return
+			"\n maxLife : " + this.maxLife +
+			"\n life : " + this.life +
+			"\n strength : " + this.strength +
+			"\n wisdom : " + this.wisdom +
+			"\n agility : " + this.agility +
+			"\n resistance : " + this.resistance +
+			"\n science : " + this.science +
+			"\n magic : " + this.magic +
+			"\n power : " + this.power +
+			"\n tp : " + this.tp +
+			"\n mp : " + this.mp +
+			"\n abso : " + this.abso +
+			"\n rel : " + this.rel +
+			"\n dmgReturn : " + this.dmgReturn;
+	}
+}

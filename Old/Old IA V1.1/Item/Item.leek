@@ -1,0 +1,166 @@
+include("../Debug");
+include("../Entity/Entity");
+
+class Item {
+	public static damageItemPriorityCheck;
+	public initDamagePriority() {
+		Item.damageItemPriorityCheck = [
+			WEAPON_M_LASER: 1,
+			WEAPON_REVOKED_M_LASER: 1.3,
+			WEAPON_ELECTRISOR: 2,
+			WEAPON_RIFLE: 3,
+			WEAPON_GAZOR: 3.1,
+			CHIP_PLAGUE: 3.2,
+			CHIP_METEORITE: 3.3,
+			CHIP_ROCKFALL: 3.6,
+			CHIP_STALACTITE: 3.9,
+			WEAPON_RHINO: 4,
+			CHIP_TOXIN: 4.1,
+			CHIP_LIGHTNING: 4.3,
+			CHIP_ICEBERG: 4.6,
+			WEAPON_UNBRIDLED_GAZOR: 5,
+			CHIP_PLASMA: 5.3,
+			CHIP_ARSENIC: 5.6,
+			WEAPON_GRENADE_LAUNCHER: 6,
+			WEAPON_DESTROYER: 7,
+			WEAPON_FLAME_THROWER: 7.1,
+			CHIP_VENOM: 7.3,
+			CHIP_COVID: 7.6,
+			WEAPON_LASER: 8,
+			WEAPON_MAGNUM: 9,
+			WEAPON_SHOTGUN: 10,
+			WEAPON_DOUBLE_GUN: 11,
+			WEAPON_MAGNUM: 12,
+			WEAPON_PISTOL: 13,
+			WEAPON_B_LASER: 14,
+			CHIP_SPARK: 15,
+			CHIP_PEBBLE: 16,
+			CHIP_ROCK: 17,
+			CHIP_FLASH: 18,
+			CHIP_FLAME: 19,
+			CHIP_ICE: 20,
+			CHIP_SHOCK: 21,
+			WEAPON_KATANA: 22,
+			WEAPON_AXE: 23,
+			WEAPON_BROADSWORD: 24
+		]
+	}
+
+	private static effectiveAreaMemo;
+	public initMemo() {
+		Item.effectiveAreaMemo = new Memoize3(function(item, cell, from) {
+			var cells = [];
+			if (item.areaType == AREA_POINT) {
+				cells[cell.id] = cell;
+				return cells;
+			} else if (item.areaType == AREA_FIRST_INLINE) {
+				return Map.getAreaFirstInLine(cells, item.maxRange - item.minRange, cell, from);
+			} else if (item.areaType == AREA_LASER_LINE) {
+				return 	Map.getAreaLaserLine(cells, item.maxRange - item.minRange, cell, from);
+			} else if (item.areaType == AREA_CIRCLE_1) {
+				return 	Map.getAreaCircle1(cells, cell);
+			} else if (item.areaType == AREA_CIRCLE_2) {
+				return 	Map.getAreaCircle2(cells, cell);
+			} else if (item.areaType == AREA_CIRCLE_3) {
+				return 	Map.getAreaCircle3(cells, cell);
+			} else if (item.areaType == AREA_PLUS_1) {
+				return 	Map.getAreaPlus1(cells, cell);
+			} else if (item.areaType == AREA_PLUS_2) {
+				return 	Map.getAreaPlus2(cells, cell);
+			} else if (item.areaType == AREA_PLUS_3) {
+				return 	Map.getAreaPlus3(cells, cell);
+			} else if (item.areaType == AREA_SQUARE_1) {
+				return 	Map.getAreaSquare1(cells, cell);
+			} else if (item.areaType == AREA_SQUARE_2) {
+				return 	Map.getAreaSquare2(cells, cell);
+			} else if (item.areaType == AREA_X_1) {
+				return 	Map.getAreaCross1(cells, cell);
+			} else if (item.areaType == AREA_X_2) {
+				return 	Map.getAreaCross2(cells, cell);
+			} else if (item.areaType == AREA_X_3) {
+				return 	Map.getAreaCross3(cells, cell);
+			}
+		}, function(item, cell, from) {
+			return (from ? from.id : 614) << 18 | cell.id << 8 | item.areaType;
+		});
+	}
+	
+	protected id;
+	protected name;
+	protected areaType;
+	protected cost;
+	protected baseCooldown;
+	protected minRange;
+	protected maxRange;
+	protected isInline;
+	protected needLos;
+	protected effects = [];
+	protected effectsDamage = [];
+	protected caster;
+	
+	protected cooldown;
+
+	constructor(id, caster) {
+		Debug.debugCodePosition("Creating Item object for id : " + id, COLOR_GREEN);
+
+		this.id = id;
+		this.caster = caster;
+	}
+	
+	public getEffectiveArea(cell, from) {
+		return Item.effectiveAreaMemo.apply(this, cell, from);
+	}
+	
+	public getItemTargets(cell, from) {
+		var targets = [];
+		for (var cId : var c in getEffectiveArea(cell, from)) {
+			(c.hasEntity) and (push(targets, c.entity));
+		}
+		return targets;
+	}
+	
+	public getAoeMult(dist) {
+		var areaType = this.areaType;
+		if (areaType == AREA_LASER_LINE or areaType == AREA_FIRST_INLINE or areaType == AREA_POINT) {
+			return 1;	
+		} else {
+			return 1 - dist * 0.2;	
+		}
+	}
+	
+	public getAreaSize() {
+		if (this.areaType == AREA_CIRCLE_1) { 
+			return 1;
+		} else if (this.areaType == AREA_CIRCLE_2) {
+			return 2;
+		} else if (this.areaType == AREA_CIRCLE_3) {
+			return 3;
+		} else if (this.areaType == AREA_PLUS_1) {
+			return 1;
+		} else if (this.areaType == AREA_PLUS_2) {
+			return 2;
+		} else if (this.areaType == AREA_PLUS_3) {
+			return 3;
+		} else if (this.areaType == AREA_SQUARE_1) {
+			return 2;
+		} else if (this.areaType == AREA_SQUARE_2) {
+			return 4;
+		} else if (this.areaType == AREA_X_1) {
+			return 2;
+		} else if (this.areaType == AREA_X_2) {
+			return 4;
+		} else if (this.areaType == AREA_X_3) {
+			return 6;
+		} else if (this.areaType == AREA_POINT) {
+			return 0;
+		} else if (this.areaType == AREA_FIRST_INLINE) {
+			return 0;
+		} else if (this.areaType == AREA_LASER_LINE) {
+			return 0;
+		}
+	}
+	
+	public use(cell) {}
+	
+	public updateCooldown() {}
+}

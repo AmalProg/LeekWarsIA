@@ -1,0 +1,71 @@
+include("Bulb");
+include("Leek");
+include("Turret");
+
+class EntitiesGroup {
+	public anyEntity = [];
+	public leeks = [];
+	public bulbs = [];
+	public alive = [];
+	public aliveLeeks = [];
+	public deadLeeks = [];
+	public turret;
+
+	constructor(entities) {
+		for (var entityId in entities) {
+			var entity = null;
+			if (getType(entityId) == ENTITY_BULB) {
+				entity = Bulb.get(entityId);
+				push(this.alive, entity);
+				push(this.bulbs, entity);
+			} else if (getType(entityId) == ENTITY_TURRET) {
+				entity = Turret.get(entityId);
+				this.turret = entity;
+			} else {
+				entity = Leek.get(entityId);
+				push(this.leeks, entity);
+				if (isAlive(entityId)) {
+					push(this.alive, entity);
+					push(this.aliveLeeks, entity);
+				} else {
+					push(this.deadLeeks, entity);
+				}
+			}
+			
+			push(this.anyEntity, entity);
+			
+		}
+	}
+	
+	public update() {
+		var entities = this.anyEntity;
+		this.anyEntity = [];
+		this.leeks = [];
+		this.bulbs = [];
+		this.alive = [];
+		this.aliveLeeks = [];
+		this.deadLeeks = [];
+		
+		for (var entity in entities) {
+			var entityId = entity.id;
+			if (getType(entityId) == ENTITY_BULB) {
+				if (entity.alive) {
+					push(this.alive, entity);
+				}
+				push(this.bulbs, entity);
+			} else if (getType(entityId) == ENTITY_TURRET) {
+				this.turret = entity;
+			} else if (getType(entityId) == ENTITY_LEEK) {
+				push(this.leeks, entity);
+				if (entity.alive) {
+					push(this.alive, entity);
+					push(this.aliveLeeks, entity);
+				} else {
+					push(this.deadLeeks, entity);
+				}
+			}
+			
+			push(this.anyEntity, entity);
+		}
+	}
+}

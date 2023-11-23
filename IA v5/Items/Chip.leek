@@ -1,0 +1,59 @@
+include("Item");
+
+class Chip extends Item {
+	/** chips pool **/
+	private static Map<integer, Chip> chips = [:];
+	public static Chip get(integer id) {
+		if (Chip.chips[id] != null)
+			return Chip.chips[id]!;
+		
+		Chip chip = new Chip(id);
+		Chip.chips[id] = chip;
+		Item.items[id] = chip;
+		return Chip.chips[id]!;
+	}
+	/** fin chips pool **/
+	
+	constructor(integer id) {
+		super(id);
+		initStats();
+	}
+
+	private void initStats() {
+		this.name = getChipName(this.id);
+		this.areaType = getChipArea(this.id)!;
+		this.cost = getChipCost(this.id)!;
+		this.baseCooldown = getChipCooldown(this.id);
+		this.minRange = getChipMinRange(this.id)!;
+		this.maxRange = getChipMaxRange(this.id)!;
+		this.launchType = getChipLaunchType(this.id)!;
+		this.needLos = chipNeedLos(this.id);
+		for (Array<any> effectArray in getChipEffects(this.id)!) {
+			Effect? eff = Effect.createEffect(effectArray, this);
+			if (eff != null) {
+				push(this._effects, eff!);
+				setPut(this._effectsTypeList, eff!.getType());
+			}
+		}
+		
+		this.initTeamTargetsBool();
+	}
+	
+	protected Set<Cell> getItemEffectiveArea(Cell cell, Cell? from) {
+		Set<Cell> cells = <>;
+		integer? fromId = null;
+		if (from != null) fromId = from!.id;
+		for (integer cId in getChipEffectiveArea(this.id, cell.id, fromId)!) {
+			setPut(cells, CellMap.getCell(cId));
+		}
+		return cells;
+	}
+	
+	public boolean canUseItemOnCell(Cell cell) {
+		return canUseChipOnCell(this.id, cell.id);
+	}
+	
+	public integer use(Cell cell) {
+		return useChipOnCell(this.id, cell.id);
+	}
+}

@@ -1,0 +1,47 @@
+include("../Debug");
+include("Item");
+include("ItemEffect");
+
+class Chip extends Item {
+	/** chips pool **/
+	private static chips = [];
+	public static get(id) {
+		if (Chip.chips[id] != null)
+			return Chip.chips[id];
+		var chip = new Chip(id);
+		Chip.chips[id] = chip;
+		Item.items[id] = chip;
+		return Chip.chips[id];
+	}
+	/** fin chips pool **/
+	
+	constructor(id) {
+		super(id);
+		initStats();
+	}
+
+	private initStats() {
+		this.name = getChipName(this.id);
+		this.areaType = getChipArea(this.id);
+		this.cost = getChipCost(this.id);
+		this.baseCooldown = getChipCooldown(this.id);
+		this.minRange = getChipMinRange(this.id);
+		this.maxRange = getChipMaxRange(this.id);
+		this.launchType = getChipLaunchType(this.id);
+		this.needLos = chipNeedLos(this.id);
+		for (var effect in getChipEffects(this.id)) {
+			var eff = new ItemEffect(effect, this);
+			push(this.effects, eff);
+			if(ItemEffect.damageEffects[eff.type])
+				push(this.effectsDamage, eff);
+			
+			this.effectsTypeList[eff.type] = true;
+		}
+	}
+	
+	public use(cell) {
+		var result = useChipOnCell(this.id, cell.id);
+		
+		return result;
+	}
+}

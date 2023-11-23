@@ -1,0 +1,109 @@
+class EntityScore {
+	public damage = 0;
+	public poison = 0;
+	public lifeDamage = 0;
+	public novaDamage = 0;
+	public heal = 0;
+	public novaVitality = 0;
+	public boostMaxLife = 0;
+	public buffAgility = 0;
+	public buffResistance = 0;
+	public buffWisdom = 0;
+	public buffMp = 0;
+	public buffTp = 0;
+	public buffStrength = 0;
+	public rawBuffAgility = 0;
+	public rawBuffResistance = 0;
+	public rawBuffWisdom = 0;
+	public rawBuffMp = 0;
+	public rawBuffTp = 0;
+	public rawBuffStrength = 0;
+	public rawBuffMagic = 0;
+	public shackleAgility = 0;
+	public shackleWisdom = 0;
+	public shackleMp = 0;
+	public shackleTp = 0;
+	public shackleStrength = 0;
+	public shackleMagic = 0;
+	public removeShackles = 0;
+	public abso = 0;
+	public rel = 0;
+	public absoVulnerability = 0;
+	public relVulnerability = 0;
+	public stealAbso = 0;
+	public damageReturn = 0;
+	public afterEffect = 0;
+	public antidote = 0;
+	public debuff = 0;
+	public teleport = 0;
+	public invert = 0;
+	public ressurect = 0;
+	public _summon = 0;
+	public summonHeal = 0;
+	public summonRes = 0;
+	public summonDamage = 0;
+	public summonPoison = 0;
+	public summonMove = 0;
+	public summonNova = 0;
+	public kill = 0;
+	public attract = 0;
+	public _push = 0;
+	public damageToAbso = 0;
+	public damageToStrength = 0;
+	public poisonToScience = 0;
+	public novaDamageToMagic = 0;
+	public propagation = 0;
+	public movedToMp = 0;
+	
+	public string() {
+		return " { damage : " + this.damage +
+			" | poison : " + this.poison +
+			" | lifeDamage : " + this.lifeDamage +
+			" | novaDamage : " + this.novaDamage +
+			" | heal : " + this.heal +
+			" | novaVitality : " + this.novaVitality +
+			" | boostMaxLife : " + this.boostMaxLife +
+			" | buffAgility : " + this.buffAgility +
+			" | buffResistance : " + this.buffResistance +
+			" | buffWisdom : " + this.buffWisdom +
+			" | buffMp : " + this.buffMp +
+			" | buffTp : " + this.buffTp +
+			" | buffStrength : " + this.buffStrength +
+			" | rawBuffAgility : " + this.rawBuffAgility +
+			" | rawBuffResistance : " + this.rawBuffResistance +
+			" | rawBuffWisdom : " + this.rawBuffWisdom +
+			" | rawBuffMp : " + this.rawBuffMp +
+			" | rawBuffTp : " + this.rawBuffTp +
+			" | rawBuffStrength : " + this.rawBuffStrength +
+			" | rawBuffMagic : " + this.rawBuffMagic +
+			" | shackleAgility : " + this.shackleAgility +
+			" | shackleWisdom : " + this.shackleWisdom +
+			" | shackleMp : " + this.shackleMp +
+			" | shackleTp : " + this.shackleTp +
+			" | shackleStrength : " + this.shackleStrength +
+			" | shackleMagic : " + this.shackleMagic +
+			" | removeShackles : " + this.removeShackles +
+			" | abso : " + this.abso +
+			" | rel : " + this.rel +
+			" | absoVulnerability : " + this.absoVulnerability +
+			" | relVulnerability : " + this.relVulnerability +
+			" | stealAbso : " + this.stealAbso +
+			" | damageReturn : " + this.damageReturn +
+			" | afterEffect : " + this.afterEffect +
+			" | antidote : " + this.antidote +
+			" | debuff : " + this.debuff +
+			" | teleport : " + this.teleport +
+			" | invert : " + this.invert +
+			" | ressurect : " + this.ressurect +
+			" | summon : " + this._summon +
+			" | kill : " + this.kill +
+			" | attract : " + this.attract +
+			" | push : " + this._push +
+			" | damageToAbso : " + this.damageToAbso +
+			" | damageToStrength : " + this.damageToStrength +
+			" | poisonToScience : " + this.poisonToScience +
+			" | novaDamageToMagic : " + this.novaDamageToMagic +
+			" | propagation : " + this.propagation +
+			" | movedToMp : " + this.movedToMp + " } ";
+	}
+}

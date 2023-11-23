@@ -1,0 +1,133 @@
+include("../Item/ItemEffect");
+
+class OrderedActions {
+	private orderedActions;
+	private summonActions;
+
+	constructor() {
+		this.orderedActions = [];
+		this.summonActions = [];
+	}
+
+	public getOrderedActions() {
+		return this.orderedActions;
+	}
+	public getSummonActions() {
+		return this.summonActions;
+	}
+
+	public order(actions, caster) {
+		var selfCastActions = [];
+		var otherActions = [];
+		 
+		for (var action in actions) {
+			// cas d'un summon
+			if (action.getCellToUse() == null) {
+				push(this.summonActions, action);
+				continue;
+			} else if (action.getCellTarget() == null) {
+				push(otherActions, action);
+				continue;
+			}
+			
+			var targets = action.getItem().getItemTargets(action.getCellTarget(), action.getCellToUse(), caster);
+			
+			// si c'est un self cast
+			if (action.getCellToUse().id == action.getCellTarget().id and ((count(targets) == 1 and targets[caster.id] != null) or(count(targets) == 0))) {
+				action.setCellTarget(null);
+				action.setCellToUse(null);
+				push(selfCastActions, action);
+			} else {
+				push(otherActions, action);
+			}
+		}
+		
+		selfCastActions = arraySort(selfCastActions, function(action1, action2) {
+			var score1 = getSelfActionOrderScore(action1);
+			var score2 = getSelfActionOrderScore(action2);
+			
+			return score1 - score2;
+		});	
+		
+		otherActions = arraySort(otherActions, function(action1, action2) {
+			var cellToUse1 = action1.getCellToUse();
+			var cellToUseId1 = -1;
+			if (cellToUse1 != null)
+				cellToUseId1 = cellToUse1.id;
+			var cellToUse2 = action2.getCellToUse();
+			var cellToUseId2 = -1;
+			if (cellToUse2 != null)
+				cellToUseId2 = cellToUse2.id;
+			
+			if (cellToUseId1 == cellToUseId2) {
+				var itemToTeleport1 = action1.getItemToTeleport();
+				var itemToTeleport2 = action2.getItemToTeleport();
+				
+				var score1 = getActionOrderScore(action1);
+				var score2 = getActionOrderScore(action2);
+				
+				if (score1 <= score2 and itemToTeleport2 != null) {
+					action1.setItemToTeleport(itemToTeleport2);
+				} else if (score2 <= score1 and itemToTeleport1 != null) {
+					action2.setItemToTeleport(itemToTeleport1);
+				} else if (score2 == score1) {
+					if (itemToTeleport2 != null)
+						return 1;
+					else if (itemToTeleport1 != null)
+						return -1;
+					else 
+						return 0
+				}
+				return score1 - score2;
+			}
+			return action1.getId() - action2.getId();
+		});
+		
+		this.orderedActions = selfCastActions + otherActions;
+	}
+
+	private getSelfActionOrderScore(action) {
+		var score = 0;
+		for (var effect in action.getItem().effects) {
+			 if (effect.type == EFFECT_DEBUFF) {
+				score += 0;
+			 } else if(effect.type == EFFECT_BUFF_AGILITY or effect.type == EFFECT_RAW_BUFF_AGILITY) {
+				score += 1;
+			} else if(ItemEffect.buffEffects[effect.type] or ItemEffect.rawBuffEffects[effect.type]) {
+				score += 2;
+			} else if(ItemEffect.maxLifeEffects[effect.type]) {
+				score += 4;
+			} else if(ItemEffect.healEffects[effect.type] or ItemEffect.shieldEffects[effect.type] or ItemEffect.dmgReturnEffects[effect.type]) {
+				score += 5;
+			} else if(effect.type == EFFECT_ANTIDOTE or effect.type == EFFECT_REMOVE_SHACKLES) {
+				score += 6;
+			} else if(effect.type == EFFECT_SUMMON) {
+				score += 8;
+			} else {
+				score += 7;
+			}
+		}
+		
+		return score / count(action.getItem().effects);
+	}
+
+	private getActionOrderScore(action) {
+		var score = 0;
+		for (var effect in action.getItem().effects) {
+			
+			if (effect.type == EFFECT_DEBUFF) {
+				score += 0;
+			} else if (ItemEffect.buffEffects[effect.type]) {
+				score += 1;	
+			} else if (ItemEffect.vulnerabilityEffects[effect.type]) {
+				score += 2;
+			} else if(effect.type == EFFECT_NOVA_DAMAGE) {
+				score += 4;
+			} else { 
+				score += 3;
+			}
+		}
+		
+		return score / count(action.getItem().effects);
+	}
+}

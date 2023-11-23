@@ -1,0 +1,154 @@
+class EntityStatsDiviser {
+	public static integer maxLife = 2150;
+	public static integer abso = 180;
+	public static integer rel = 70;
+	public static integer dmgReturn = 40;
+	public static integer strength = 400;
+	public static integer power = 50;
+	public static integer magic = 400;
+	public static integer wisdom = 335;
+	public static integer resistance = 335;
+	public static integer agility = 335;
+	public static integer science = 400;
+	public static integer poison = 750;
+	public static integer mp = 4;
+	public static integer tp = 12;
+	
+	public static reset() {
+		EntityStatsDiviser.maxLife = 0;
+		EntityStatsDiviser.abso = 0;
+		EntityStatsDiviser.rel = 0;
+		EntityStatsDiviser.dmgReturn = 0;
+		EntityStatsDiviser.strength = 0;
+		EntityStatsDiviser.power = 0;
+		EntityStatsDiviser.magic = 0;
+		EntityStatsDiviser.wisdom = 0;
+		EntityStatsDiviser.resistance = 0;
+		EntityStatsDiviser.agility = 0;
+		EntityStatsDiviser.science = 0;
+		EntityStatsDiviser.poison = 0;
+		EntityStatsDiviser.mp = 0;
+		EntityStatsDiviser.tp = 0;
+	}
+	
+	public static init(Set<AbstractEntity> alliesLeeks) {
+		EntityStatsDiviser.reset();
+		
+		real meanLevel = 0.0;
+		for (AbstractEntity entity in alliesLeeks) {
+			meanLevel = entity.getLevel() as real;
+		}
+		meanLevel /= setSize(alliesLeeks);
+		
+		var capital = 50 + meanLevel * 5;
+		if (meanLevel > 99) capital += 45;
+		if (meanLevel > 199) capital += 45;
+		if (meanLevel > 299) capital += 45;
+		if (meanLevel > 300) capital += 95;
+			
+		var lifeCapital = capital / 7.12;
+		var value = 0;
+		if (lifeCapital > 250) {
+			lifeCapital -= 250;
+			value += 1000;
+			if (lifeCapital > 333) {
+				lifeCapital -= 333;
+				value += 1000;
+				if (lifeCapital > 500) {
+					lifeCapital -= 500;
+					value += 1000;
+				} else {
+					value += lifeCapital * 2;
+				}
+			} else {
+				value += lifeCapital * 3;
+			}
+		} else {
+			value += lifeCapital * 4;
+		}
+		EntityStatsDiviser.maxLife = 100 + ((meanLevel - 1) * 3) + value;
+		
+		var attackCapital = capital / 4.45;
+		EntityStatsDiviser.strength = getStatValue(attackCapital);
+		EntityStatsDiviser.magic = EntityStatsDiviser.strength;
+		
+		var wisdomCapital = capital / 7.12;
+		EntityStatsDiviser.wisdom = getStatValue(wisdomCapital);
+		
+		var resistanceCapital = capital / 7.12;
+		EntityStatsDiviser.resistance = getStatValue(resistanceCapital);
+		
+		var agilityCapital = capital / 1.78;
+		EntityStatsDiviser.agility = getStatValue(agilityCapital);
+		
+		var scienceCapital = capital / 7.12;
+		EntityStatsDiviser.science = getStatValue(scienceCapital);
+		
+		var mpCapital = capital / 14.8;
+		EntityStatsDiviser.mp = 3;
+		if (mpCapital >= 20) EntityStatsDiviser.mp = 4;
+		if (mpCapital >= 60) EntityStatsDiviser.mp = 5;
+		if (mpCapital >= 120) EntityStatsDiviser.mp = 6;
+		if (mpCapital >= 200) EntityStatsDiviser.mp = 7;
+		if (mpCapital >= 300) EntityStatsDiviser.mp = 8;
+		
+		var tpCapital = capital / 2.94;
+		EntityStatsDiviser.tp = 10;
+		if (tpCapital >= 30) EntityStatsDiviser.tp = 11;
+		if (tpCapital >= 65) EntityStatsDiviser.tp = 12;
+		if (tpCapital >= 105) EntityStatsDiviser.tp = 13;
+		if (tpCapital >= 150) EntityStatsDiviser.tp = 14;
+		if (tpCapital >= 200) EntityStatsDiviser.tp = 15;
+		if (tpCapital >= 255) EntityStatsDiviser.tp = 16;
+		if (tpCapital >= 315) EntityStatsDiviser.tp = 17;
+		if (tpCapital >= 380) EntityStatsDiviser.tp = 18;
+		if (tpCapital >= 450) EntityStatsDiviser.tp = 19;
+		if (tpCapital >= 525) EntityStatsDiviser.tp = 20;
+		if (tpCapital >= 605) EntityStatsDiviser.tp = 21;
+		if (tpCapital >= 690) EntityStatsDiviser.tp = 22;
+		
+		EntityStatsDiviser.abso = 14 * max(1, meanLevel / 30);
+		EntityStatsDiviser.rel = 20 * max(1, meanLevel / 100);
+		EntityStatsDiviser.dmgReturn = 15 * max(1, meanLevel / 100);
+		
+		/*debug(EntityStatsDiviser.maxLife);
+		debug(EntityStatsDiviser.abso);
+		debug(EntityStatsDiviser.rel);
+		debug(EntityStatsDiviser.dmgReturn);
+		debug(EntityStatsDiviser.strength);
+		debug(EntityStatsDiviser.magic);
+		debug(EntityStatsDiviser.wisdom);
+		debug(EntityStatsDiviser.resistance);
+		debug(EntityStatsDiviser.agility);
+		debug(EntityStatsDiviser.science);
+		debug(EntityStatsDiviser.mp);
+		debug(EntityStatsDiviser.tp);*/
+	}
+	
+	private static getStatValue(capital) {
+		var value = 0;
+		if (capital > 100) {
+			capital -= 100;
+			value += 200;
+			if (capital > 100) {
+				capital -= 100;
+				value += 100;
+				if (capital > 100) {
+					capital -= 100;
+					value += 100;
+					if (capital > 400) {
+						value += 200;
+					}
+				} else {
+					value += capital / 2;
+				}
+			} else {
+				value += capital;
+			}
+		} else {
+			value += capital * 2;
+		}
+		
+		return value;
+	}
+}

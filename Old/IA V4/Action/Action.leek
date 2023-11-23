@@ -1,0 +1,78 @@
+class Action {
+	public static allId = 0;
+	public id;
+	public cellToUse;
+	public otherGoodActions;
+	public cellTarget;
+	public item;
+	public itemToTeleport;
+	public execCount;
+	
+	public constructor() {
+		Action.allId++;
+		
+		this.id = allId;
+		this.cellToUse = null;
+		this.otherGoodActions = [];
+		this.cellTarget = null;
+		this.item = null;
+		this.itemToTeleport = null;
+		this.execCount = 1;
+	} 
+	
+	public constructor(cellToUse, cellTarget, item, itemToTeleport) {
+		Action.allId++;
+		
+		this.id = allId;
+		this.cellToUse = cellToUse;
+		this.otherGoodActions = [];
+		this.cellTarget = cellTarget;
+		this.item = item;
+		this.itemToTeleport = itemToTeleport;
+		this.execCount = 1;
+	}
+	
+	public setCellToUse(cell) {
+		this.cellToUse = cell;
+	}
+	public addOtherGoodActions(action) {
+		this.otherGoodActions[action] = action;	
+	}
+	public setCellTarget(cell) {
+		this.cellTarget = cell;
+	}
+	public setItem(item) {
+		this.item = item;
+	}
+	public setItemToTeleport(itemToTeleport) {
+		this.itemToTeleport = itemToTeleport;
+	}
+	
+	public getId() {
+		return this.id;	
+	}
+	public getCellToUse() {
+		return this.cellToUse;
+	}
+	public getOtherGoodActions() {
+		return this.otherGoodActions;	
+	}
+	public getCellTarget() {
+		return this.cellTarget;
+	}
+	public getItem() {
+		return this.item;
+	}
+	public getItemToTeleport() {
+		return this.itemToTeleport;
+	}
+	
+	public string() {
+		return "{ id : " + this.id +
+			"\n cellToUse : " + this.cellToUse +
+			"\n cellTarget : " + this.cellTarget +
+			"\n item : " + this.item +
+			"\n itemToTeleport : " + this.itemToTeleport +
+			"\n execCount : " + this.execCount + " }\n";
+	}
+}

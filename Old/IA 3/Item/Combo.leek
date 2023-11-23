@@ -1,0 +1,124 @@
+include("Weapon");
+include("../Utils/ArrayUtils");
+
+class Combo {
+	public items; public getItems() {return this.items}
+	public cost;
+	public debuffEffects;
+	public otherEffects;
+	public damageEffects;
+
+	public addItem(item, cost) {
+		push(this.items, item);
+		this.cost += cost;
+		
+		for (var effect in item.effects) {
+			if (effect == EFFECT_DEBUFF) {
+				push(debuffEffects, effect);
+			} else if (ItemEffect.vulnerabilityEffects[effect.type] or ItemEffect.buffEffects[effect.type]) {
+				push(otherEffects, effect);
+			} else if (ItemEffect.damageEffects[effect.type]) {
+				push(damageEffects, effect);
+			}
+		}
+	}
+	
+	public calculateDamage(target, caster, targetStats, casterStats) {
+		if (this.items == []) return 0;
+		
+		for (var effect in this.debuffEffects) {
+			effect.applyToForKillCombo(target, caster, targetStats, casterStats, target.cell, 0);
+		}
+		for (var effect in this.otherEffects) {
+			if (ItemEffect.buffEffects[effect.type]) {
+				effect.applyToForKillCombo(caster, caster, targetStats, casterStats, target.cell, 0);
+			}
+			if (!ItemEffect.movementEffects[effect.type]) {
+				effect.applyToForKillCombo(target, caster, targetStats, casterStats,target.cell, 0);
+			}
+		}
+		
+		var dmgDone = 0;
+		for (var effect in this.damageEffects) {
+			if (effect.canTarget(target, caster))
+				dmgDone += effect.getAppliedValue(target, caster, target.cell, 1);
+		}
+		
+		return dmgDone;
+	}
+	
+	constructor() {
+		this.items = [];
+		this.cost = 0;
+		this.debuffEffects = [];
+		this.otherEffects = [];
+		this.damageEffects = [];
+	}
+	constructor(combo) {
+		this.items = clone(combo.items);
+		this.cost = combo.cost;
+		this.debuffEffects = clone(combo.debuffEffects);
+		this.otherEffects = clone(combo.otherEffects);
+		this.damageEffects = clone(combo.damageEffects);
+	}
+
+	public static generate(itemList, tp, equippedWeaponId) {
+		return insideGenerate(itemList, tp, equippedWeaponId, new Combo());
+	}
+		
+	private static insideGenerate(itemList, tp, equippedWeaponId, currentCombo) {
+		if (tp <= 0) return [];
+		
+		var combos = [];
+		var noDuplicateItem = clone(itemList);
+		for (var item in itemList) {
+			if (item.baseCooldown != 0 and isItemInCombo(currentCombo, item)) continue;
+			var useCost = item.cost;
+			if (item instanceof Weapon and item.id != equippedWeaponId)
+				useCost += 1;
+			if (useCost <= tp) {
+				var combo = new Combo(currentCombo);
+				combo.addItem(item, useCost);
+				push(combos, combo);
+				pushAll(combos, Combo.insideGenerate(noDuplicateItem, tp - useCost, equippedWeaponId, combo))
+			}
+			
+			removeElement(noDuplicateItem, item);
+		}
+		return combos;
+	}
+	
+	public static getUseableCombos(combos, caster) {
+		var useableCombos = [];
+		for (var combo in combos) {
+			var useable = true;
+			if (combo.cost > caster.stats.tp) {
+				useable = false;
+			} else {
+				for (var item in combo.items) {
+					if (caster.cooldowns[item.id] != 0) {
+						useable = false;
+						break;
+					}
+				}
+			}
+			
+			if (useable) {
+				useableCombos[combo] = combo;	
+			}
+		}
+		
+		return useableCombos;
+	}
+	
+	public string() {
+		var str = "";
+		for (var item in this.items) {
+			str += item.name + " "
+		}
+		str += ", " + this.cost; 
+		str += '\n';
+		
+		return str;
+	}
+}

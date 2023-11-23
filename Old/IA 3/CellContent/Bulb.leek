@@ -1,0 +1,197 @@
+include("../Debug");
+include("Entity");
+
+class Bulb extends Entity { 
+	/** Bulbs pool **/
+	private static bulbs = [];
+	public static initBulbs(entitiesId) {
+		for (var bulb in Bulb.bulbs) {
+			if (entitiesId[bulb.id] == null) {
+				// le bulbe est mort
+				removeKey(Bulb.bulbs, bulb.id);
+			}
+		}
+		
+		for (var bulbId in entitiesId) {
+			if (getType(bulbId) == ENTITY_BULB) {
+				if (Bulb.get(bulbId) != null) continue;
+			
+				bulbs[bulbId] = new Bulb(bulbId);
+				Entity.entities[bulbId] = bulbs[bulbId];
+			}
+		}
+	}
+	public static get(id) {
+		return Bulb.bulbs[id];
+	}
+	/** fin bulbs pool **/
+	
+	public static supportBulbChips = [CHIP_PUNY_BULB: true, CHIP_HEALER_BULB: true, CHIP_METALLIC_BULB: true, CHIP_TACTICIAN_BULB: true, CHIP_SAVANT_BULB: true];
+	public static damageBulbChips = [CHIP_ROCKY_BULB: true, CHIP_ICED_BULB: true, CHIP_FIRE_BULB: true, CHIP_LIGHTNING_BULB: true, CHIP_WIZARD_BULB: true];
+	public isSupport;
+	public isDamage;
+	
+	constructor(id) {
+		super(id);
+		
+		if (supportBulbChips[bulbsNameChip[this.name]])
+			this.isSupport = true;
+		if (damageBulbChips[bulbsNameChip[this.name]])
+			this.isDamage = true;
+	}
+	
+	public static updateBulbsStats() {
+		for (var bulb in Bulb.bulbs) {
+			bulb.updateStats();
+		}
+	}
+	public updateStats() {
+		super.updateStats();
+	}
+	
+	public calculateScore(game) {
+		super.calculateScore(game);
+		
+		if (this.isDamage) {
+			this.scores.damage *= 0.75;
+			this.scores.poison *= 0.75;
+			this.scores.lifeDamage *= 0.75;
+			this.scores.novaDamage *= 0.2;
+			this.scores.heal *= 0.4;
+			this.scores.novaVitality *= 0.5;
+			this.scores.boostMaxLife *= 0.5;
+			this.scores.buffAgility *= 0.3;
+			this.scores.buffResistance *= 0;
+			this.scores.buffWisdom *= 0;
+			this.scores.buffMp *= 0.6;
+			this.scores.buffTp *= 0.6;
+			this.scores.buffStrength *= 0.6;
+			this.scores.rawBuffAgility *= 0.3;
+			this.scores.rawBuffResistance *= 0;
+			this.scores.rawBuffWisdom *= 0;
+			this.scores.rawBuffMp *= 0.6;
+			this.scores.rawBuffTp *= 0.6;
+			this.scores.rawBuffStrength *= 0.6;
+			this.scores.rawBuffMagic *= 0.6;
+			this.scores.shackleAgility  *= 0.5;
+			this.scores.shackleWisdom *= 0.2;
+			this.scores.shackleMp *= 0.5;
+			this.scores.shackleTp *= 0.5;
+			this.scores.shackleStrength *= 0.7;
+			this.scores.shackleMagic *= 0.7;
+			this.scores.removeShackles *= 0.2;
+			this.scores.abso *= 0.2;
+			this.scores.rel *= 0.2;
+			this.scores.absoVulnerability *= 0.5;
+			this.scores.relVulnerability *= 0.5;
+			this.scores.stealAbso *= 0.2;
+			this.scores.damageReturn *= 0.3;
+			this.scores.afterEffect *= 0.3;
+			this.scores.antidote *= 0.4;
+			this.scores.debuff *= 0.4;
+			this.scores.teleport *= 0;
+			this.scores.invert *= 1;
+			this.scores.ressurect *= 0;
+			this.scores._summon *= 0;
+			this.scores.summonPuny *= 0;
+			this.scores.summonHeal *= 0;
+			this.scores.summonRes *= 0;
+			this.scores.summonDamage *= 0;
+			this.scores.summonPoison *= 0;
+			this.scores.summonMove *= 0;
+			this.scores.summonNova *= 0;
+			this.scores.kill *= 0.3;
+			this.scores.attract *= 0.5;
+			this.scores._push *= 0.5;
+			this.scores.damageToAbso *= 0;
+			this.scores.damageToStrength *= 0;
+			this.scores.poisonToScience *= 0;
+			this.scores.novaDamageToMagic *= 0;
+			this.scores.movedToMp *= 0;
+			this.scores.willGetHit *= 0.3;
+			//this.scores.propagation;
+			//this.scores.usefulnessScore;
+			//this.scores.isolated;
+			//this.scores.nearEnemies;
+			//this.scores.inDanger;
+			//this.scores.desperated;
+			this.scores.debuffProtect *= 0.6;
+			this.scores.debuffDanger *= 0.6;
+		} else if (this.isSupport) {
+			this.scores.damage *= 0.65;
+			this.scores.poison *= 0.55;
+			this.scores.lifeDamage *= 0.55;
+			this.scores.novaDamage *= 0.2;
+			this.scores.heal *= 0.6;
+			this.scores.novaVitality *= 0.5;
+			this.scores.boostMaxLife *= 0.5;
+			this.scores.buffAgility *= 0.45;
+			this.scores.buffResistance *= 0.6;
+			this.scores.buffWisdom *= 0.6;
+			this.scores.buffMp *= 0.4;
+			this.scores.buffTp *= 0.4;
+			this.scores.buffStrength *= 0;
+			this.scores.rawBuffAgility *= 0.25;
+			this.scores.rawBuffResistance *= 0.6;
+			this.scores.rawBuffWisdom *= 0.6;
+			this.scores.rawBuffMp *= 0.4;
+			this.scores.rawBuffTp *= 0.4;
+			this.scores.rawBuffStrength *= 0;
+			this.scores.rawBuffMagic *= 0;
+			this.scores.shackleAgility  *= 0;
+			this.scores.shackleWisdom *= 0.4;
+			this.scores.shackleMp *= 0.5;
+			this.scores.shackleTp *= 0.5;
+			this.scores.shackleStrength *= 0;
+			this.scores.shackleMagic *= 0;
+			this.scores.removeShackles *= 0.1;
+			this.scores.abso *= 0.2;
+			this.scores.rel *= 0.2;
+			this.scores.absoVulnerability *= 0.3;
+			this.scores.relVulnerability *= 0.3;
+			this.scores.stealAbso *= 0.2;
+			this.scores.damageReturn *= 0.3;
+			this.scores.afterEffect *= 0.3;
+			this.scores.antidote *= 0.3;
+			this.scores.debuff *= 0.2;
+			this.scores.teleport *= 0;
+			this.scores.invert *= 1;
+			this.scores.ressurect *= 0;
+			this.scores._summon *= 0;
+			this.scores.summonPuny *= 0;
+			this.scores.summonHeal *= 0;
+			this.scores.summonRes *= 0;
+			this.scores.summonDamage *= 0;
+			this.scores.summonPoison *= 0;
+			this.scores.summonMove *= 0;
+			this.scores.summonNova *= 0;
+			this.scores.kill *= 0.2;
+			this.scores.attract *= 0.5;
+			this.scores._push *= 0.5;
+			this.scores.damageToAbso *= 0;
+			this.scores.damageToStrength *= 0;
+			this.scores.poisonToScience *= 0;
+			this.scores.novaDamageToMagic *= 0;
+			this.scores.movedToMp *= 0;
+			this.scores.willGetHit *= 0.2;
+			//this.scores.propagation;
+			//this.scores.usefulnessScore;
+			//this.scores.isolated;
+			//this.scores.nearEnemies;
+			//this.scores.inDanger;
+			//this.scores.desperated;
+			this.scores.debuffProtect *= 0.6;
+			this.scores.debuffDanger *= 0.6;
+		}
+	}
+
+	
+	public static bulbsNameChip = ["puny_bulb" : CHIP_PUNY_BULB, "rocky_bulb" : CHIP_ROCKY_BULB, 
+		"iced_bulb" : CHIP_ICED_BULB, "healer_bulb" : CHIP_HEALER_BULB, 
+		"metallic_bulb" : CHIP_METALLIC_BULB, "fire_bulb" : CHIP_FIRE_BULB, 
+		"lightning_bulb" : CHIP_LIGHTNING_BULB, 
+		"wizard_bulb" : CHIP_WIZARD_BULB,
+		"tactician_bulb" : CHIP_TACTICIAN_BULB, 
+		"savant_bulb" : CHIP_SAVANT_BULB
+	];
+}

@@ -1,0 +1,24 @@
+include("IA");
+include("Debug");
+
+Debug.enabledWarning = true;
+Debug.enabledError = true;
+Debug.enabledLogC = false;
+Debug.enabledLog = false;
+Debug.enabledOp = false;
+if (getFightContext() == FIGHT_CONTEXT_TEST or getFightContext() == FIGHT_CONTEXT_CHALLENGE) {
+	Debug.enabledLog = true;
+	Debug.enabledLogC = false;
+	Debug.enabledInfo = false;
+}
+
+global ia = new IA();
+
+ia.start();
+
+ia.execute(); 
+
+ia.end();
+
+Debug.logC("Operations ce tour : " + getOperations(), getColor(220, 120, 220));
+

@@ -1,4 +1,4 @@
-/** ExportÃ© le 22/11/2023 17:53:47 **/
+/** Exporté le 20/11/2023 18:24:50 **/
 
 /** IA v5/Brain42 **/
 
@@ -209,11 +209,11 @@ class Area {
 	
 	
 	/**
-	 * RÃ©cupÃ¨re la premiÃ¨re cellule permettant d'utilier l'item sur la cellule target
+	 * Récupère la première cellule permettant d'utilier l'item sur la cellule target
 	 * 
 	 * params
-	 * target : la cellule Ã  viser
-	 * item : l'item utilisÃ©
+	 * target : la cellule à viser
+	 * item : l'item utilisé
 	 * 
 	 * return
 	 *  : la cellule
@@ -230,7 +230,7 @@ class Area {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re une ligne
+	 * Récupère une ligne
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -252,7 +252,7 @@ class Area {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re une zone en forme de +
+	 * Récupère une zone en forme de +
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -277,7 +277,7 @@ class Area {
 	);
 	
 	/**
-	 * RÃ©cupÃ¨re une zone en forme de + avec test de los
+	 * Récupère une zone en forme de + avec test de los
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -297,7 +297,7 @@ class Area {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re une zone en forme de + pour les inversion
+	 * Récupère une zone en forme de + pour les inversion
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -327,7 +327,7 @@ class Area {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re une zone en forme de + pour les inversion
+	 * Récupère une zone en forme de + pour les inversion
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -357,7 +357,7 @@ class Area {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re une zone circulaire
+	 * Récupère une zone circulaire
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -419,7 +419,7 @@ class Area {
 	);
 	
 	/**
-	 * RÃ©cupÃ¨re une zone circulaire avec test de los
+	 * Récupère une zone circulaire avec test de los
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -439,7 +439,7 @@ class Area {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re une zone circulaire avec test de los
+	 * Récupère une zone circulaire avec test de los
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -469,7 +469,7 @@ class Area {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re une zone circulaire avec test de los
+	 * Récupère une zone circulaire avec test de los
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -499,7 +499,7 @@ class Area {
 	}
 
 	/**
-	 * RÃ©cupÃ¨re une zone diagonale avec test de los
+	 * Récupère une zone diagonale avec test de los
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -524,7 +524,7 @@ class Area {
 	);
 	
 	/**
-	 * RÃ©cupÃ¨re une zone diagonale avec test de los
+	 * Récupère une zone diagonale avec test de los
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -544,7 +544,7 @@ class Area {
 	}
 
 	/**
-	 * RÃ©cupÃ¨re une zone star avec test de los
+	 * Récupère une zone star avec test de los
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -565,7 +565,7 @@ class Area {
 	);
 	
 	/**
-	 * RÃ©cupÃ¨re une zone star avec test de los
+	 * Récupère une zone star avec test de los
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -727,14 +727,14 @@ class BuffMpEffect extends Effect {
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
 		integer finalValue = round(value * caster.getStats().getScienceMult());
-		return targetScores.getMPScore(finalValue, targetStats.getMP()) * targetAllyMult * targetScores.getAdjuster().buffMP;
+		return targetScores.getMPScore(finalValue, targetStats.getMP()) * targetAllyMult;
 	}
 	
 	public static real getFinalEffectScoreStatic(integer finalValue, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
 		EntityScores targetScores = target.getScores();
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
-		return targetScores.getMPScore(finalValue, targetStats.getMP()) * targetAllyMult * targetScores.getAdjuster().buffMP;
+		return targetScores.getMPScore(finalValue, targetStats.getMP()) * targetAllyMult;
 	}
 	
 	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
@@ -982,14 +982,14 @@ class RawBuffMpEffect extends Effect {
 		EntityScores targetScores = target.getScores();
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
-		return targetScores.getMPScore(round(value), targetStats.getMP()) * targetAllyMult * targetScores.getAdjuster().buffMP;
+		return targetScores.getMPScore(round(value), targetStats.getMP()) * targetAllyMult;
 	}
 	
 	public static real getFinalEffectScoreStatic(integer finalValue, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
 		EntityScores targetScores = target.getScores();
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
-		return targetScores.getMPScore(finalValue, targetStats.getMP()) * targetAllyMult * targetScores.getAdjuster().buffMP;
+		return targetScores.getMPScore(finalValue) * targetAllyMult;
 	}
 	
 	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
@@ -1041,14 +1041,14 @@ class AbsoluteShieldEffect extends Effect {
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
 		integer finalValue = round(value * casterStats.getResistanceMult());
-		return targetScores.getAbsoScore(finalValue, targetStats.getAbso(), targetStats.getRel()) * targetAllyMult * targetScores.getAdjuster().shieldAbso;
+		return targetScores.getAbsoScore(finalValue, targetStats.getAbso(), targetStats.getRel()) * targetAllyMult * targetScores.getAdjuster().shield;
 	}
 	
 	public static real getFinalEffectScoreStatic(integer finalValue, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
 		EntityScores targetScores = target.getScores();
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
-		return targetScores.getAbsoScore(finalValue, targetStats.getAbso(), targetStats.getRel()) * targetAllyMult * targetScores.getAdjuster().shieldAbso;
+		return targetScores.getAbsoScore(finalValue, targetStats.getAbso(), targetStats.getRel()) * targetAllyMult * targetScores.getAdjuster().shield;
 	}
 	
 	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
@@ -1101,14 +1101,14 @@ class StealAbsoluteShieldEffect extends Effect {
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
 		integer finalValue = round(value * casterStats.getResistanceMult());
-		return targetScores.getAbsoScore(finalValue, targetStats.getAbso(), targetStats.getRel()) * targetAllyMult * targetScores.getAdjuster().shieldAbso;
+		return targetScores.getAbsoScore(finalValue, targetStats.getAbso(), targetStats.getRel()) * targetAllyMult * targetScores.getAdjuster().shield;
 	}
 	
 	public static real getFinalEffectScoreStatic(integer finalValue, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
 		EntityScores targetScores = target.getScores();
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
-		return targetScores.getAbsoScore(finalValue, targetStats.getAbso(), targetStats.getRel()) * targetAllyMult * targetScores.getAdjuster().shieldAbso;
+		return targetScores.getAbsoScore(finalValue, targetStats.getAbso(), targetStats.getRel()) * targetAllyMult * targetScores.getAdjuster().shield;
 	}
 	
 	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
@@ -1129,14 +1129,14 @@ class RawAbsoluteShieldEffect extends Effect {
 		EntityScores targetScores = target.getScores();
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
-		return targetScores.getAbsoScore(round(value), targetStats.getAbso()) * targetAllyMult * targetScores.getAdjuster().shieldAbso;
+		return targetScores.getAbsoScore(round(value), targetStats.getAbso()) * targetAllyMult * targetScores.getAdjuster().shield;
 	}
 	
 	public static real getFinalEffectScoreStatic(integer finalValue, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
 		EntityScores targetScores = target.getScores();
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
-		return targetScores.getAbsoScore(finalValue, targetStats.getAbso()) * targetAllyMult * targetScores.getAdjuster().shieldAbso;
+		return targetScores.getAbsoScore(finalValue, targetStats.getAbso()) * targetAllyMult * targetScores.getAdjuster().shield;
 	}
 	
 	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
@@ -1200,7 +1200,7 @@ class AfterEffectEffect extends Effect {
 		if (dmg > 0) {
 			integer overDmg = 0;
 			if (dmg > targetStats.getLife()) {
-				// On ne gÃ¨re l'over dmg que pour un ennemi
+				// On ne gère l'over dmg que pour un ennemi
 				if (!target.isAnAlly())
 					overDmg = dmg - targetStats.getLife(); 
 				dmg = targetStats.getLife();
@@ -1285,7 +1285,7 @@ class DamageEffect extends Effect {
 			integer overDmg = 0;
 			
 			if (dmg > targetStats.getLife()) {
-				// On ne gÃ¨re l'over dmg que pour un ennemi
+				// On ne gère l'over dmg que pour un ennemi
 				if (!target.isAnAlly())
 					overDmg = dmg - targetStats.getLife(); 
 				dmg = targetStats.getLife();
@@ -1328,7 +1328,7 @@ class DamageEffect extends Effect {
 	
 	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
 		if (this._item.getId() == 143) return 0;
-			// TODO : gÃ©rer plasma
+			// TODO : gérer plasma
 		
 		real baseValue = this.getBaseValueToApply(cellTarget, cellFrom, caster, dist, isCasterHit);
 		real baseDmg = baseValue * casterStats.getStrengthMult() * casterStats.getPowerMult();
@@ -1376,7 +1376,7 @@ class LifeDamageEffect extends Effect {
 			if (dmg > targetStats.getLife()) {
 				dmg = targetStats.getLife();
 
-				// On ne gÃ¨re l'over dmg que pour un ennemi
+				// On ne gère l'over dmg que pour un ennemi
 				if (!target.isAnAlly())
 					overDmg = dmg - targetStats.getLife(); 
 				
@@ -1544,7 +1544,7 @@ class HealEffect extends Effect {
 		if (this._turns == 0) {
 			integer overHeal = 0;
 			if (finalValue > targetStats.getMaxLife() - targetStats.getLife()) {
-				// On ne gÃ¨re l'over heal que pour un alliÃ©
+				// On ne gère l'over heal que pour un allié
 				if (target.isAnAlly())
 					overHeal = (targetStats.getLife() + finalValue) - targetStats.getMaxLife(); 
 				finalValue = targetStats.getMaxLife() - targetStats.getLife();
@@ -1590,7 +1590,7 @@ class RawHealEffect extends Effect {
 		if (this._turns == 0) {
 			integer overHeal = 0;
 			if (finalValue > targetStats.getMaxLife() - targetStats.getLife()) {
-				// On ne gÃ¨re l'over heal que pour un alliÃ©
+				// On ne gère l'over heal que pour un allié
 				if (target.isAnAlly())
 					overHeal = (targetStats.getLife() + finalValue) - targetStats.getMaxLife(); 
 				finalValue = targetStats.getMaxLife() - targetStats.getLife();
@@ -1652,11 +1652,6 @@ class NovaVitalityEffect extends Effect {
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
 		integer finalValue = round(value * casterStats.getScienceMult());
 		return targetScores.getMaxLifeScore(finalValue, targetStats.getMaxLife()) * targetAllyMult;
-	}
-	
-	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
-		real baseValue = this.getBaseValueToApply(cellTarget, cellFrom, caster, dist, isCasterHit);
-		return round(baseValue * casterStats.getScienceMult());
 	}
 }
 /** IA v5/Effects/ShackleAgilityEffect **/
@@ -1890,10 +1885,6 @@ class InvertEffect extends Effect {
 		caster.invert(target, cellFrom!);
 	}
 	
-	protected real getScore(Cell? cellTarget, Cell? cellFrom, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
-		
-	}
-	
 	protected real getEffectScore(real value, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
 		return 0.0;
 	}
@@ -1970,7 +1961,7 @@ class DebuffEffect extends Effect {
 			if (setContains(Effect.shieldEffects, effType) || setContains(Effect.rawShieldEffects, effType) || setContains(Effect.dmgReturnEffects, effType) || setContains(Effect.vulnerabilityEffects, effType))
 				effTypeMult = targetScores.getAdjuster().debuffShield;
 			
-			// Pas besoin de calculer un score pour un effet qui va disparaitre au prochain tour de l'entitÃ© et qui n'a pas d'importance pour notre tour
+			// Pas besoin de calculer un score pour un effet qui va disparaitre au prochain tour de l'entité et qui n'a pas d'importance pour notre tour
 			else if (eff.getTurns() == 1 && eff.getCaster().getTurnOrder() <= target.getTurnOrder()) 
 				continue;
 			
@@ -1992,7 +1983,7 @@ class DebuffEffect extends Effect {
 			else 
 				effTypeMult = targetScores.getAdjuster().debuffOther;
 			
-			// RÃ©cupÃ¨re la classe de l'effet
+			// Récupère la classe de l'effet
 			Function<integer, AbstractEntity, AbstractEntity, EntityStats, EntityStats, Cell? => real>? getFinalEffectScoreFnct = Effect.finalEffectScoreFnctPerId[effType];
 			if (getFinalEffectScoreFnct != null) {
 				integer newValue = round(eff.getValue() * (1 - (value / 100)));
@@ -2028,11 +2019,11 @@ class AntidoteEffect extends Effect {
 			
 			integer effType = eff.getType();
 			if (effType == EFFECT_POISON) {
-				// RÃ©cupÃ¨re la classe de l'effet
+				// Récupère la classe de l'effet
 				Function<integer, AbstractEntity, AbstractEntity, EntityStats, EntityStats, Cell? => real>? getFinalEffectScoreFnct = Effect.finalEffectScoreFnctPerId[effType];
 				if (getFinalEffectScoreFnct != null) {
 					// on multiplie le score par un coeff en fonction du nombre de tours restant pour l'effet
-					// le poison Ã©tant un effet nÃ©gatif pour les alliÃ©s, on soustrait le score, pour qu'il devienne positif
+					// le poison étant un effet négatif pour les alliés, on soustrait le score, pour qu'il devienne positif
 					score -= (1 + (eff.getTurns() - 3) / 5) * (getFinalEffectScoreFnct!)(eff.getValue(), target, caster, targetStats, casterStats, cellTarget);
 				}
 			}
@@ -2323,7 +2314,7 @@ class Effect {
 		}
 		
 		if (this._isNotReplaceable) {
-			// On ne peut pas remplacer l'effet dÃ©jÃ  en place
+			// On ne peut pas remplacer l'effet déjà en place
 			if (target.getStats().hasEffectOn(this)) 
 				return false;
 		}
@@ -2349,12 +2340,12 @@ class Effect {
 		boolean isSelfCast = caster.getId() == target.getId();
 		
 		if (this._isNotReplaceable) {
-			// On ne peut pas remplacer l'effet dÃ©jÃ  en place
+			// On ne peut pas remplacer l'effet déjà en place
 			if (targetStats.hasEffectOn(this)) return;
 		}
 		
 		if (!this._isStackable) {
-			// on retire l'effet qui va Ãªtre remplacÃ©
+			// on retire l'effet qui va être remplacé
 			targetStats.removeEffects(targetStats.getEffectsOn(this));
 		}
 		
@@ -2411,7 +2402,7 @@ class Effect {
 		if (!this.canApplyTo(target, caster)) return 0.0;
 
 		if (this._isNotReplaceable) {
-			// On ne peut pas remplacer l'effet dÃ©jÃ  en place
+			// On ne peut pas remplacer l'effet déjà en place
 			if (targetStats.hasEffectOn(this)) return 0.0;
 		}
 		
@@ -2420,11 +2411,11 @@ class Effect {
 			EntityStats tmpTargetStats = new EntityStats();
 			tmpTargetStats.copy(targetStats);
 			targetStats = tmpTargetStats;
-			// on retire l'effet qui va Ãªtre remplacÃ©
+			// on retire l'effet qui va être remplacé
 			for (EntityEffect entityEff in targetStats.getEffectsOn(this)) {
 				targetStats.removeEffect(entityEff);
 				
-				// rÃ©cupÃ¨re la classe de l'effet
+				// récupère la classe de l'effet
 				Function<integer, AbstractEntity, AbstractEntity, EntityStats, EntityStats, Cell? => real>? getFinalEffectScorefnct = Effect.finalEffectScoreFnctPerId[entityEff.getType()];
 				if (getFinalEffectScorefnct != null) {
 					// on multiplie le score par un coeff en fonction du nombre de tours restant pour l'effet
@@ -2444,15 +2435,15 @@ class Effect {
 		if (!this.canApplyTo(caster, caster)) return 0.0;
 		
 		if (this._isNotReplaceable) {
-			// On ne peut pas remplacer l'effet dÃ©jÃ  en place
+			// On ne peut pas remplacer l'effet déjà en place
 			if (casterStats.hasEffectOn(this)) return 0.0;
 		}
 		
 		real removedEffectScore = 0.0;
 		if (!this._isStackable) {
-			// on retire l'effet qui va Ãªtre remplacÃ©
+			// on retire l'effet qui va être remplacé
 			for (EntityEffect entityEff in casterStats.getEffectsOn(this)) {
-				// rÃ©cupÃ¨re la classe de l'effet
+				// récupère la classe de l'effet
 				Function<integer, AbstractEntity, AbstractEntity, EntityStats, EntityStats, Cell? => real>? getFinalEffectScorefnct = Effect.finalEffectScoreFnctPerId[entityEff.getType()];
 				if (getFinalEffectScorefnct != null) {
 					// on multiplie le score par un coeff en fonction du nombre de tours restant pour l'effet
@@ -2466,13 +2457,13 @@ class Effect {
 		return this.scaleScoreOnCdAndDuration(score - removedEffectScore);
 	}
 	protected real scaleScoreOnCdAndDuration(real score) {
-		// multiplie le score en fonction du nombre de tours durant lesquels il est appliquÃ©
+		// multiplie le score en fonction du nombre de tours durant lesquels il est appliqué
 		if (this._turns != 0)
 			score *= 0.5 + (0.5 * (this._turns - 1) / 3);
 		
 		integer itemCd = this._item.getBaseCooldown();
 		if (itemCd == -1) {
-			// Si l'item Ã  un cd infini
+			// Si l'item à un cd infini
 			score *= 0.5;
 		} else if (itemCd != 0) {
 			score *= 1 - min(0.5, itemCd / 20);
@@ -2486,7 +2477,7 @@ class Effect {
 
 		var nbrTargetsMult = 1;
 		if (this._isMultByTargets) {
-			// l'effet de base est multipliÃ© par le nombre d'entitÃ©s touchÃ©es
+			// l'effet de base est multiplié par le nombre d'entités touchées
 			Set<AbstractEntity> targets = this.getAffectedTargets(cellTarget!, cellFrom, caster);
 			nbrTargetsMult = setSize(targets) + (isCasterHit ? 1 : 0);
 		}
@@ -2808,7 +2799,7 @@ class Effect {
 	public static final Set<integer> novaDamageEffects = <EFFECT_NOVA_DAMAGE>;
 	public static final Set<integer> dmgReturnEffects = <EFFECT_DAMAGE_RETURN>;
 	public static final Set<integer> healEffects = <EFFECT_HEAL, EFFECT_RAW_HEAL, EFFECT_BOOST_MAX_LIFE>;
-	public static final Set<integer> augmentMaxLifeEffects = <EFFECT_BOOST_MAX_LIFE, EFFECT_NOVA_VITALITY>;
+	public static final Set<integer> maxLifeEffects = <EFFECT_BOOST_MAX_LIFE, EFFECT_NOVA_VITALITY>;
 	public static final Set<integer> shackleEffects = <EFFECT_SHACKLE_AGILITY, EFFECT_SHACKLE_MAGIC, EFFECT_SHACKLE_MP, EFFECT_SHACKLE_STRENGTH, EFFECT_SHACKLE_TP, EFFECT_SHACKLE_WISDOM>;
 	public static final Set<integer> movementEffects = <EFFECT_ATTRACT, EFFECT_PUSH, EFFECT_INVERT, EFFECT_TELEPORT>;
 	public static final Set<integer> teleportEffects = <EFFECT_TELEPORT>;
@@ -2821,7 +2812,7 @@ class Effect {
 	public static final Map<integer, string> effectNamePerType = [EFFECT_BUFF_AGILITY: "EFFECT_BUFF_AGILITY", EFFECT_BUFF_RESISTANCE: "EFFECT_BUFF_RESISTANCE", EFFECT_BUFF_STRENGTH: "EFFECT_BUFF_STRENGTH", EFFECT_BUFF_WISDOM: "EFFECT_BUFF_WISDOM", EFFECT_BUFF_MP: "EFFECT_BUFF_MP", EFFECT_BUFF_TP: "EFFECT_BUFF_TP", EFFECT_RAW_BUFF_AGILITY: "EFFECT_RAW_BUFF_AGILITY", EFFECT_RAW_BUFF_MAGIC: "EFFECT_RAW_BUFF_MAGIC", EFFECT_RAW_BUFF_POWER: "EFFECT_RAW_BUFF_POWER", EFFECT_RAW_BUFF_RESISTANCE: "EFFECT_RAW_BUFF_RESISTANCE", EFFECT_RAW_BUFF_SCIENCE: "EFFECT_RAW_BUFF_SCIENCE", EFFECT_RAW_BUFF_STRENGTH: "EFFECT_RAW_BUFF_STRENGTH", EFFECT_RAW_BUFF_WISDOM: "EFFECT_RAW_BUFF_WISDOM", EFFECT_RAW_BUFF_MP: "EFFECT_RAW_BUFF_MP", EFFECT_RAW_BUFF_TP: "EFFECT_RAW_BUFF_TP", EFFECT_ABSOLUTE_SHIELD: "EFFECT_ABSOLUTE_SHIELD", EFFECT_RELATIVE_SHIELD: "EFFECT_RELATIVE_SHIELD", EFFECT_STEAL_ABSOLUTE_SHIELD: "EFFECT_STEAL_ABSOLUTE_SHIELD", EFFECT_RAW_ABSOLUTE_SHIELD: "EFFECT_RAW_ABSOLUTE_SHIELD", EFFECT_RAW_RELATIVE_SHIELD: "EFFECT_RAW_RELATIVE_SHIELD", EFFECT_AFTEREFFECT: "EFFECT_AFTEREFFECT", EFFECT_DAMAGE: "EFFECT_DAMAGE", EFFECT_LIFE_DAMAGE: "EFFECT_LIFE_DAMAGE", EFFECT_POISON: "EFFECT_POISON", EFFECT_NOVA_DAMAGE: "EFFECT_NOVA_DAMAGE", EFFECT_DAMAGE_RETURN: "EFFECT_DAMAGE_RETURN", EFFECT_HEAL: "EFFECT_HEAL", EFFECT_RAW_HEAL: "EFFECT_RAW_HEAL", EFFECT_BOOST_MAX_LIFE: "EFFECT_BOOST_MAX_LIFE", EFFECT_NOVA_VITALITY: "EFFECT_NOVA_VITALITY", EFFECT_SHACKLE_AGILITY: "EFFECT_SHACKLE_AGILITY", EFFECT_SHACKLE_MAGIC: "EFFECT_SHACKLE_MAGIC", EFFECT_SHACKLE_MP: "EFFECT_SHACKLE_MP", EFFECT_SHACKLE_TP: "EFFECT_SHACKLE_TP", EFFECT_SHACKLE_STRENGTH: "EFFECT_SHACKLE_STRENGTH", EFFECT_SHACKLE_WISDOM: "EFFECT_SHACKLE_WISDOM", EFFECT_ATTRACT: "EFFECT_ATTRACT", EFFECT_PUSH: "EFFECT_PUSH", EFFECT_INVERT: "EFFECT_INVERT", EFFECT_VULNERABILITY: "EFFECT_VULNERABILITY", EFFECT_ABSOLUTE_VULNERABILITY: "EFFECT_ABSOLUTE_VULNERABILITY", EFFECT_ANTIDOTE: "EFFECT_ANTIDOTE", EFFECT_REMOVE_SHACKLES: "EFFECT_REMOVE_SHACKLES", EFFECT_MOVED_TO_MP: "EFFECT_MOVED_TO_MP", EFFECT_DAMAGE_TO_ABSOLUTE_SHIELD: "EFFECT_DAMAGE_TO_ABSOLUTE_SHIELD", EFFECT_DAMAGE_TO_STRENGTH: "EFFECT_DAMAGE_TO_STRENGTH", EFFECT_NOVA_DAMAGE_TO_MAGIC: "EFFECT_NOVA_DAMAGE_TO_MAGIC", EFFECT_POISON_TO_SCIENCE: "EFFECT_POISON_TO_SCIENCE", EFFECT_ALLY_KILLED_TO_AGILITY: "EFFECT_ALLY_KILLED_TO_AGILITY", EFFECT_KILL_TO_TP: "EFFECT_KILL_TO_TP"];
 
 	public string() {
-		return 	"{ type: " + effectNamePerType[this._type] +
+		return 	"{ type: " + this._type +
 				" | meanValue: " + this._meanValue +
 				" | turns: " + this._turns +
 				" | item: " + this._item.getName() + " }";
@@ -2890,11 +2881,9 @@ class Item {
 		Set<AbstractEntity> targets = <>;
 		
 		for (Cell c in this.getEffectiveArea(cell, from)) {
-			if (c.hasEntity() && c.getCellEntity()!.isEntityAlive() && this.canTarget(c.getCellEntity()!, caster)) {
+			if (c.hasEntity() && this.canTarget(c.getCellEntity()!, caster)) {
 				setPut(targets, c.getCellEntity());
-			}
-			else if (c.hasEntity() && !c.getCellEntity()!.isEntityAlive())
-				Debug.warning("Getting a dead target " + c.getCellEntity());
+			};
 		}
 		return targets;
 	}
@@ -3012,7 +3001,7 @@ class Item {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re une ligne pour utiliser un laser sur une cell
+	 * Récupère une ligne pour utiliser un laser sur une cell
 	 * 
 	 * @params cell : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -3052,7 +3041,7 @@ class Item {
 	}
 		
 	/**
-	 * RÃ©cupÃ¨re une ligne qui peut Ãªtre toucher par un laser
+	 * Récupère une ligne qui peut être toucher par un laser
 	 * 
 	 * @params cellFrom : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -3067,7 +3056,7 @@ class Item {
 			if (i >= distMin) {
 				setPut(cells, currentCell);
 			} else if(currentCell!.hasEntity()) {
-				// Une entitÃ© block le tire
+				// Une entité block le tire
 				break;
 			}
 			
@@ -3082,7 +3071,7 @@ class Item {
 			if (i >= distMin) {
 				setPut(cells, currentCell);
 			} else if(currentCell!.hasEntity() && !setContains(ignoredEntities, currentCell!.getCellEntity())) {
-				// Une entitÃ© block le tire
+				// Une entité block le tire
 				break;
 			}
 			
@@ -3123,7 +3112,7 @@ class Item {
 		
 		
 	/**
-	 * RÃ©cupÃ¨re les cellules oÃ¹ on peut pousser une entitÃ©
+	 * Récupère les cellules où on peut pousser une entité
 	 * 
 	 * @params cellFrom : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -3140,7 +3129,7 @@ class Item {
 				if (firstEntity == null)
 					firstEntity = currentCell!.getCellEntity();
 				else
-					// On ne peut pas pousser Ã  travers une autre entitÃ©
+					// On ne peut pas pousser à travers une autre entité
 					break;
 			} else if (i >= distMin && firstEntity != null) {
 				setPut(cells, currentCell);
@@ -3159,7 +3148,7 @@ class Item {
 				if (firstEntity == null)
 					firstEntity = currentCell!.getCellEntity();
 				else
-					// On ne peut pas pousser Ã  travers une autre entitÃ©
+					// On ne peut pas pousser à travers une autre entité
 					break;
 			} else if (i >= distMin && firstEntity != null) {
 				setPut(cells, currentCell);
@@ -3172,7 +3161,7 @@ class Item {
 	}
 		
 	/**
-	 * RÃ©cupÃ¨re les cellules sur lesquelles on peut pousser la premiÃ¨re entitÃ© sur la ligne avec 'item'
+	 * Récupère les cellules sur lesquelles on peut pousser la première entité sur la ligne avec 'item'
 	 */
 	public static Set<Cell> getCellsCanPush(Cell cellFrom, integer distMin, integer distMax) {
 		Set<Cell> cells = <>;
@@ -3196,7 +3185,7 @@ class Item {
 	}
 		
 	/**
-	 * RÃ©cupÃ¨re les cellules oÃ¹ on peut attirer une entitÃ©
+	 * Récupère les cellules où on peut attirer une entité
 	 * 
 	 * @params cellFrom : la cellule initial
 	 * @params distMin : distance minimale de la zone
@@ -3220,7 +3209,7 @@ class Item {
 			
 			currentCell = (currentCell!)[direction] as Cell?;
 		}
-		
+			
 		if (foundEntity)
 			setPutAll(cells, tmpCells);
 			
@@ -3249,7 +3238,7 @@ class Item {
 	}
 		
 	/**
-	 * RÃ©cupÃ¨re les cellules sur lesquelles on peut pousser la premiÃ¨re entitÃ© sur la ligne avec 'item'
+	 * Récupère les cellules sur lesquelles on peut pousser la première entité sur la ligne avec 'item'
 	 */
 	public static Set<Cell> getCellsCanAttract(Cell cellFrom, integer distMin, integer distMax) {
 		Set<Cell> cells = <>;
@@ -3274,11 +3263,11 @@ class Item {
 	
 	
 	/**
-	 * RÃ©cupÃ¨re les cellules sur lesquelles on peut utiliser 'item' avec des dÃ©placements
+	 * Récupère les cellules sur lesquelles on peut utiliser 'item' avec des déplacements
 	 * 
 	 * params
 	 * cellsCanGo : les cellules accessibles par la lanceur
-	 * item : l'item utilisÃ©
+	 * item : l'item utilisé
 	 * target : la cellule cible
 	 * 
 	 * return
@@ -3327,7 +3316,7 @@ class Item {
 				cells = Area.getStarArea(target, item.minRange, item.maxRange);
 		}
 
-		// On ne peut pas se dÃ©placer sur une case avec une entitÃ©
+		// On ne peut pas se déplacer sur une case avec une entité
 		Set<Cell> goodCells = <>;
 		for (Cell cell in cells) {
 			if (!cell.hasEntity())
@@ -3343,11 +3332,11 @@ class Item {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re les cellules sur lesquelles on peut utiliser 'item' avec des dÃ©placements
+	 * Récupère les cellules sur lesquelles on peut utiliser 'item' avec des déplacements
 	 * 
 	 * params
 	 * cellsCanGo : les cellules accessibles par la lanceur
-	 * item : l'item utilisÃ©
+	 * item : l'item utilisé
 	 * target : la cellule cible
 	 * 
 	 * return
@@ -3416,7 +3405,7 @@ class Item {
 				cells = Area.getStarArea(target, item.minRange, item.maxRange);
 		}
 
-		// On ne peut pas se dÃ©placer sur une case avec une entitÃ©
+		// On ne peut pas se déplacer sur une case avec une entité
 		Set<Cell> goodCells = <>;
 		for (Cell cell in cells) {
 			if (!cell.hasEntity() || setContains(ignoredEntities, cell.getCellEntity()))
@@ -3446,7 +3435,7 @@ class Item {
 	/**
 	 * params
 	 * cellsCanGo : les cellules accessibles par la lanceur
-	 * item : l'item utilisÃ©
+	 * item : l'item utilisé
 	 * target : la cellule cible
 	 * 
 	 * return
@@ -3457,11 +3446,11 @@ class Item {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re les cellules sur lesquelles on peut utiliser 'item'
+	 * Récupère les cellules sur lesquelles on peut utiliser 'item'
 	 * 
 	 * params
-	 * target : la cellule visÃ©e
-	 * item : l'item utilisÃ©
+	 * target : la cellule visée
+	 * item : l'item utilisé
 	 * 
 	 * return
 	 * cells : tableau des cellules
@@ -3540,12 +3529,12 @@ class Item {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re les cellules sur lesquelles on peut utiliser 'item'
+	 * Récupère les cellules sur lesquelles on peut utiliser 'item'
 	 * 
 	 * params
-	 * target : la cellule visÃ©e
-	 * item : l'item utilisÃ©
-	 * ignoredEntities : tableau des entitÃ©s ignorÃ©es
+	 * target : la cellule visée
+	 * item : l'item utilisé
+	 * ignoredEntities : tableau des entités ignorées
 	 * 
 	 * return
 	 * cells : tableau des cellules
@@ -3971,23 +3960,23 @@ class EntityStatsDiviser {
 
 /** IA v5/Entities/Scoring/EntityScoresAdjuster **/
 
- class EntityScoresAdjuster {
-	public static real maxLife = 0.9;
-	public static real dmg = 1.1;
-	public static real heal = 1.3;
-	public static real abso = 1.9;
+class EntityScoresAdjuster {
+	public static real maxLife = 1.2;
+	public static real dmg = 0.8;
+	public static real heal = 1.2;
+	public static real abso = 1.7;
 	public static real rel = 1.3;
 	public static real dmgReturn = 1.0;
-	public static real strength = 1.7;
+	public static real strength = 1.6;
 	public static real power = 1.0;
-	public static real magic = 1.6;
+	public static real magic = 1.0;
 	public static real wisdom = 1.0;
-	public static real resistance = 0.9;
+	public static real resistance = 0.5;
 	public static real agility = 1.2;
 	public static real science = 1.0;
-	public static real poison = 1.5;
-	public static real mp = 1.0;
-	public static real tp = 1.2;
+	public static real poison = 1.0;
+	public static real mp = 1.2;
+	public static real tp = 1.4;
 	
 	public real kill;
 	public real entityType;
@@ -4003,13 +3992,10 @@ class EntityStatsDiviser {
 	public real debuffDmgReturn;
 	public real debuffShackles;
 	public real buffDamage;
-	public real buffMP;
 	public real antidote;
 	public real healOverTime;
 	public real heal;
 	public real shield;
-	public real shieldAbso;
-	public real shieldRel;
 	public real resBuff;
 	public real directDmg;
 	public real poison;
@@ -4028,7 +4014,7 @@ class EntityStatsDiviser {
 			Bulb bulb = this._entity as Bulb;
 
 			if (bulb.isSupport())
-				this.entityType = 0.25;
+				this.entityType = 0.15;
 			else if (bulb.isDamage())
 				this.entityType = 0.5;
 		} else {
@@ -4041,7 +4027,6 @@ class EntityStatsDiviser {
 		EntityStats entityStats = this._entity.getStats();
 		EntityStats entityStatsIn1Turn = this._entity.getStatsInTurns(1);
 		integer entityMP = entityStatsIn1Turn.getMP();
-		Team entityTeam = this._entity.getTeam()!;
 		
 		if (!this._entity.isEntityAlive()) {
 			/* Resurection */
@@ -4050,9 +4035,9 @@ class EntityStatsDiviser {
 		}
 		
 		/* Turn order */
-		// Si c'est un alliÃ© on prÃ©fÃ¨re viser les entitÃ©s qui jouent aprÃ¨s
+		// Si c'est un allié on préfère viser les entités qui jouent après
 		this.turnOrderNear = 1.1 - (0.2 * GAME.timeline.getTurnOrderAfterMe(this._entity) / setSize(GAME.getAllEntities()));
-		// Si c'est un enemy on prÃ©fÃ¨re viser les entitÃ©s qui jouent dans longtemps
+		// Si c'est un enemy on préfère viser les entités qui jouent dans longtemps
 		this.turnOrderFar = 0.9 + (0.2 * GAME.timeline.getTurnOrderAfterMe(this._entity) / setSize(GAME.getAllEntities()));
 		/* * */
 		
@@ -4075,7 +4060,7 @@ class EntityStatsDiviser {
 			integer alliesNearCount = 0;
 			integer ennemiesNearCount = 0;
 			for (Team team in Team.getTeams()) {
-				boolean isOnMyTeam = team == entityTeam;
+				boolean isOnMyTeam = team == this._entity.getTeam();
 
 				for (AbstractEntity entity in team.getAliveLeeks()) {
 					if (entity == this._entity) continue;
@@ -4090,8 +4075,8 @@ class EntityStatsDiviser {
 			}
 			
 			
-			isolatedFromAlliesScore = 1.0 + (GAME.leeksPerTeamCount / (1 + alliesNearCount) - 1) / (8.0 * aliveTeamsCount / 2);
-			inDangerScore = 1.0 + (ennemiesNearCount / (1 + alliesNearCount) - 1) / (4.0 * aliveTeamsCount / 2);
+			isolatedFromAlliesScore = 1.0 + (GAME.leeksPerTeamCount / (1 + alliesNearCount) - 1) / (12.0 * aliveTeamsCount / 2);
+			inDangerScore = 1.0 + (ennemiesNearCount / (1 + alliesNearCount) - 1) / (12.0 * aliveTeamsCount / 2);
 			this.isolation = isolatedFromAlliesScore * inDangerScore;
 		}
 		/* * */
@@ -4118,20 +4103,17 @@ class EntityStatsDiviser {
 			EntityStats stats = new EntityStats();
 			stats.copy(entityStats);
 			
-			Array<AbstractEntity> entitiesPlayingAfterMe = GAME.timeline.getEntitiesPlayingAfter(GAME.me, true, true, true, true);
-			integer entitiesPlayingAfterMeCount = count(entitiesPlayingAfterMe)
-			integer i = entitiesPlayingAfterMeCount;
-			for (AbstractEntity otherEntity in entitiesPlayingAfterMe) {
+			for (AbstractEntity otherEntity in GAME.timeline.getEntitiesPlayingAfter(GAME.me, true, true, true, true)) {
 				if (!otherEntity.isEntityAlive()) continue;
 
 				EntityStats otherEntityStatsIn1Turn = otherEntity.getStatsInTurns(1);
 
-				if (otherEntity.getTeam() == entityTeam) {
+				if (otherEntity.getTeam() == this._entity.getTeam()) {
 					integer otherEntityMP = otherEntityStatsIn1Turn.getMP();
 
-					// Si c'est une entitÃ© de mon Ã©quipe on ajout les shields disponibles
+					// Si c'est une entité de mon équipe on ajout les shields disponibles
 					for (Item item in otherEntity.getOffCooldownsItemsInTurns(1)) {
-						// Si la distance entre les deux entitÃ© est < Ã  la range d'application de l'effet + les mp du caster 
+						// Si la distance entre les deux entité est < à la range d'application de l'effet + les mp du caster 
 						if (Cell.getDistance(otherEntity.getCell()!, entityCell) < otherEntityMP + item.getAreaSize() + item.getMaxRange()) {
 							for (Effect eff in item.getEffects()) {
 								integer effType = eff.getType();
@@ -4154,7 +4136,7 @@ class EntityStatsDiviser {
 						if (Cell.getDistance(otherEntity.getCell()!, entityCell) < otherEntityMP / 2 + item.getAreaSize() + item.getMaxRange()) {
 							
 							if (item.hasEffectType(EFFECT_DEBUFF) && otherEntity != GAME.me) {
-								debuffedStats.debuff(60 * (i / entitiesPlayingAfterMeCount));
+								debuffedStats.debuff(60);
 							} else if (item.hasEffectTypeIn(Effect.directDamageEffects)) {
 								real dmgWithDebuffsPerTp = 0.0;
 								real dmgPerTp = 0.0;
@@ -4176,10 +4158,8 @@ class EntityStatsDiviser {
 						}
 					}
 					dmgPotentialWithDebuffs += bestDamageWithDebuffsPerTp * otherEntity.getStats().getTP();
-					dmgPotential += bestDamagePerTp * otherEntity.getStats().getTP() * (i / entitiesPlayingAfterMeCount);
+					dmgPotential += bestDamagePerTp * otherEntity.getStats().getTP();
 				}
-				
-				i--;
 			}
 		}
 		this.debuffShield = dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 3 * this.isolation * this.turnOrderFar;
@@ -4215,39 +4195,15 @@ class EntityStatsDiviser {
 		real directDamageDanger = 0.0;
 		real poisonDamageDanger = 0.0;
 		for (Team team in Team.getTeams()) {
-			if (team != entityTeam)
+			if (team != this._entity.getTeam())
 				directDamageDanger += team.getScores().directDamageDanger;
 				poisonDamageDanger += team.getScores().poisonDamageDanger;
 			
 		}
-		this.shield = max(0.0, min(1.6, directDamageDanger)) * (isGoodTarget ? 1.2 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 6) * this.isolation * this.turnOrderNear;
-		// Si il n'y a personne Ã  proximitÃ©, on a moins besoin de shield
+		this.shield = max(0.0, min(1.6, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderNear;
+		// Si il n'y a personne à proximité, on a moins besoin de shield
 		if (setSize(possibleTargets) == 0)
-			this.shield /= 1.5;
-		
-		this.shieldAbso = this.shield;
-		integer entityAbso = this._entity.getStats().getAbso();
-		real totalDirectDmgFromAbsoVulne = 0.0;
-		if (entityAbso < 0) {
-			Array<AbstractEntity> enemiesPlayingAfterMe =  GAME.timeline.getEntitiesPlayingAfter(GAME.me, false, true, true, true);
-			integer enemiesPlayingAfterMeCount = count(enemiesPlayingAfterMe);
-			integer i = enemiesPlayingAfterMeCount;
-			for (AbstractEntity otherEntity in enemiesPlayingAfterMe) {
-				real maxDirectDmgEffectsCountPerTP = 0.0;
-				for (Item item in otherEntity.getOffCooldownsItemsInTurns(1)) {
-					integer directDmgEffectsCountPerTP = 0;
-					directDmgEffectsCountPerTP += setSize(item.getEffectsOfTypes(Effect.directDamageEffects));
-					if (directDmgEffectsCountPerTP / item.getCost() > maxDirectDmgEffectsCountPerTP) {
-						maxDirectDmgEffectsCountPerTP = directDmgEffectsCountPerTP / item.getCost();
-					}
-				}
-				
-				totalDirectDmgFromAbsoVulne += maxDirectDmgEffectsCountPerTP * otherEntity.getStats().getTP() * entityAbso * (i / enemiesPlayingAfterMeCount);
-				i--;
-			}
-			// On a multipliÃ© par la vulnÃ© absolue donc il faut inverser le signe
-			this.shieldAbso = this.shield + -totalDirectDmgFromAbsoVulne / EntityStatsDiviser.maxLife;
-		}
+			this.shield /= 2;
 		/* * */
 		
 		
@@ -4266,12 +4222,12 @@ class EntityStatsDiviser {
 				}
 			}
 		}
-		this.resBuff = shieldItemsOffCooldownCount / 2.0 * max(0.0, min(1.6, directDamageDanger)) * this.turnOrderNear;
+		this.resBuff = shieldItemsOffCooldownCount / 2.0 * this.shield // * teamNeedShields;
 		/* * */
 		
 		
 		/* Dmg return */
-		this.dmgReturn = max(0.0, min(1.6, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 9) * this.isolation;
+		this.dmgReturn = max(0.0, min(1.6, directDamageDanger)) * this.isolation;
 		/* * */
 		
 		
@@ -4285,7 +4241,7 @@ class EntityStatsDiviser {
 				}
 			}
 		}
-		this.heal = min(1.3, 1.0 + 0.1 * entityAfterNovaDmgItemsOffCooldownCount) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderNear;
+		this.heal = max(1.3, 1.0 + 0.1 * entityAfterNovaDmgItemsOffCooldownCount) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderNear;
 		/* * */
 		
 		
@@ -4293,20 +4249,17 @@ class EntityStatsDiviser {
 		this.buffDamage = 1.0 * this.turnOrderNear;
 		if (setSize(possibleTargets) == 0)
 			this.buffDamage /= 2;
-		
-		// S'il y a des possibleTarget on a pas forcÃ©ment besoin de buff les mp
-		this.buffMP = (1.0 - (!setIsEmpty(possibleTargets) ? 0.5 : 0)) * this.turnOrderNear;
 		/* * */
 		
 		/* Damage */
-		this.directDmg = 1.0 * max(1.0, min(1.2, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 10) * this.isolation * this.turnOrderNear;
+		this.directDmg = 1.0 * max(1.0, min(1.2, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar;
 		/* * */
 		
 		this.poison = 1.0 * this.isolation * this.turnOrderNear;
 		this.novaDamage = 1.0 * this.isolation * this.turnOrderFar;
 		
 		
-		this.vulneAbso = 1.5  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar * (1 + min(2.0, totalDirectDmgFromAbsoVulne / EntityStatsDiviser.maxLife) / 2);
+		this.vulneAbso = 1.5  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar;
 		this.vulneRel = 1.5  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar;
 	}
 }
@@ -4417,17 +4370,21 @@ class EntityScores {
 	
 	public real getAbsoScore(integer absoAdded, integer abso = this._entity.getStats().getAbso(), integer rel = this._entity.getStats().getRel()) {
 		if (abso >= 0) {
-			// \frac{h-0.3d}{h}\left(7x-\frac{3f}{F}x\right)
+			// \frac{h-0.3d}{h}\left(6x-\frac{f}{60}x\right)
 			return 	(EntityStatsDiviser.rel - 0.3 * rel) / EntityStatsDiviser.rel * (7 * absoAdded - (3 * abso / EntityStatsDiviser.abso) * absoAdded) * EntityScoresAdjuster.abso;
 		} else {
-			// \left(7x-\frac{3f}{F}x\right)
 			return 7 * absoAdded - (3 * abso / EntityStatsDiviser.abso) * absoAdded * EntityScoresAdjuster.abso;
 		}
 	}
 	
 	public real getRelScore(integer relAdded, integer rel = this._entity.getStats().getRel()) {
-		// \left(40-10\cdot\frac{d}{h}\right)x-\frac{\left(d\right)}{3h}x^{2}
-		return 	((40 - 10 * rel / EntityStatsDiviser.rel) * relAdded - rel / (3 * EntityStatsDiviser.rel) * relAdded * relAdded) * EntityScoresAdjuster.rel;
+		if (rel >= 0) {
+			// \left(40-10\cdot\frac{d}{h}\right)x-\frac{\left(d\right)}{3h}x^{2}
+			return 	((40 - 10 * rel / EntityStatsDiviser.rel) * relAdded - rel / (3 * EntityStatsDiviser.rel) * relAdded * relAdded) * EntityScoresAdjuster.rel;
+		} else {
+			// \frac{100+d}{100}\left(30-15\cdot\frac{d}{100}\right)x
+			return 	(EntityStatsDiviser.rel + rel) / EntityStatsDiviser.rel * (30 - 15 * (rel / EntityStatsDiviser.rel)) * relAdded * EntityScoresAdjuster.rel;
+		}
 	}
 	
 	public real getDmgReturnScore(integer dmgReturnAdded, integer dmgReturn = this._entity.getStats().getDmgReturn(), integer abso = this._entity.getStats().getAbso(), integer rel = this._entity.getStats().getRel()) {
@@ -4441,15 +4398,11 @@ class EntityScores {
 	}
 	
 	public real getMPScore(integer addedMp, integer mp = this._entity.getStats().getMP()) {
-		if (addedMp <= 0 && mp <= 0) return 0.0;
-		
 		// 200x\cdot\frac{\left(w-\frac{\left(k-w\cdot1.5\right)^{2}}{w\cdot2.25}\right)}{w}
 		return 200 * (EntityStatsDiviser.mp - (mp - EntityStatsDiviser.mp * 1.5) * (mp - EntityStatsDiviser.mp * 1.5) / (EntityStatsDiviser.mp * 2.25)) / EntityStatsDiviser.mp * addedMp * EntityScoresAdjuster.mp;	
 	}
 		
 	public real getTPScore(integer addedTp, integer tp = this._entity.getStats().getTP()) {
-		if (addedTp <= 0 && tp <= 0) return 0.0;
-
 		// 200x\cdot\frac{\left(w-\frac{\left(k-w\cdot1.5\right)^{2}}{w\cdot2.25}\right)}{w}
 		return 200 * (EntityStatsDiviser.tp - (tp - EntityStatsDiviser.tp * 1.5) * (tp - EntityStatsDiviser.tp * 1.5) / (EntityStatsDiviser.tp * 2.25)) / EntityStatsDiviser.tp * addedTp * EntityScoresAdjuster.tp;	
 	}	
@@ -4775,11 +4728,11 @@ class EntityStats {
 	}
 	
 	/**
-	 * Test si l'effet affecte l'entitÃ©, corespondant au type et Ã  l'item de l'effet donnÃ©
+	 * Test si l'effet affecte l'entité, corespondant au type et à l'item de l'effet donné
 	 * 
-	 * @param eff : l'effet recherchÃ©
+	 * @param eff : l'effet recherché
 	 * 
-	 * @return true si l'entitÃ© est affectÃ© par l'effet
+	 * @return true si l'entité est affecté par l'effet
 	 * 
 	 **/
 	public boolean hasEffectOn(Effect eff) {
@@ -4799,11 +4752,11 @@ class EntityStats {
 	}
 	
 	/**
-	 * RÃ©cupÃ¨re l'effet qui affecte l'entitÃ©, corespondant au type et Ã  l'item de l'effet donnÃ©
+	 * Récupère l'effet qui affecte l'entité, corespondant au type et à l'item de l'effet donné
 	 * 
-	 * @param eff : l'effet recherchÃ©
+	 * @param eff : l'effet recherché
 	 * 
-	 * @return la liste des effets correspondant Ã  'eff'
+	 * @return la liste des effets correspondant à 'eff'
 	 **/
 	public Set<EntityEffect> getEffectsOn(Effect eff) {
 		Set<EntityEffect> effectsMatching = <>;
@@ -4816,7 +4769,7 @@ class EntityStats {
 	
 		
 	/**
-	 * RÃ©cupÃ¨re les effets qui affecteront encore l'entitÃ© dans x tour
+	 * Récupère les effets qui affecteront encore l'entité dans x tour
 	 * 
 	 * @param turns : le nombre de tours
 	 * 
@@ -5215,7 +5168,7 @@ class SimulationEntity {
 			this._tp = this._tp + eff.getAppliedValue(null, null, this._entity, this._entity.getStats(), this._entity.getStats(), dist, true);
 		}
 		for (Effect eff in item.getEffectsOfType(EFFECT_INVERT)) {
-			// On ne peut viser qu'une entitÃ© avec inversion, et on inverse forcÃ©ment avec nous mÃªme
+			// On ne peut viser qu'une entité avec inversion, et on inverse forcément avec nous même
 			AbstractEntity target = setGetOne(action.getTargets()) as AbstractEntity;
 			MoveCell moveCell = setGetOne(action.getCellsFrom()) as MoveCell;
 
@@ -5374,8 +5327,6 @@ class Turret extends AbstractEntity {
 class TeamScores {
 	public real directDamageDanger;
 	public real poisonDamageDanger;
-	public real augmentMaxLifeDanger;
-	public real needShield;
 
 	private Team _team;
 	
@@ -5387,32 +5338,17 @@ class TeamScores {
 	private void reset() {
 		this.directDamageDanger = 0.0;
 		this.poisonDamageDanger = 0.0;
-		this.augmentMaxLifeDanger = 0.0;
 	}
 	
 	public void update() {
 		this.reset();
-				
+		
 		integer entitiesAliveCount = setSize(this._team.getAlive());
 		for (AbstractEntity entity in this._team.getAlive()) {
 			EntityStats eStats = entity.getStats();
-			this.directDamageDanger += eStats.getStrength() / (EntityStatsDiviser.strength * 1.5) * entity.getScores().getAdjuster().entityType;
-			this.poisonDamageDanger += eStats.getMagic() / (EntityStatsDiviser.magic * 1.5) * entity.getScores().getAdjuster().entityType;
-			
-			
-			/** Shield **/
-			this.needShield = 1.0;
-			/* * */
-			
-			for (Item item in entity.getItems()) {
-				for (Effect eff in item.getEffects()) {
-					if (setContains(Effect.augmentMaxLifeEffects, eff.getType())) {
-						this.augmentMaxLifeDanger += eff.getAppliedValue(null, null, entity, eStats, eStats, 0, true);
-					}
-				}
-			}
-		}		
-		this.augmentMaxLifeDanger /= EntityStatsDiviser.maxLife * 2;
+			this.directDamageDanger += eStats.getStrength() / (EntityStatsDiviser.strength * 1.5);
+			this.poisonDamageDanger += eStats.getMagic() / (EntityStatsDiviser.magic * 1.5);
+		}
 	}
 }
 /** IA v5/Entities/Teams/TeamMapInfos **/
@@ -5464,7 +5400,7 @@ class TeamMapInfos {
 					}
 				}
 			}
-			// Si l'ennemi a peu de shield et qu'il est proche d'au moins 2 alliÃ©s
+			// Si l'ennemi a peu de shield et qu'il est proche d'au moins 2 alliés
 			if (goodTargetCount >= TeamMapInfos.ALLIES_NEEDED_GOOD_TARGET) {
 				setPut(this.goodTargets, enemy);
 			}
@@ -5665,7 +5601,7 @@ class AbstractEntity {
 				push(this._movementItems, item);
 			}
 			
-			// Ordonne les item de tÃ©lÃ©port du plus petit coÃ»t au plus grand
+			// Ordonne les item de téléport du plus petit coût au plus grand
 			this._movementItems = arraySort(this._movementItems, function(Item i1, Item i2) => integer {
 				return i1.getCost() - i2.getCost();
 			}) as Array<Item>;
@@ -5685,7 +5621,7 @@ class AbstractEntity {
 			// Change the cell to it's new location and update the CellMap
 			this.setCell(CellMap.getCell(getCell(this._id)!))
 		} else {
-			// L'entitÃ© est morte donc elle n'est plus sur la map
+			// L'entité est morte donc elle n'est plus sur la map
 			this.setCell(null);
 		}
 
@@ -5774,10 +5710,10 @@ class AbstractEntity {
 	public AccessibleCells? getAccessibleCellsWithItem(Item item, integer dist = 0) {
 		integer key = item.getId() << 10 | this._simulationEntity.getMP();
 		
-		if (mapContainsKey(this._accessibleCellsWithItem, key))
-			return this._accessibleCellsWithItem[key];
-		else 
-			return this._accessibleCellsWithItem[key] = this.createAccessibleCellsWithItem(item, dist);
+		if (!mapContainsKey(this._accessibleCellsWithItem, key)) 
+			this._accessibleCellsWithItem[key] = this.createAccessibleCellsWithItem(item, dist);
+
+		return this._accessibleCellsWithItem[key];
 	}
 	public void clearAccessibleCellsWithItem() {
 		mapClear(this._accessibleCellsWithItem);
@@ -5791,41 +5727,6 @@ class AbstractEntity {
 			if (this._isAlive) 
 				this.kill(caster);
 		}
-	}
-
-	public Array<Item> getOrderedAndFilteredDangerItemsInTurns(integer turns, AbstractEntity target) {
-		EntityStats entityStats = this.getStatsInTurns(turns);
-		Set<Item> items = this.getOffCooldownsItemsInTurns(turns);
-		
-		Map<Item, real> dangerScorePerItem = [:];
-		for (Item item in items) {
-			real score = 0.0;
-
-			for (Effect eff in item.getEffects()) {
-				if (setContains(Effect.dangerEffects, eff.getType())) {
-					if (eff.getType() == EFFECT_INVERT || eff.getType() == EFFECT_ATTRACT || eff.getType() == EFFECT_PUSH) {
-
-					} else {
-						if (item.getId() == 143) continue;
-						// TODO : gÃ©rer plasma
-						
-						score += eff.getScore(null, null, target, this, target.getStats(), entityStats, 0);
-					}
-				}
-			}
-			
-			dangerScorePerItem[item] = item.scaleScoreOnCost(score);
-		}
-		
-		Array<Item> orderedItems = setToArray(items) as Array<Item>;
-		orderedItems = arrayFilter(orderedItems, function(Item i1) => boolean {
-			return dangerScorePerItem[i1] != 0;
-		}) as Array<Item>;
-		orderedItems = arraySort(orderedItems, function(Item i1, Item i2) => real {
-			return dangerScorePerItem[i1]! - dangerScorePerItem[i2]!;
-		}) as Array<Item>;
-
-		return orderedItems;
 	}
 
 	public integer getItemCooldown(Item item) {
@@ -5927,7 +5828,7 @@ class AbstractEntity {
 		if(getTurn() >= 11) {
 			debug(this + " " + this._cell + " "	+ cell);
 		}
-		// On vÃ©rifie que c'est bien nous sur la cellule et qu'il n'y a pas eu l'update d'une autre entitÃ© avant
+		// On vérifie que c'est bien nous sur la cellule et qu'il n'y a pas eu l'update d'une autre entité avant
 		if (this._cell != null && this._cell!.getCellEntity() == this)
 			this._cell!.setType(CELL_EMPTY);
 
@@ -5940,9 +5841,9 @@ class AbstractEntity {
 	}
 	
 	/**
-	 * Simule l'inversion de 2 entitÃ©s
+	 * Simule l'inversion de 2 entités
 	 * 
-	 * @param otherEntity : entitÃ©
+	 * @param otherEntity : entité
 	 **/
 	public void invert(AbstractEntity otherEntity, Cell cellFrom) {
 		var tmpE1Cell = cellFrom;
@@ -5956,10 +5857,10 @@ class AbstractEntity {
 	}
 	
 	/**
-	 * Simule le dÃ©placement
+	 * Simule le déplacement
 	 * 
-	 * @param cell : cellule d'arrivÃ©e
-	 * @param mp  : mp utilisÃ©s 
+	 * @param cell : cellule d'arrivée
+	 * @param mp  : mp utilisés 
 	 **/
 	public void move(Cell cell, integer mp) {
 		this.setCell(cell);
@@ -5967,9 +5868,9 @@ class AbstractEntity {
 	}
 	
 	/**
-	 * Simule la tÃ©lÃ©portation
+	 * Simule la téléportation
 	 * 
-	 * @param cell : cellule d'arrivÃ©e
+	 * @param cell : cellule d'arrivée
 	 **/
 	public teleport(Cell? cell) {
 		if (cell == null) {
@@ -5986,7 +5887,7 @@ class AbstractEntity {
 	/**
 	 * Simule l'attraction
 	 * 
-	 * @param cell : cellule d'arrivÃ©e
+	 * @param cell : cellule d'arrivée
 	 **/
 	public void attract(Cell cell) {
 		this.setCell(cell);
@@ -5998,9 +5899,9 @@ class AbstractEntity {
 	}
 	
 	/**
-	 * Simule la poussÃ©e
+	 * Simule la poussée
 	 * 
-	 * @param cell : cellule d'arrivÃ©e
+	 * @param cell : cellule d'arrivée
 	 **/
 	public void pushTo(Cell cell) {			
 		this.setCell(cell);
@@ -6138,7 +6039,7 @@ class Cell {
 	 * @params c1 : cellule
 	 * @params c2 : cellule
 	 * 
-	 * @return la distance entre les deux cellules Ã  vole d'oiseau
+	 * @return la distance entre les deux cellules à vole d'oiseau
 	 **/
 	public static integer getDistance(Cell c1, Cell c2) {
 		integer distX = c1.x - c2.x;
@@ -6150,7 +6051,7 @@ class Cell {
 	 * @params c1 : cellule
 	 * @params c2 : cellule
 	 * 
-	 * @return la distance entre les deux cellules Ã  vole d'oiseau
+	 * @return la distance entre les deux cellules à vole d'oiseau
 	 **/
 	public static Cell getBarycenterCell(Set<Cell> cells) {
 		integer sumX = 0;
@@ -6168,7 +6069,7 @@ class Cell {
 	 * @params Cell c1
 	 * @params Cell c2
 	 * 
-	 * @return true si les cellules sont sur la mÃªme ligne
+	 * @return true si les cellules sont sur la même ligne
 	 **/
 	public static boolean isOnSameLine(Cell c1, Cell c2) {
 		if (c1.x == c2.x) return true;
@@ -6180,7 +6081,7 @@ class Cell {
 	 * @params Cell c1
 	 * @params Cell c2
 	 * 
-	 * @return true si les cellules c1 et c2 sont du mÃªme cotÃ© par rapport Ã  cellTarget
+	 * @return true si les cellules c1 et c2 sont du même coté par rapport à cellTarget
 	 **/
 	public static boolean isOnSameDirection(Cell cellTarget, Cell c1, Cell c2) {
 		return signum(cellTarget.x - c1.x as real) == signum(cellTarget.x - c2.x as real) && signum(cellTarget.y - c1.y as real) == signum(cellTarget.y - c2.y as real);
@@ -6534,7 +6435,7 @@ class CellMap {
 			//for (Cell cellToHitTP in cellsCanHitTeleport) {
 				//if (setContains(cellCenHitTested, cellToHitTP)) continue;
 				//setPut(cellCenHitTested, cellToHitTP);
-				//// Si on n'a pas encore mis de score sur la cellToHitTP ou que les mpUsed est < au score dÃ©jÃ  mis
+				//// Si on n'a pas encore mis de score sur la cellToHitTP ou que les mpUsed est < au score déjà mis
 				//if (!accessibleCellsWithTP.hasCell(cellToHitTP) || moveCell.mpUsed < accessibleCellsWithTP.getMpUsed(cellToHitTP)) {
 					//for (MoveCell moveCellAfterTP in CellMap.getAccessibleCells(cellToHitTP, moveCell.mpRemain).getMoveCells()) {
 						//if (!accessibleCellsWithTP.hasCell(moveCellAfterTP.cell) || moveCell.mpUsed + moveCellAfterTP.mpUsed < accessibleCellsWithTP.getMpUsed(moveCellAfterTP.cell)) {
@@ -6769,7 +6670,7 @@ class Timeline {
 				turnOrder += count(this._entitiesTurnOrdered);
 			this._turnOrderAfterMe[otherEntity] = turnOrder;
 			
-			// les entitÃ©s ordonnÃ©es par ordre de tour pour chaque team
+			// les entités ordonnées par ordre de tour pour chaque team
 			if (!mapContainsKey(this._turnOrderedPerTeam, otherEntity.getTeam()))
 				this._turnOrderedPerTeam[otherEntity.getTeam()!] = [];
 			push(this._turnOrderedPerTeam[otherEntity.getTeam()!]!, otherEntity);
@@ -7027,7 +6928,7 @@ class Action {
 		while (useCount-- > 0) {
 			if (!setIsEmpty(this._targetCells)) {
 				MoveCell moveCell = setGetOne(this._cellsFrom) as MoveCell;
-				// On ne se tÃ©lÃ©porte que Ã  la premiÃ¨re rÃ©alisation de l'action
+				// On ne se téléporte que à la première réalisation de l'action
 				if (this._teleportItem != null && !manager.isUsedMovementItem(this._teleportItem!)) {
 					manager.addUsedMovementItem(this._teleportItem!);
 
@@ -7069,7 +6970,7 @@ class Action {
 					} while(moveTowardCell(moveCell!.cellFromTeleport!.id, 1));
 					
 					moveCell!.itemTeleport!.use(moveCell!.cellToTeleport!);
-					// On retire l'item de tÃ©lÃ©portation pour les prochaines rÃ©alisations de l'action
+					// On retire l'item de téléportation pour les prochaines réalisations de l'action
 					this._teleportItem = null;
 				}
 
@@ -7104,7 +7005,7 @@ class Action {
 						if (targetsHash == this._targetsHash) {
 							useResult = this._item.use(targetCell.cellTarget);
 						} else {
-							// On test en retirant les entitÃ© mortes du targetsHash
+							// On test en retirant les entité mortes du targetsHash
 							string newTargetsHash = "";
 							for (string targetsDist in split(this._targetsHash, ",")) {
 								string targetId = split(targetsDist, "|")[0];
@@ -7182,300 +7083,7 @@ class Action {
 		return ret;
 	}
 }
-/** IA v5/Map/DangerMap **/
 
-
-
-class DangerMap {
-	private ScoreMap _scoreMap;
-	private Map<AbstractEntity, Map<Item, Set<Cell>>> _cellsPerDangerItemPerEntity;
-	private AbstractEntity _targetedEntity;
-	
-	private real _referenceScorePerDist;
-	
-	constructor(AbstractEntity targetedEntity, real refScorePerDist) {
-		this._targetedEntity = targetedEntity;
-		this._cellsPerDangerItemPerEntity = [:];
-		this._scoreMap = new ScoreMap(<>, 0.0);
-		
-		this._referenceScorePerDist = refScorePerDist;
-	}
-	
-	public real getScore(Cell cell) {
-		return this._scoreMap.getScore(cell);	
-	}
-	
-	private real getLowestDangerScoreAccessible(AccessibleCells accCells) {
-		real lowestDangerScoreAccessible = 999999.0;
-		for (Cell cell in accCells.getCells()) {
-			if (this.getScore(cell) < lowestDangerScoreAccessible)
-				lowestDangerScoreAccessible = this.getScore(cell);
-		}
-		return lowestDangerScoreAccessible;
-	}
-	
-	
-	/**
-	 * Initialise la map de danger
-	 **/
-	private Map<Cell, Set<Item>> initDangerItemMap() {
-		mapClear(this._cellsPerDangerItemPerEntity);
-		
-		integer enemiesLeeksCount = 0;
-		for (Team team in Team.getTeams()) {
-			if (team != this._targetedEntity.getTeam())
-				enemiesLeeksCount += setSize(team.getAliveLeeks());
-		}
-		
-		for (Team team in Team.getTeams()) {
-			if (team == this._targetedEntity.getTeam()) continue;
-			
-			Debug.log("Testing danger on " + AI.MAX_DANGER_ITEMS_TESTED_COUNT / enemiesLeeksCount + " items");
-			for (AbstractEntity entity in team.getAlive()) {
-				AccessibleCells entityAccessibleCells = entity.getInitialAccessibleCells();
-				this._cellsPerDangerItemPerEntity[entity] = [:];
-				
-				integer dangerItemsTestedCount = 0;
-				// get the items which will be off cooldown when this entity will play
-				Array<Item> orderedDangerItems = entity.getOrderedAndFilteredDangerItemsInTurns(1, this._targetedEntity);
-				boolean isAlreadyTestedMeleeItem = false;
-				//Debug.log("OrderedDangerItems : " + orderedDangerItems);
-
-				for (Item item in orderedDangerItems) {
-					if (item.getMaxRange() == 1) {
-						if (isAlreadyTestedMeleeItem) continue;
-						isAlreadyTestedMeleeItem = true;
-					}
-					
-					//Debug.startOpCount();
-					Set<Cell> cellsCanUseItem = item.getCellsCanHitFromCellsIgnore(entityAccessibleCells.getCells(), <entity>);
-					this._cellsPerDangerItemPerEntity[entity]![item] = cellsCanUseItem;
-
-					dangerItemsTestedCount++;
-					if (dangerItemsTestedCount > AI.MAX_DANGER_ITEMS_TESTED_COUNT / enemiesLeeksCount)
-						break;
-					//Debug.log(entity.getName() + " with " + item.getName())										
-					//Debug.stopOpCount("getCellsCanUseFromCellsIgnore : ");		
-					//CellMap.markCells(cellsCanUseItem, COLOR_RED);
-					//pause();
-					//clearMarks();
-				}
-			}
-		}
-	}
-	
-	/**
-	 * Calcul le score de danger pour chaque cell de la map
-	 **/
-	private void calculateDangerMap() {
-		this._scoreMap.resetScore();
-		
-		Map<AbstractEntity, ScoreMap> damageMapPerEntity;
-		for (AbstractEntity entity : Map<Item, Set<Cell>> cellsPerItem in this._cellsPerDangerItemPerEntity) {
-			if (!entity.isEntityAlive()) continue;
-			
-			ScoreMap damageMap = new ScoreMap(<>, 0.0);
-
-			// On prend les stats de l'entitÃ© lors de son prochain tour (pas Ã  l'instant actuel)
-			EntityStats entityStatsHisTurn = entity.getStatsInTurns(1);
-
-			// Calcul les dangerScore pour tous les items dangereux de l'entitÃ© et les cellules qu'il peut toucher avec
-			for (Item item : Set<Cell> cells in cellsPerItem) {		
-				if (item.getId() == 143) continue;
-				// TODO : gÃ©rer plasma
-
-				Map<integer, real> itemDangerScore = [:];
-				// On calcule le score pour toutes les distance d'area possible pour l'item
-				for (integer i = 0; i <= item.getAreaSize(); i++) {
-					itemDangerScore[i] = item.scaleScoreOnCost(item.getScore(this._targetedEntity, entity, this._targetedEntity.getStats(), entityStatsHisTurn, i));
-				}
-
-				// TODO: calculer les combos de danger, pour calculer plus prÃ©cisÃ©ment les dÃ©gats potentiels sur une cell
-				//if (item.getBaseCooldown() == 0) {
-					//for (integer hitDist : real dangerScore in itemDangerScore) {
-						//itemDangerScore[hitDist] = dangerScore;
-					//}
-				//}
-		
-				damageMap.setHighestScores(cells, -(itemDangerScore[0]!));
-
-				// Ajoute les area of effect
-				if (item.getAreaType() != AREA_LASER_LINE && item.getAreaType() != AREA_FIRST_INLINE) {
-					for (Cell cell in CellMap.getEdgeCells(cells)) {
-						for (Cell effCell in item.getEffectiveArea(cell, null)) {
-							integer dist = Cell.getDistance(effCell, cell);
-							if (!setContains(cells, effCell)) {
-								damageMap.setHighestScore(effCell, -itemDangerScore[dist]!);
-							}
-						}
-					}
-				}
-			}
-			
-			damageMapPerEntity[entity] = damageMap;
-		}
-		
-		// Pour toutes les cellules on calcule des scores en fonction des distances avec les alliÃ©s, les ennemis ...
-		
-		integer alliesTotalLife = 0;
-		integer alliesAliveLeeksCount = setSize(this._targetedEntity.getTeam()!.getAliveLeeks());
-		for (AbstractEntity ally in this._targetedEntity.getTeam()!.getAlive()) {
-			alliesTotalLife += ally.getStats().getLife();
-		}
-		
-		this.calculateEnemyTeamDangerMap(damageMapPerEntity, alliesTotalLife, alliesAliveLeeksCount);
-		this.calculateAllyTeamDangerMap(alliesTotalLife, alliesAliveLeeksCount);
-	}
-
-	private void calculateEnemyTeamDangerMap(Map<AbstractEntity, ScoreMap> damageMapPerEntity, integer alliesTotalLife, integer alliesAliveLeeksCount) {
-		Team targetTeam = this._targetedEntity.getTeam()!;
-		
-		real SCORE_PER_DIST = this._referenceScorePerDist / 50;
-		
-		for (Team team in Team.getTeams()) {
-			if (team == targetTeam) continue;
-			
-			integer teamTotalLife = 0;
-			integer teamAlivesLeeksCount = setSize(team.getAliveLeeks());
-			for (AbstractEntity entity in team.getAlive()) {
-				teamTotalLife += round(entity.getStats().getLife() * entity.getScores().getAdjuster().entityType);
-			}
-			
-			real augmentMaxLifeDanger = max(0.5, 2 * (1 + team.getScores().augmentMaxLifeDanger - targetTeam.getScores().augmentMaxLifeDanger));
-			Debug.log("augmentMaxLifeDanger : " + augmentMaxLifeDanger);
-			
-			real lifeAdvantageScore = max(0.2, 1 + (alliesTotalLife - teamTotalLife) / (2 * EntityStatsDiviser.maxLife));
-			real countAdvantageScore = 1.0 + (alliesAliveLeeksCount - teamAlivesLeeksCount) / GAME.leeksPerTeamCount;
-			real advantageScore = lifeAdvantageScore * countAdvantageScore;
-			Debug.log("advantageScore enemy : " + advantageScore);
-			for (AbstractEntity entity in team.getAlive()) {
-				if (entity == this._targetedEntity) continue;
-				
-				AccessibleCells entityPathLength = entity.getPathLengthCells();
-				boolean entityIsBulb = entity instanceof Bulb;
-				real entityTypeMult = entity.getScores().getAdjuster().entityType;
-				Cell entityCell = entity.getCell()!;
-				integer entityMP = entity.getStats().getMP();
-				
-				integer distWantedFromEntity = round(entityMP * 1.5 / (advantageScore * augmentMaxLifeDanger));
-				real scorePerDistFromEntity = SCORE_PER_DIST * advantageScore * augmentMaxLifeDanger * entityTypeMult / GAME.leeksPerTeamCount;
-				real distWantedScore = (1 - distWantedFromEntity / 24) * scorePerDistFromEntity;
-
-				ScoreMap? entityDamageMap = mapGet(damageMapPerEntity, entity, null) as ScoreMap;
-				
-				integer alliesBeforeEntityCount = GAME.timeline.getEntitiesPlayingBetweenEntitiesCount(this._targetedEntity, entity, true);
-				integer alliesBeforeEntityCountDiviser = 1 + alliesBeforeEntityCount;
-				for (Cell cell in CellMap.getCells()) {
-					if (cell._isObstacle) continue;
-					
-					// Ajoute damage map pour l'entitÃ©
-					if (entityDamageMap != null) {
-						real score = entityDamageMap!.getScore(cell);
-						score /= advantageScore;
-						score /= alliesBeforeEntityCountDiviser;
-						this._scoreMap.addScore(cell, score);
-					}
-					
-					// TODO: Quickfix si on n'est pas prÃ©sent dans le pathLength de l'entitÃ© (car le chemin est bloquÃ© par exemple)
-					real distToEntity = 0.0;
-					real meanWeight = 1.5;
-					if (entityPathLength.hasCell(cell)) {
-						distToEntity += entityPathLength.getMpUsed(cell)!;
-						meanWeight += 1.0;
-					}
-					distToEntity += Cell.getDistance(entityCell, cell) * 1.5;
-					distToEntity /= meanWeight;
-					
-					real distScore =  max(0.0, abs(distWantedFromEntity - distToEntity) - 2) * scorePerDistFromEntity;
-					this._scoreMap.addScore(cell, distScore);
-				}
-			}
-		}
-	}
-
-	private void calculateAllyTeamDangerMap(integer alliesTotalLife, integer alliesAliveLeeksCount) {
-		Cell myCell = this._targetedEntity.getCell()!;
-		
-		real SCORE_PER_DIST = this._referenceScorePerDist / 4;
-
-		// Pour voir si les enemis ont beaucoup d'items dangereux en AOE
-		real areaSizeWeightedMean = 0.0;
-		integer areaSizeWeightValue = 0;
-		integer enemyTeamsTotalLife = 0;
-		integer enemyTeamAlivesLeeksCount = 0;
-		for (Team team in Team.getTeams()) {
-			if (team == this._targetedEntity.getTeam()) continue;
-			
-			enemyTeamAlivesLeeksCount += setSize(team.getAliveLeeks());
-			
-			for (AbstractEntity entity in team.getAlive()) {
-				real entityTypeScore = entity.getScores().getAdjuster().entityType;
-				enemyTeamsTotalLife += round(entity.getStats().getLife() * entityTypeScore * entityTypeScore);
-				
-				Array<Item> dangerItems = entity.getOrderedAndFilteredDangerItemsInTurns(1, this._targetedEntity);
-				areaSizeWeightValue += count(dangerItems);
-				for (integer i : Item item in dangerItems) {
-					if (item.getAreaType() != AREA_LASER_LINE && item.getAreaType() != AREA_FIRST_INLINE) {
-						areaSizeWeightedMean += item.getAreaSize();
-					}
-				}
-			}
-		}
-		areaSizeWeightedMean /= areaSizeWeightValue;
-		//Debug.log("areaSizeWeightedMean : " + areaSizeWeightedMean);
-		integer distAwayWantedFromEntity = ceil(areaSizeWeightedMean);
-
-		
-		real lifeAdvantageScore = max(0.2, 1.0 + (alliesTotalLife - enemyTeamsTotalLife) / (2 * EntityStatsDiviser.maxLife));
-		real countAdvantageScore = 1.0 + (alliesAliveLeeksCount - enemyTeamAlivesLeeksCount) / GAME.leeksPerTeamCount;
-		real advantageScore = lifeAdvantageScore * countAdvantageScore;
-		Debug.log("advantageScore ally : " + advantageScore);
-		for (AbstractEntity entity in this._targetedEntity.getTeam()!.getAlive()) {
-			if (entity == this._targetedEntity) continue;
-
-			AccessibleCells entityPathLength = entity.getPathLengthCells();
-			boolean entityIsBulb = entity instanceof Bulb;
-			real entityTypeMult = entity.getScores().getAdjuster().entityType;
-			Cell entityCell = entity.getCell()!;
-			integer entityMP = entity.getStats().getMP();
-
-			integer distWantedFromEntity = round(entityMP * 0.75 * advantageScore);
-			real scorePerDistFromEntity = SCORE_PER_DIST * entityTypeMult / advantageScore / GAME.leeksPerTeamCount;
-			real distWantedScore = (4 - distWantedFromEntity / 12) * scorePerDistFromEntity;
-
-			integer alliesBeforeEntityCount = GAME.timeline.getEntitiesPlayingBetweenEntitiesCount(this._targetedEntity, entity, true);
-			integer alliesBeforeEntityCountDiviser = 1 + alliesBeforeEntityCount;
-			for (Cell cell in CellMap.getCells()) {
-				if (cell._isObstacle) continue;
-
-				real distToEntity = 0.0;
-				real meanWeight = 2.5;
-				if (entityPathLength.hasCell(cell)) {
-					distToEntity += entityPathLength.getMpUsed(cell)!;
-					meanWeight += 1.0;
-				}
-				distToEntity += Cell.getDistance(entityCell, cell) * 2.5;
-				distToEntity /= meanWeight;	
-
-				// Si on retire du score de danger
-				if (distToEntity <= distWantedFromEntity) {
-					// On retire un score constant pour toutes les cells Ã  moins de la distance demandÃ©e
-					this._scoreMap.removeScore(cell, distWantedScore);
-				} else {
-					// On retire de moins en moins de score plus les cells s'Ã©loignes
-					real distScore = distWantedScore - abs(distWantedFromEntity - distToEntity) * scorePerDistFromEntity;
-					this._scoreMap.removeScore(cell, max(-SCORE_PER_DIST * 10.0, distScore));
-				}
-				
-				if (distToEntity <= distAwayWantedFromEntity) {
-					real distScore = (1 + distToEntity - distAwayWantedFromEntity) * scorePerDistFromEntity * 2;
-					//distScore *= 
-					this._scoreMap.addScore(cell, distScore);
-				}
-			}
-		}
-	}
-}
 
 /** IA v5/Actions/ActionsManager **/
 
@@ -7566,13 +7174,13 @@ class ActionsManager {
 		for (Action action in this._orderedOtherActions) {
 			action.simulate(this, caster);
 			
-			// Si l'Ã©lÃ©ment obligeait de delayer les self action, on le retire de _delayingActions
+			// Si l'élément obligeait de delayer les self action, on le retire de _delayingActions
 			setRemove(delayingActions, action);
 			if (setIsEmpty(delayingActions)) {
 				isDelayedSelfActions = false;
 			}
 
-			// On essaye d'exÃ©cuter les self action restantes sur cette cell
+			// On essaye d'exécuter les self action restantes sur cette cell
 			if (!isDelayedSelfActions)
 				this.simulateDelayedSelfAction(caster);
 		}
@@ -7618,8 +7226,8 @@ class ActionsManager {
 	}
 												 
 	/**
-	 * @params actions : toutes les actions (pas sur soi) ordonnÃ©es
-	 * @params isEndOfActions : si c'est la fin de l'algo et qu'on renvoi juste les bonnes actions Ã  rÃ©aliser
+	 * @params actions : toutes les actions (pas sur soi) ordonnées
+	 * @params isEndOfActions : si c'est la fin de l'algo et qu'on renvoi juste les bonnes actions à réaliser
 	 **/
 	public void setOrderedOtherAction(Array<Action> actions, boolean isEndOfActions = false) {
 		this._orderedOtherActions = actions;
@@ -7652,7 +7260,7 @@ class ActionsManager {
 	}
 	
 	/**
-	 * Retourne le coÃ»t de l'utilisation des actions, dans l'ordre donnÃ©, par caster
+	 * Retourne le coût de l'utilisation des actions, dans l'ordre donné, par caster
 	 **/
 	public integer getOrderedActionsCost(Array<Action> actions, SimulationEntity caster) {
 		integer cost = 0;
@@ -7672,9 +7280,9 @@ class ActionsManager {
 	}
 	
 	/**
-	 * @params ScoreMap dangerMap : les scores les plus bas seront considÃ©rÃ© comme les meilleures cells
+	 * @params ScoreMap dangerMap : les scores les plus bas seront considéré comme les meilleures cells
 	 **/
-	public void executeChoosenActions(DangerMap dangerMap) {
+	public void executeChoosenActions(ScoreMap dangerMap) {
 		this.clearUsedMovementItems();
 		
 		this.orderSelfActions();
@@ -7684,7 +7292,7 @@ class ActionsManager {
 		Array<Action> notExecutedSelfActions = clone(this._selfActions) as Array<Action>;
 		this.tryExecuteSelfActions(notExecutedSelfActions);
 		
-		// GÃ©rer toutes les autres actions
+		// Gérer toutes les autres actions
 		for (integer i : Action action in this._orderedOtherActions) {
 			AbstractEntity.updatePositions();
 			Cell myCell = GAME.me.getCell()!;
@@ -7700,11 +7308,15 @@ class ActionsManager {
 			for (MoveCell moveCell in action.getCellsFrom()) {
 				if (!myCellsAcc.hasCell(moveCell.cell)) continue;
 				
-				// On rÃ©cupÃ¨re la moveCell des AccessibleCells de myCell pour Ãªtre sÃ»r de ne pas utiliser une moveCell simulÃ©e d'une autre maniÃ¨re
+				// On récupère la moveCell des AccessibleCells de myCell pour être sûr de ne pas utiliser une moveCell simulée d'une autre manière
 				moveCellPerCell[moveCell.cell] = myCellsAcc.getMoveCell(moveCell.cell);
 				
-				// RÃ©cupÃ¨re le plus petit score de danger accessible via cette moveCell
-				real lowestDangerScore = dangerMap.getLowestDangerScoreAccessible(CellMap.getAccessibleCells(moveCell.cell, moveCell.mpRemain));
+				// Récupère le plus petit score de danger accessible via cette moveCell
+				real lowestDangerScore = 999999.0;
+				for (Cell accCell in CellMap.getAccessibleCells(moveCell.cell, moveCell.mpRemain).getCells()) {
+					if (dangerMap.getScore(accCell) < lowestDangerScore)
+						lowestDangerScore = dangerMap.getScore(accCell);
+				}
 				push(scoredCellsFrom, new ScoreCell(moveCell.cell, lowestDangerScore));
 			}
 
@@ -7724,7 +7336,7 @@ class ActionsManager {
 				Cell bestCellFrom = this.getBestCellFromToExecuteAction(action, scoredCellsFrom, moveCellPerCell, myCellsAcc, i==0);
 
 				action.execute(this, notExecutedSelfActions, moveCellPerCell[bestCellFrom]);
-				// Si l'Ã©lÃ©ment obligeait de delayer les self action, on le retire de _delayingActions
+				// Si l'élément obligeait de delayer les self action, on le retire de _delayingActions
 				setRemove(this._delayingActions, action);
 				if (setIsEmpty(this._delayingActions)) {
 					if (this._isDelayedSelfActions)
@@ -7732,21 +7344,21 @@ class ActionsManager {
 					this._isDelayedSelfActions = false;
 				}
 
-				// On essaye d'exÃ©cuter les self action restantes sur cette cell	
+				// On essaye d'exécuter les self action restantes sur cette cell	
 				this.tryExecuteSelfActions(notExecutedSelfActions, bestCellFrom);	
 				if (!this._isDelayedSelfActions)
 					this.tryExecuteSelfActions(this._delayedSelfActions, bestCellFrom);
 			}
 		}
 	
-		// S'il reste des actions delayÃ©e, ont les rÃ©alisent
+		// S'il reste des actions delayée, ont les réalisent
 		this.tryExecuteSelfActions(this._delayedSelfActions);
 	}
 
 	private Cell getBestCellFromToExecuteAction(Action action, Array<ScoreCell> scoredCellsFrom, Map<Cell, MoveCell> moveCellPerCell, AccessibleCells myCellsAcc, boolean isFirstAction) {
 
 		Cell bestCellFrom = (arrayGet(scoredCellsFrom, 0) as ScoreCell).cell;
-		// Si ce n'est pas la premiÃ¨re action et que elle a un item pour se tÃ©lÃ©porter
+		// Si ce n'est pas la première action et que elle a un item pour se téléporter
 		if (!isFirstAction && action.getTeleportItem() != null) {
 			Cell myCell = CellMap.getCell(getCell()!)!;
 			for (ScoreCell scoreCell in scoredCellsFrom) {
@@ -7768,13 +7380,13 @@ class ActionsManager {
 	}
 
 	private void tryExecuteSelfActions(Array<Action> actions, Cell cellFrom = CellMap.getCell(getCell()!)!) {
-		// GÃ©rer les actions sur soi mÃªme
+		// Gérer les actions sur soi même
 		for (Action action in clone(actions) as Array<Action>) {
-			// On n'essaye que les actions pas dÃ©jÃ  exÃ©cutÃ©s
+			// On n'essaye que les actions pas déjà exécutés
 			if (this.tryExecuteSelfAction(action, cellFrom)) {
 				removeElement(actions, action);
 			} else {
-				Debug.warning("Someone in the self cast aoe : " + " for " + action);
+				Debug.warning("Someone in the self cast aoe : " + action.getItem().getSimulationTargets(cellFrom, null, GAME.me) + " for " + action);
 			}
 		}
 	}
@@ -7783,7 +7395,7 @@ class ActionsManager {
 		integer distWanted = action.getHitCasterDist();
 		if (action.getHitCasterDist() == 0) {
 			if (setSize(action.getItem().getSimulationTargets(cellFrom, null, GAME.me)) == 0) {
-				// Si on est la seule entitÃ© affectÃ© par l'item
+				// Si on est la seule entité affecté par l'item
 				action.setTargetCells(<new TargetCell(cellFrom, null)>);		  
 				action.execute(this);
 			} else {
@@ -7848,7 +7460,7 @@ class ActionsManager {
 				score += 2;
 			} else if(setContains(Effect.buffEffects, effType) or setContains(Effect.rawBuffEffects, effType)) {
 				score += 3;
-			} else if(setContains(Effect.augmentMaxLifeEffects, effType)) {
+			} else if(setContains(Effect.maxLifeEffects, effType)) {
 				score += 5;
 			} else if(setContains(Effect.healEffects, effType) or setContains(Effect.shieldEffects, effType) or setContains(Effect.dmgReturnEffects, effType)) {
 				score += 7;
@@ -7933,7 +7545,7 @@ class ActionsManager {
 		}
 		setPut(this._sameCellsFromLinkedActions[a2]!, a1);
 
-		// Pour toutes les actions dÃ©jÃ  liÃ© Ã  a1 on les lie avec a2
+		// Pour toutes les actions déjà lié à a1 on les lie avec a2
 		for (Action linkedAction in clone(mapGet(this._sameCellsFromLinkedActions, a1, <>)) as Set<Action>) {
 			setPut(this._sameCellsFromLinkedActions[linkedAction]!, a2);
 			setPut(this._sameCellsFromLinkedActions[a2]!, linkedAction);
@@ -8019,9 +7631,9 @@ class RegistersManager {
 	}
 	
 	public Register get(string name) {
-		if (mapContainsKey(this._registers, name))
-			return this._registers[name]!;
-		return this._registers[name] = new Register(name);
+		if (!mapContainsKey(this._registers, name))
+			this._registers[name] = new Register(name);
+		return this._registers[name]!
 	}
 }
 /** IA v5/Utils/Json **/
@@ -8144,7 +7756,8 @@ class AI {
 	
 	private AbstractEntity _me;
 	private Set<Team> _teams;
-	private DangerMap _dangerMap;
+	private Map<AbstractEntity, Map<Item, Set<Cell>>> _cellsPerDangerItemPerEntity;
+	private ScoreMap _dangerMap;
 	private Array<Action> _everyActions; public void resetEveryActions() { arrayClear(this._everyActions); }
 	private Array<Action> _actions;
 	private real _highestActionScore;
@@ -8156,6 +7769,8 @@ class AI {
 	constructor(AbstractEntity me, Set<Team> teams) {
 		this._me = me;
 		this._teams = teams;
+		this._dangerMap = new ScoreMap(<>, 0.0);
+		this._cellsPerDangerItemPerEntity = [:];
 		this._everyActions = [];
 		this._actions = [];
 		this._highestActionScore = 0.0;
@@ -8167,17 +7782,15 @@ class AI {
 			this.registerStats();
 			this.initItemsScoresRegister();
 		}
-		
-		this._dangerMap = new DangerMap(me, this._highHighMeanScore);
 	}
 	
 	/**
-	 * DÃ©termine toutes les action choisies du tour
+	 * Détermine toutes les action choisies du tour
 	 **/
 	public void determineActions() {
 		if (!this._me.isStatic) {
 			Debug.startOpCount();
-			this._dangerMap.initDangerItemMap();
+			this.initDangerItemMap();
 			Debug.stopOpCount("initDangerItemMap : ");
 		}
 		
@@ -8192,24 +7805,24 @@ class AI {
 			arrayClear(this._actions);
 
 			if (!this._me.isStatic && prevChoosenAction == null || this.needToRecalculateDangerMap(prevChoosenAction)) {
-				// recalcule la danger map en fonction des nouvelles stats des entitÃ©s
+				// recalcule la danger map en fonction des nouvelles stats des entités
 				Debug.startOpCount();
-				this._dangerMap.calculateDangerMap();
+				this.calculateDangerMap();
 				Debug.stopOpCount("calculateDangerMap : ");
 			}
 			
-			// update tout les multiplicateurs qui ont pu Ãªtre modifiÃ©s par la simulation d'un effet
+			// update tout les multiplicateurs qui ont pu être modifiés par la simulation d'un effet
 			//for (Team team in this._teams) {
 				//for (AbstractEntity entity in team.getEntities()) {
 					//entity.getStats().updateMults();
 				//}
 			//}
 			
-			// On vÃ©rifie que l'on a toujours besoin de fuir en utilisant un item
+			// On vérifie que l'on a toujours besoin de fuir en utilisant un item
 			if (this._movementEscapeItem != null) {
-				real lowestDangerScoreAccessible = this._dangerMap.getLowestDangerScoreAccessible(this._me.getPathCalcAccessibleCells());
+				real lowestDangerScoreAccessible = this.getLowestDangerScoreAccessible(this._me.getPathCalcAccessibleCells());
 				if (this._highestActionScore > lowestDangerScoreAccessible) {
-					// Si aprÃ¨s les action dÃ©jÃ  simulÃ©e, on est finalement plus en danger, on n'utilise plus de teleport escape
+					// Si après les action déjà simulée, on est finalement plus en danger, on n'utilise plus de teleport escape
 					this._me.unsimulateItemUse(this._movementEscapeItem!);
 					Debug.log("Cancel escape with item : " + this._movementEscapeItem);
 					this._movementEscapeItem = null;
@@ -8242,13 +7855,13 @@ class AI {
 				this.registerItemsScores();
 			}
 			
-			//Debug.log("Actions possible found : " + count(this._actions));
+			Debug.log("Actions possible found : " + count(this._actions));
 			integer i = 0;
 			for (Action action in this._actions) {
 				Debug.log(action, getColor(175, 175, 175));
 				
 				i++;
-				if (i > 20) break;
+				if (i > 30) break;
 			}
 			
 			boolean useDangerMap = this.doNeedDangerMap();
@@ -8266,7 +7879,7 @@ class AI {
 				Debug.startOpCount();
 				GAME.updateAllStats();
 				for (AbstractEntity entity in GAME.getAllEntities()) {
-					// On reset les stats de simulation pour enlever les cellules modifiÃ©s lors de la simu
+					// On reset les stats de simulation pour enlever les cellules modifiés lors de la simu
 					entity.getSimulationEntity().resetStats();
 				}
 				if (this._movementEscapeItem != null)
@@ -8280,7 +7893,7 @@ class AI {
 			}
 			
 			if (bestDoableAction == null)
-				Debug.log("Pas d'action rÃ©alisable trouvÃ©e");
+				Debug.log("Pas d'action réalisable trouvée");
 		}
 	}
 	
@@ -8288,11 +7901,11 @@ class AI {
 		if (prevChoosenAction == null) return false;
 		
 		Item item = prevChoosenAction!.getItem();
-		// Si on fait des dÃ©gats Ã  une entitÃ©, on recalcule
+		// Si on fait des dégats à une entité, on recalcule
 		if (item.hasEffectTypeIn(Effect.directDamageEffects))
 			return true;
 		
-		// Si on se shield / heal soi mÃªme
+		// Si on se shield / heal soi même
 		if (item.hasEffectTypeIn(Effect.shieldEffects) || item.hasEffectTypeIn(Effect.rawShieldEffects) || item.hasEffectTypeIn(Effect.healEffects)) {
 			if (prevChoosenAction!.getHitCasterDist() != -1)
 				return true;
@@ -8308,20 +7921,29 @@ class AI {
 		return false;
 	}
 	
+	private real getLowestDangerScoreAccessible(AccessibleCells accCells) {
+		real lowestDangerScoreAccessible = 999999.0;
+		for (Cell cell in accCells.getCells()) {
+			if (this._dangerMap.getScore(cell) < lowestDangerScoreAccessible)
+				lowestDangerScoreAccessible = this._dangerMap.getScore(cell);
+		}
+		return lowestDangerScoreAccessible;
+	}
+	
 	/**
 	 * 
 	 **/
 	private boolean doNeedDangerMap() {
 		// Si le score de la meilleur action est <= au plus petit score de la map de danger, alors on ne va pas prendre en compte la map de danger
-		real lowestDangerScoreAccessible = this._dangerMap.getLowestDangerScoreAccessible(this._me.getPathCalcAccessibleCells());
+		real lowestDangerScoreAccessible = this.getLowestDangerScoreAccessible(this._me.getPathCalcAccessibleCells());
 		if (!isEmpty(this._actions) && this._actions[0].getScore() <= lowestDangerScoreAccessible && this._highestActionScore <= lowestDangerScoreAccessible) {
 			if (this._movementEscapeItem != null) return true;
 			
-			// On test si on peut aller sur une cell safe avec un item de tÃ©lÃ©port
+			// On test si on peut aller sur une cell safe avec un item de téléport
 			for (Item moveItem in this._me.getOffCooldownMovementItemsOrderedByCost()) {
 				if (moveItem.getCost() > this._me.getStats().getTP()) continue;
 				
-				real lowestDangerScoreAccessibleWithTp = this._dangerMap.getLowestDangerScoreAccessible(this._me.getAccessibleCellsWithItem(moveItem)!);
+				real lowestDangerScoreAccessibleWithTp = this.getLowestDangerScoreAccessible(this._me.getAccessibleCellsWithItem(moveItem)!);
 
 				if (this._actions[0].getScore() > lowestDangerScoreAccessibleWithTp) {
 					// On peut utiliser cette item pour aller sur une cell safe
@@ -8333,12 +7955,12 @@ class AI {
 			}
 
 			if (this._movementEscapeItem == null) {
-				// MÃªme avec des item de tÃ©lÃ©port on ne peut pas accÃ©der Ã  une cell safe
+				// Même avec des item de téléport on ne peut pas accéder à une cell safe
 				Debug.log("Not using danger map", getColor(127, 3, 252));
 				return false;
 			}
 		} else if (this._movementEscapeItem != null && !isEmpty(this._actions)) {
-			// Si aprÃ¨s les action dÃ©jÃ  simulÃ©e, on est finalement plus en danger, on n'utilise plus de teleport escape
+			// Si après les action déjà simulée, on est finalement plus en danger, on n'utilise plus de teleport escape
 			this._me.unsimulateItemUse(this._movementEscapeItem!);
 			Debug.log("Cancel escape with teleport item : " + this._movementEscapeItem);
 			this._movementEscapeItem = null;
@@ -8348,7 +7970,7 @@ class AI {
 	}
 	
 	/*
-	 * Enregistre les stats utilisÃ©es pour les diffÃ©rents type de combat
+	 * Enregistre les stats utilisées pour les différents type de combat
 	 */
 	private void registerStats() {
 		Register statsSetReg = RegistersManager.getInstance().get(RegistersManager.STATS_REGISTER_NAME);
@@ -8372,7 +7994,7 @@ class AI {
 				Debug.warning("Reseting ITEMS_SCORES / ITEMS_USE_COUNT registers cause stats have changed");
 				Debug.log(saveStatsHash + " / " + statsHash);
 
-				// Si les items ont changÃ©s, on reset le registre des utilisations d'item
+				// Si les items ont changés, on reset le registre des utilisations d'item
 				Register? statsUseCountReg = RegistersManager.getInstance().get(RegistersManager.ITEMS_SCORES_REGISTER_NAME + fightTypeStr);
 				if (statsUseCountReg != null) {
 					JsonObject statsUseCount = statsUseCountReg!.get() as JsonObject;
@@ -8396,7 +8018,7 @@ class AI {
 	}
 	
 	/*
-	 * Enregistre les items utilisÃ©s pour les diffÃ©rents type de combat
+	 * Enregistre les items utilisés pour les différents type de combat
 	 */
 	private void registerItemsSet() {
 		Register itemsSetReg = RegistersManager.getInstance().get(RegistersManager.ITEMS_SET_REGISTER_NAME);
@@ -8418,7 +8040,7 @@ class AI {
 				Debug.warning("Reseting ITEMS_USE_COUNT register cause items have changed");
 				Debug.log(saveItemsHash + " / " + itemsHash);
 
-				// Si les items ont changÃ©s, on reset le registre des utilisations d'item
+				// Si les items ont changés, on reset le registre des utilisations d'item
 				Register? itemsUseCountReg = RegistersManager.getInstance().get(RegistersManager.ITEMS_USE_COUNT_REGISTER_NAME);
 				if (itemsUseCountReg != null) {
 					JsonObject itemsUseCount = itemsUseCountReg!.get() as JsonObject;
@@ -8434,7 +8056,7 @@ class AI {
 	}
 	
 	/*
-	 * Enregistre le nombre d'utilisation des items pour les diffÃ©rents type de combat
+	 * Enregistre le nombre d'utilisation des items pour les différents type de combat
 	 */
 	private void registerChoosenItem(Action action) {
 		Register itemsUseCountReg = RegistersManager.getInstance().get(RegistersManager.ITEMS_USE_COUNT_REGISTER_NAME);
@@ -8455,7 +8077,7 @@ class AI {
 	}
 	
 	/*
-	 * Enregistre la moyenne des scores des items pour les diffÃ©rents type de combat
+	 * Enregistre la moyenne des scores des items pour les différents type de combat
 	 */	
 	private void initItemsScoresRegister() {		
 		string fightTypeStr = string(getFightType());
@@ -8520,7 +8142,7 @@ class AI {
 					itemScoreObj.addProp("meanHigh", round((itemScoreObj.getProp("meanHigh") * meanHighCount + score) / (meanHighCount + 1)));
 					itemScoreObj.addProp("meanHighCount", meanHighCount + 1);
 					
-					// On set la meanHighHigh Ã  la valeur de la meanHigh si elle n'existe pas encore
+					// On set la meanHighHigh à la valeur de la meanHigh si elle n'existe pas encore
 					if (itemScoreObj.getProp("meanHighHighCount") < itemScoreObj.getProp("meanHigh"))
 						itemScoreObj.addProp("meanHighHigh", itemScoreObj.getProp("meanHigh"));
 
@@ -8558,7 +8180,7 @@ class AI {
 	}
 	
 	/**
-	 * DÃ©place l'entitÃ© sur la meilleur cell possible en fonction de la map de danger
+	 * Déplace l'entité sur la meilleur cell possible en fonction de la map de danger
 	 **/
 	public void goToEndOfTurnCell() {
 		if (this._me.isStatic) return;
@@ -8612,7 +8234,7 @@ class AI {
 	}
 	
 	/**
-	 * SÃ©lectionne la meilleur arme probable pour le prochain tour
+	 * Sélectionne la meilleur arme probable pour le prochain tour
 	 **/
 	public void selectBestWeapon() {
 		if (this._me.getStats().getTP() >= 1) {
@@ -8681,7 +8303,7 @@ class AI {
 		for (Action action in this._actions) {			
 			if (action.getScore() <= AI.MIN_SCORE_USEFUL_ACTION) continue;
 			
-			// Si l'action a dÃ©jÃ  Ã©tÃ© choisie prÃ©cÃ©dement
+			// Si l'action a déjà été choisie précédement
 			if (this._actionsManager.hasChoosenAction(action.getUniqueId())) {
 				this._actionsManager.getChoosenAction(action.getUniqueId())!.addUse();
 				return action;
@@ -8699,7 +8321,7 @@ class AI {
 				if (!this._me.isStatic()) {
 					for (Item moveItem in this._me.getOffCooldownMovementItemsOrderedByCost()) {
 						// Si j'ai assez de TP pour faire l'action et utiliser l'item de movement
-						// Et que l'action est rÃ©alisable en utilisant l'item de movement
+						// Et que l'action est réalisable en utilisant l'item de movement
 						integer switchWeaponCost = action.getItem() instanceof Weapon && (this._me as Leek).getEquippedWeaponId() != action.getItem().getId() ? 1 : 0;
 						if (moveItem.getCost() + action.getItem().getCost() + switchWeaponCost > this._me.getStats().getTP()) continue;
 						
@@ -8721,14 +8343,14 @@ class AI {
 			}
 		}
 		
-		// Aucune nouvelle action ne peut Ãªtre ajoutÃ© donc on remet les actions dÃ©jÃ  choisie avec les bonnes cellsFrom
+		// Aucune nouvelle action ne peut être ajouté donc on remet les actions déjà choisie avec les bonnes cellsFrom
 		this._actionsManager.setOrderedOtherAction(doableOtherActions, true);
 
 		return null;
 	}
 
 	/**
-	 * DÃ©termine si utilise un item de mouvement pour l'action, vaut le coÃ»t
+	 * Détermine si utilise un item de mouvement pour l'action, vaut le coût
 	 **/
 	private boolean isActionWorthTeleporting(Action action, Item moveItem) {
 		Item item = action.getItem();
@@ -8736,7 +8358,7 @@ class AI {
 		real cdMult = (moveItem.getBaseCooldown() / 2.5 - 3) / 8;
 		real scoreMult = costMult + cdMult;
 		
-		// Si le score est < Ã  la moyenne des trÃ¨s haute moyenne de chaque item, alors la tp ne vaut pas le coup
+		// Si le score est < à la moyenne des très haute moyenne de chaque item, alors la tp ne vaut pas le coup
 		if (action.getScore() < this._highHighMeanScore * (1 + scoreMult)) return false;
 
 		string itemName = item.getName();
@@ -8750,7 +8372,7 @@ class AI {
 				integer diff = (meanHighHigh - itemScoreStatsObj.getProp("meanHigh")) as integer;
 				real scoreNeeded = meanHighHigh - 2 * diff * costMult;
 
-				// Si le score est > Ã  la moyenne haute des scores de l'item, alors le tÃ©lÃ©port vaut le coup
+				// Si le score est > à la moyenne haute des scores de l'item, alors le téléport vaut le coup
 				if (action.getScore() > scoreNeeded)
 					return true;
 			}
@@ -8783,7 +8405,7 @@ class AI {
 						setPut(cellsAccessibleToHit, moveCell);
 				}
 								
-				// On a trouvÃ© des cell avec cette item de movement
+				// On a trouvé des cell avec cette item de movement
 				if (!setIsEmpty(cellsAccessibleToHit)) {
 					// S'il n'y a pas encore d'action non self cast
 					if (!this._actionsManager.isUsedMovementItem(moveItem)) {
@@ -8799,7 +8421,7 @@ class AI {
 	}
 
 	/**
-	 * DÃ©termine si on peu rÃ©aliser l'action en mÃªme temps que toutes les autres dÃ©jÃ  choisies
+	 * Détermine si on peu réaliser l'action en même temps que toutes les autres déjà choisies
 	 **/
 	private boolean canDoAction(Action action, Array<Action> otherActions, boolean useDangerMap) {			
 		// S'il n'y a pas encore d'action non self cast
@@ -8821,7 +8443,7 @@ class AI {
 				}
 			}
 			
-			// Si on a trouvÃ© des cell avec une escape safe
+			// Si on a trouvé des cell avec une escape safe
 			if (!setIsEmpty(cellsWithSafeEscape)) {
 				action.setCellsFrom(cellsWithSafeEscape);
 				this._actionsManager.setOrderedOtherAction([action]);
@@ -8844,13 +8466,13 @@ class AI {
 				// On ordonne les actions dans le sens le plus logique
 				newOtherActions = this._actionsManager.orderOtherActions(newOtherActions);
 			} else {
-				// Dans le cas d'une inversion, on vÃ©rifie qu'il soit possible de rÃ©aliser les autres actions mÃªme si inversion est fait avant
+				// Dans le cas d'une inversion, on vérifie qu'il soit possible de réaliser les autres actions même si inversion est fait avant
 				boolean canInvertBeforeOtherActions = true;
 				AbstractEntity invertionTarget = setGetOne(invertAction!.getTargets()) as AbstractEntity;
 				for (Action otherAction in newOtherActions) {
 					if (otherAction == invertAction) continue;
 					
-					// Si otherAction ne vise pas l'entitÃ© inversÃ©e oÃ¹ qu'elle le fait mais que c'est l'unique entitÃ© visÃ©e
+					// Si otherAction ne vise pas l'entité inversée où qu'elle le fait mais que c'est l'unique entité visée
 					if (setSize(otherAction.getTargets()) > 1 && setContains(otherAction.getTargets(), invertionTarget)) {
 						canInvertBeforeOtherActions = false;
 					}
@@ -8868,10 +8490,10 @@ class AI {
 			do {
 				//Debug.log("Trying new path " + newOtherActions, COLOR_BLUE);
 
-				// Si l'ordre des items fait que la suite d'action coÃ»te plus que nos TP, alors on ne peut pas faire l'action
+				// Si l'ordre des items fait que la suite d'action coûte plus que nos TP, alors on ne peut pas faire l'action
 				if (this._actionsManager.getOrderedActionsCost(newOtherActions, this._me.getSimulationEntity()) > this._me.getSimulationEntity().getTP()) return false;
 				
-				// On clear les items de mouvement dÃ©jÃ  utilisÃ©s
+				// On clear les items de mouvement déjà utilisés
 				this._actionsManager.clearUsedMovementItems();
 				for (Action newOtherAction in newOtherActions) {
 					newOtherAction.setTeleportItem(null);	
@@ -8895,7 +8517,7 @@ class AI {
 						this.invertActionCells(firstAction, newOtherActions, 0);
 				}
 
-				// Pour toutes les actions choisie + cette action, ordonnÃ©e
+				// Pour toutes les actions choisie + cette action, ordonnée
 				for (integer i = 0; i < count(newOtherActions) - 1; i++) {						
 					curUsedTP += newOtherActions[i+1].getItem().getCost();
 					
@@ -8915,14 +8537,14 @@ class AI {
 					boolean canBeReversed = true;
 					Set<AbstractEntity> sameTargets = setIntersection(newOtherActions[i].getTargets(), newOtherActions[i+1].getTargets()) as Set<AbstractEntity>;
 					if (setContains(sameTargets, this._me) && this._actionsManager.compareSelfActionOrder(newOtherActions[i], newOtherActions[i+1]) != 0) {
-						// Si on est affectÃ© par les deux actions et que les deux actions n'ont pas le mÃªme score de prioritÃ©
+						// Si on est affecté par les deux actions et que les deux actions n'ont pas le même score de priorité
 						canBeReversed = false;
 					} else if (!setIsEmpty(sameTargets) && this._actionsManager.compareActionOrder(newOtherActions[i], newOtherActions[i+1]) != 0) {
-						// Si au moins une entitÃ© est affectÃ© par les deux actions et que les deux actions n'ont pas le mÃªme score de prioritÃ©
+						// Si au moins une entité est affecté par les deux actions et que les deux actions n'ont pas le même score de priorité
 						canBeReversed = false;
 					}
 
-					// On vÃ©rifit qu'on a pas dÃ©jÃ  inversÃ© les deux actions
+					// On vérifit qu'on a pas déjà inversé les deux actions
 					if (canBeReversed && !setContains(alreadyReversed, i)) {
 						// Intervertit
 						Action tmpAction = newOtherActions[i];
@@ -8941,7 +8563,7 @@ class AI {
 						isActionDoable = false;
 						break;
 					} else {
-						// La nextChoosenAction n'est pas rÃ©alisable aprÃ¨s choosenAction, donc on continue de tester avec la prochaine action
+						// La nextChoosenAction n'est pas réalisable après choosenAction, donc on continue de tester avec la prochaine action
 						this._actionsManager.unlinkEveryActions();
 						isActionDoable = false;
 						break;
@@ -8959,9 +8581,9 @@ class AI {
 	}
 
 	/**
-	 * Cherche les cells pour rÃ©aliser la premiÃ¨re action
+	 * Cherche les cells pour réaliser la première action
 	 * 
-	 * @return true si des cellules ont Ã©tÃ© trouvÃ©es
+	 * @return true si des cellules ont été trouvées
 	 **/
 	private boolean findCellsFromForFirstAction(Action choosenAction, boolean useDangerMap) {
 		if (setIsEmpty(choosenAction.getCellsFrom())) {
@@ -8973,7 +8595,7 @@ class AI {
 				}
 			}
 
-			// Si on a trouvÃ© des cell avec une escape safe
+			// Si on a trouvé des cell avec une escape safe
 			if (!setIsEmpty(cellsWithSafeEscape)) {
 				choosenAction.setCellsFrom(cellsWithSafeEscape);
 				
@@ -8985,9 +8607,9 @@ class AI {
 	}
 
 	/**
-	 * Cherche un path rÃ©alisable entre les deux actions
+	 * Cherche un path réalisable entre les deux actions
 	 * 
-	 * @return true si un path Ã  Ã©tÃ© trouvÃ©
+	 * @return true si un path à été trouvé
 	 **/
 	private boolean findPathsBetweenChoosenActions(Action choosenAction, Action nextChoosenAction, boolean useDangerMap) {
 		
@@ -8996,7 +8618,7 @@ class AI {
 		
 		Set<MoveCell> choosenActionCellsFrom = <>;
 		if (choosenAction.getItem().hasEffectType(EFFECT_INVERT)) {
-			// Si choosenAction est une inversion, il faut prendre en compte qu'on est tÃ©lÃ©portÃ© sur la targetCell, et donc c'est la cell Ã  partir de laquelle on doit calculer le path avec le nextChoosenAction
+			// Si choosenAction est une inversion, il faut prendre en compte qu'on est téléporté sur la targetCell, et donc c'est la cell à partir de laquelle on doit calculer le path avec le nextChoosenAction
 			TargetCell targetCell = setGetOne(choosenAction.getTargetCells()) as TargetCell;
 			
 			for (MoveCell moveCell in choosenAction.getCellsFrom()) {
@@ -9006,38 +8628,38 @@ class AI {
 		} else {
 			choosenActionCellsFrom = choosenAction.getCellsFrom();
 			
-			// On ne teste pas si les deux actions ont les mÃªme celle si l'action d'avant Ã©tait une inversion
+			// On ne teste pas si les deux actions ont les même celle si l'action d'avant était une inversion
 			for (MoveCell moveCell in choosenActionCellsFrom) {
 				if (setContains(cellsCanMoveToHitNextChoosenAction, moveCell.cell))
 					setPut(cellsAccessibleToHitLikeChoosenAction, moveCell);
 			}
 		}
 		
-		// Si au moins une des cellCanMoveToHit de cette action est dÃ©jÃ  prÃ©sente dans les cellsFrom permettant de rÃ©aliser choosenAction
+		// Si au moins une des cellCanMoveToHit de cette action est déjà présente dans les cellsFrom permettant de réaliser choosenAction
 		if (!setIsEmpty(cellsAccessibleToHitLikeChoosenAction)) {
 			choosenAction.setCellsFrom(cellsAccessibleToHitLikeChoosenAction);
 			nextChoosenAction.setCellsFrom(cellsAccessibleToHitLikeChoosenAction);
 			
 			this._actionsManager.linkSameCellsFromActions(nextChoosenAction, choosenAction);
-			// Pour toutes les actions liÃ©s on met Ã©galement ces cells
+			// Pour toutes les actions liés on met également ces cells
 			for (Action linkedAction in this._actionsManager.getSameCellsFromLinkedActions(choosenAction)) {
 				linkedAction.setCellsFrom(cellsAccessibleToHitLikeChoosenAction);
 			}
 			
-			//Debug.log(choosenAction + " into " + nextChoosenAction);
-			//Debug.log("Same cells linked actions " + this._actionsManager.getSameCellsFromLinkedActions(choosenAction));
-			//Debug.log("Common cells for actions " + cellsAccessibleToHitLikeChoosenAction);
+			Debug.log(choosenAction + " into " + nextChoosenAction);
+			Debug.log("Same cells linked actions " + this._actionsManager.getSameCellsFromLinkedActions(choosenAction));
+			Debug.log("Common cells for actions " + cellsAccessibleToHitLikeChoosenAction);
 
-			/** La nextChoosenAction est rÃ©alisable aprÃ¨s choosenAction, donc on continue de tester avec la prochaine action **/
+			/** La nextChoosenAction est réalisable après choosenAction, donc on continue de tester avec la prochaine action **/
 			return true;
 		}
 
-		// Si a partir des cellFrom de choosenAction je ne peux pas atteindre une des cellules pour rÃ©aliser nextChoosentAction
+		// Si a partir des cellFrom de choosenAction je ne peux pas atteindre une des cellules pour réaliser nextChoosentAction
 		if (!this.hasCellsAccessibleToHitWithSafeEscape(choosenAction, choosenActionCellsFrom, nextChoosenAction, cellsCanMoveToHitNextChoosenAction, null, useDangerMap)) {
-			// On test la mÃªme chose mais en utilisant les items de movement disponible
+			// On test la même chose mais en utilisant les items de movement disponible
 			for (Item moveItem in this._actionsManager.getUseableMovementItems()) {
 				if (this._actionsManager.isUsedMovementItem(moveItem)) continue;
-				// Si l'item de movement n'a pas dÃ©jÃ  Ã©tÃ© utilisÃ©
+				// Si l'item de movement n'a pas déjà été utilisé
 				if (this.hasCellsAccessibleToHitWithSafeEscape(choosenAction, choosenActionCellsFrom, nextChoosenAction, cellsCanMoveToHitNextChoosenAction, moveItem, useDangerMap)) {
 					nextChoosenAction.setTeleportItem(moveItem);
 					this._actionsManager.addUsedMovementItem(moveItem);
@@ -9049,7 +8671,7 @@ class AI {
 			return false;
 		}
 		
-		//Debug.log("Found to do" + nextChoosenAction + " after " + choosenAction);
+		Debug.log("Found to do" + nextChoosenAction + " after " + choosenAction);
 		return true;
 	}
 
@@ -9067,10 +8689,10 @@ class AI {
 			Item item = action.getItem();
 			integer areaType = item.getAreaType();
 			
-			// Si l'action ne vise pas l'entitÃ© inversÃ©e, on ne fait rien
+			// Si l'action ne vise pas l'entité inversée, on ne fait rien
 			if (setSize(action.getTargets()) > 1 || !setContains(action.getTargets(), inversionTarget)) continue;
 
-			// On gÃ©nÃ¨re les nouvelles TargetCell en fonction de la cell de l'entitÃ© visÃ©e aprÃ¨s l'inversion
+			// On génère les nouvelles TargetCell en fonction de la cell de l'entité visée après l'inversion
 			Set<TargetCell> newTargetCells = <>;
 			Cell entityCell = inversionTarget.getSimulationEntity().getCell()!;
 			if (areaType == AREA_LASER_LINE || areaType == AREA_FIRST_INLINE) {
@@ -9086,7 +8708,7 @@ class AI {
 				pause();
 
 			} else {
-				// On rÃ©cupÃ¨re la dist Ã  laquelle l'entitÃ© doit Ãªtre visÃ©e
+				// On récupère la dist à laquelle l'entité doit être visée
 				for (string targetsDist in split(action.getTargetsHash(), ",")) {
 					Array<string> targetsDistTab = split(targetsDist, "|");
 					string targetId = targetsDistTab[0];
@@ -9140,32 +8762,32 @@ class AI {
 			}
 
 			if (!cellAccFound) {
-				// Cette moveCell de choosenAction ne permet pas d'aller vers une cell pour rÃ©aliser nextChoosenAction
+				// Cette moveCell de choosenAction ne permet pas d'aller vers une cell pour réaliser nextChoosenAction
 				setPut(cellsFromOfChoosenActionWithoutPath, moveCell);
 			}
 		}
 
-		/** Des cells avec une bonne escape et un path avec la choosenAction d'avant on Ã©tÃ© trouvÃ©es**/
+		/** Des cells avec une bonne escape et un path avec la choosenAction d'avant on été trouvées**/
 		if (!setIsEmpty(cellsAccessibleToHitWithSafeEscape)) {
 			nextChoosenAction.setCellsFrom(cellsAccessibleToHitWithSafeEscape);
 			choosenAction.removeCellsFrom(cellsFromOfChoosenActionWithoutPath);
-			// Si on a vider toutes les cellsFrom d'une des actions antÃ©rieur c'est qu'il n'y a ps de path
+			// Si on a vider toutes les cellsFrom d'une des actions antérieur c'est qu'il n'y a ps de path
 			if (!this.removeCellsFromForLinkedAction(choosenAction))
 				return false;
-			// Pour toutes les actions liÃ©s on retire Ã©galement ces cells
+			// Pour toutes les actions liés on retire également ces cells
 			for (Action linkedAction in this._actionsManager.getSameCellsFromLinkedActions(choosenAction)) {
 				linkedAction.removeCellsFrom(cellsFromOfChoosenActionWithoutPath);
 			}
 			
 			this._actionsManager.linkPrevActions(nextChoosenAction, choosenAction);
 			
-			//Debug.log(choosenAction + " into " + nextChoosenAction);
-			//Debug.log("Same cells linked actions " + this._actionsManager.getSameCellsFromLinkedActions(choosenAction));
-			//Debug.log("Remove cells from prev action " + cellsFromOfChoosenActionWithoutPath);
-			//Debug.log("Cells from for prev action " + choosenAction.getCellsFrom());
-			//Debug.log("Cells from for next action " + cellsAccessibleToHitWithSafeEscape);
+			Debug.log(choosenAction + " into " + nextChoosenAction);
+			Debug.log("Same cells linked actions " + this._actionsManager.getSameCellsFromLinkedActions(choosenAction));
+			Debug.log("Remove cells from prev action " + cellsFromOfChoosenActionWithoutPath);
+			Debug.log("Cells from for prev action " + choosenAction.getCellsFrom());
+			Debug.log("Cells from for next action " + cellsAccessibleToHitWithSafeEscape);
 			
-			/** La nextChoosenAction est rÃ©alisable aprÃ¨s choosenAction, donc on continue de tester avec la prochaine action **/
+			/** La nextChoosenAction est réalisable après choosenAction, donc on continue de tester avec la prochaine action **/
 			return true;
 		}
 		
@@ -9173,9 +8795,9 @@ class AI {
 	}
 
 	/**
-	 * Retire les paths qui ne sont plus rÃ©alisable Ã  cause des actions antÃ©rieure
+	 * Retire les paths qui ne sont plus réalisable à cause des actions antérieure
 	 * 
-	 * @return false si on retire toutes les cellFrom d'une action antÃ©rieure
+	 * @return false si on retire toutes les cellFrom d'une action antérieure
 	 **/
 	private boolean removeCellsFromForLinkedAction(Action action) {
 		Action? linkedPrevAction = this._actionsManager.getLinkedPrevActions(action);
@@ -9207,14 +8829,14 @@ class AI {
 				setPut(cellsToRemoveFromPrevAction, moveCell);
 		}
 
-		//Debug.log("Remove cells from prev action " + cellsToRemoveFromPrevAction);
+		Debug.log("Remove cells from prev action " + cellsToRemoveFromPrevAction);
 
 		linkedPrevAction!.removeCellsFrom(cellsToRemoveFromPrevAction);
-		// On a retirÃ© toutes les cellFrom de l'action antÃ©rieure, donc il n'y a pas de path
+		// On a retiré toutes les cellFrom de l'action antérieure, donc il n'y a pas de path
 		if (setIsEmpty(linkedPrevAction!.getCellsFrom()))
 			return false;
 		
-		// On continue de retirer les path impossible dans les actions prÃ©cÃ©dentes
+		// On continue de retirer les path impossible dans les actions précédentes
 		Action? linkedPrevPrevAction = this._actionsManager.getLinkedPrevActions(linkedPrevAction!);
 		if (linkedPrevPrevAction != null)
 			return this.removeCellsFromForLinkedAction(linkedPrevPrevAction!);
@@ -9223,18 +8845,18 @@ class AI {
 	}
 
 	/**
-	 * RÃ©cupÃ¨re le cellsToHit pour l'action
+	 * Récupère le cellsToHit pour l'action
 	 **/
 	private Set<Cell> getActionCellsCanMoveToHit(Action action) {
 		Set<Cell> cellsCanMoveToHit = <>;
 		Item item = action.getItem();
 
-		// RÃ©cupÃ¨re les cell qui permettent de viser targetCell
+		// Récupère les cell qui permettent de viser targetCell
 		for (TargetCell targetCell in action.getTargetCells()) {
 			if (item.getAreaType() == AREA_LASER_LINE || item.getAreaType() == AREA_FIRST_INLINE) {
 				Cell? cellCanMoveToHit = Item.getCellToHitLaser(item, targetCell.cellFrom!, targetCell.cellTarget);
 				if (cellCanMoveToHit != null) {
-					// Si on est sur la mÃªme ligne et du mÃªme cotÃ© que la cellFrom d'origine
+					// Si on est sur la même ligne et du même coté que la cellFrom d'origine
 					if (Cell.isOnSameDirection(targetCell.cellTarget, cellCanMoveToHit!, targetCell.cellFrom!)) {
 						setPut(cellsCanMoveToHit, cellCanMoveToHit!);
 					}
@@ -9247,7 +8869,7 @@ class AI {
 				Set<Cell> allCellsCanMoveToHitTarget = item.getCellsCanMoveToHit(targetCell.cellTarget);
 				if (distWanted != -1) {
 					for (Cell areaCell in item.getEffectiveArea(targetCell.cellTarget, null)) {
-						// Si la cell permet d'utiliser l'item sur targetCell et qu'on est Ã  la distance voulue
+						// Si la cell permet d'utiliser l'item sur targetCell et qu'on est à la distance voulue
 						if (setContains(allCellsCanMoveToHitTarget, areaCell) && Cell.getDistance(areaCell, targetCell.cellTarget) == distWanted) {
 							setPut(cellsCanMoveToHit, areaCell);
 						}
@@ -9266,12 +8888,12 @@ class AI {
 	}
 
 	/**
-	 * DÃ©termine Ã  partir de la cellFrom il est possible de terminer sur un cell safe, de la dangerMap, par rapport au score de l'action
+	 * Détermine à partir de la cellFrom il est possible de terminer sur un cell safe, de la dangerMap, par rapport au score de l'action
 	 **/
 	private boolean doesCellHaveSafeEscape(Action action, MoveCell moveCell) {
 		AccessibleCells accCellsToEscape;
 		Cell cellFrom = moveCell.cell;
-		// Si c'est une inversion, on prend en compte le fait qu'on sera sur la cellule visÃ©e aprÃ¨s l'utilisation
+		// Si c'est une inversion, on prend en compte le fait qu'on sera sur la cellule visée après l'utilisation
 		if (action.getItem().hasEffectType(EFFECT_INVERT))
 			cellFrom = (setGetOne(action.getTargetCells()) as TargetCell).cellTarget;
 		
@@ -9291,7 +8913,7 @@ class AI {
 	}
 	
 	/**
-	 * Ordonne les actions dans l'ordre dÃ©croissant de leur score
+	 * Ordonne les actions dans l'ordre décroissant de leur score
 	 **/
 	private void orderActionsByScore() {
 		this._actions = arraySort(this._actions, function(Action a, Action b) => real {
@@ -9300,7 +8922,7 @@ class AI {
 	}
 	
 	/**
-	 * Filtre les actions qui sont trop loin pour Ãªtre rÃ©alisÃ©e
+	 * Filtre les actions qui sont trop loin pour être réalisée
 	 **/
 	private void filterToFarActions() {
 		//Debug.log("Actions before filtering to far : " + count(this._actions));
@@ -9319,7 +8941,7 @@ class AI {
 		integer maxDistFromItem = mostDistMovementItem != null ? mostDistMovementItem!.getMaxRange() : 0;
 		integer maxDistMoved = myMP + maxDistFromItem;
 		this._actions = arrayFilter(this._actions, function(Action action) => boolean {
-			// Une self action est toujours rÃ©alisable
+			// Une self action est toujours réalisable
 			if (setIsEmpty(action.getTargetCells())) return true;
 			
 			integer minDistForAction = 999999;
@@ -9349,7 +8971,7 @@ class AI {
 				if (targetCell != null) {
 					integer effType = eff.getType();
 					if (effType == EFFECT_ATTRACT || effType == EFFECT_PUSH || effType == EFFECT_INVERT || effType == EFFECT_TELEPORT) {
-						// c'est diffÃ©rent
+						// c'est différent
 					} else {
 						score += eff.getScoreOnCell(targetCell!.cellTarget, targetCell!.cellFrom, this._me, this._me.getStats(), isCasterHit);
 
@@ -9370,15 +8992,15 @@ class AI {
 	}
 	
 	/**
-	 * GÃ©nÃ¨re toutes les actions possibles
+	 * Génère toutes les actions possibles
 	 **/
 	private void generateActions() {
 		for (Item item in this._me.getOffCooldownItems()) {
-			// On passe l'item si c'est un item pour ce tÃ©lÃ©porter ou pour summoner
+			// On passe l'item si c'est un item pour ce téléporter ou pour summoner
 			if (setContains(item.getEffectsTypeList(), EFFECT_TELEPORT) || setContains(item.getEffectsTypeList(), EFFECT_SUMMON)) continue;
 			
 			var cost = item.getCost();
-			// si ce n'est pas l'arme qu'on a actuellement Ã§a coÃ»te 1 de plus
+			// si ce n'est pas l'arme qu'on a actuellement ça coûte 1 de plus
 			if (item instanceof Weapon && (this._me as Leek).getEquippedWeaponId() != item.getId()) {
 				cost++;
 			}
@@ -9404,7 +9026,7 @@ class AI {
 			if (setContains(item.getEffectsTypeList(), EFFECT_TELEPORT) || setContains(item.getEffectsTypeList(), EFFECT_SUMMON)) continue;
 			
 			var cost = item.getCost();
-			// Si ce n'est pas l'arme qu'on a actuellement Ã§a coÃ»te 1 de plus
+			// Si ce n'est pas l'arme qu'on a actuellement ça coûte 1 de plus
 			if (item instanceof Weapon && (this._me as Leek).getEquippedWeaponId() != item.getId()) {
 				cost++;
 			}
@@ -9418,7 +9040,7 @@ class AI {
 	}
 
 	/**
-	 * GÃ©nÃ¨re les actions possibles avec un item
+	 * Génère les actions possibles avec un item
 	 * 
 	 * @params Item item
 	 **/
@@ -9429,10 +9051,10 @@ class AI {
 		
 		for (Team team in this._teams) {
 			for (AbstractEntity entity in team.getAlive()) {
-				// Si l'entitÃ© n'est pas vivante
+				// Si l'entité n'est pas vivante
 				// ou que je me vise sans pouvoir me toucher
-				// ou que je vise un alliÃ© mais que l'item n'est pas fait pour Ã§a
-				// ou que je vise un ennemi mais que l'item n'est pas fait pour Ã§a
+				// ou que je vise un allié mais que l'item n'est pas fait pour ça
+				// ou que je vise un ennemi mais que l'item n'est pas fait pour ça
 				// Alors on passe l'item
 				if (!entity.isEntityAlive() || entity == this._me || (entity.isAnAlly() && !item.canTargetAlly()) || (!entity.isAnAlly() && !item.canTargetEnemy())) continue;
 
@@ -9465,11 +9087,11 @@ class AI {
 	}
 
 	/**
-	 * Retourne une map avec pour chaque TargetCell un score unique selon les entitÃ©s prÃ©sente dans l'area touchÃ©e
+	 * Retourne une map avec pour chaque TargetCell un score unique selon les entités présente dans l'area touchée
 	 **/
 	private Map<TargetCell, string> getTargetsPerCell(Item item, Set<TargetCell> cellsToCalcScore) {
 		boolean isAreaLaserLine = item.getAreaType() == AREA_LASER_LINE;
-		// Calcule une valeur unique en fonction des targets et de leur position par rapport Ã  la cellule visÃ©e
+		// Calcule une valeur unique en fonction des targets et de leur position par rapport à la cellule visée
 		Map<TargetCell, string> targetsPerCell = [:];
 		for (TargetCell targetCell in cellsToCalcScore) {
 			Set<AbstractEntity> targets = item.getSimulationTargets(targetCell.cellTarget, targetCell.cellFrom, this._me);
@@ -9480,10 +9102,10 @@ class AI {
 	}
 
 	/**
-	 * Groupe les TargetCell en fonction de leur score unique des entitÃ©s touchÃ©es
+	 * Groupe les TargetCell en fonction de leur score unique des entités touchées
 	 **/
 	private Map<string, Set<TargetCell>> getCellsPerTargets(Item item, Map<TargetCell, string> targetsPerCell) {
-		// Tri les cellules qui ont exactement les mÃªmes targets dans les mÃªme conditions
+		// Tri les cellules qui ont exactement les mêmes targets dans les même conditions
 		Map<string, Set<TargetCell>> cellsPerTargets = [:];
 		for (TargetCell targetCell : string targetsHash in targetsPerCell) {
 			if (!mapContainsKey(cellsPerTargets, targetsHash))
@@ -9495,7 +9117,7 @@ class AI {
 	}
 
 	/**
-	 * CrÃ©Ã© les objets Action
+	 * Créé les objets Action
 	 **/
 	private void createActions(Item item, Map<string, Set<TargetCell>> cellsPerTargets) {
 		boolean canHitSelf = item.getAreaType() != AREA_LASER_LINE  && item.getAreaType() != AREA_FIRST_INLINE && item.getAreaSize() >= item.getMinRange() && item.canTarget(this._me, this._me) ;
@@ -9529,11 +9151,11 @@ class AI {
 			}
 			
 			if (canHitSelf) {
-				// On peut se faire toucher sur toutes les distances de l'area, sauf si la range max est < Ã  la distance max d'area
+				// On peut se faire toucher sur toutes les distances de l'area, sauf si la range max est < à la distance max d'area
 				for (integer dist = item.getMinRange(); dist <= min(item.getAreaSize(), item.getMaxRange()); dist++) {
 					if (dist == 0) {
-						// VÃ©rifie qu'il n'y a pas dÃ©jÃ  une entitÃ© prÃ©sente sur la cell visÃ©e
-						// Si ce n'est pas nous alors on ne crÃ©e pas d'action
+						// Vérifie qu'il n'y a pas déjà une entité présente sur la cell visée
+						// Si ce n'est pas nous alors on ne crée pas d'action
 						AbstractEntity? entity = (setGetOne(cells) as TargetCell).cellTarget.getCellEntity();
 						if (entity != null && entity != this._me) continue;
 					}
@@ -9550,7 +9172,7 @@ class AI {
 			}
 		}
 		
-		// Ajoute les actions quand on hit que soit mÃªme
+		// Ajoute les actions quand on hit que soit même
 		if (canHitSelf) {
 			Cell myCell = this._me.getCell()!;
 			for (integer dist = item.getMinRange(); dist <= item.getAreaSize(); dist++) {
@@ -9562,6 +9184,295 @@ class AI {
 				push(this._actions, newSelfAction);
 			}
 		}
+	}
+
+	/**
+	 * Initialise la map de danger
+	 **/
+	private Map<Cell, Set<Item>> initDangerItemMap() {
+		mapClear(this._cellsPerDangerItemPerEntity);
+		
+		integer enemiesLeeksCount = 0;
+		for (Team team in this._teams) {
+			if (team != this._me.getTeam())
+				enemiesLeeksCount += setSize(team.getAliveLeeks());
+		}
+		
+		for (Team team in this._teams) {
+			if (team == this._me.getTeam()) continue;
+			
+			Debug.log("Testing danger on " + AI.MAX_DANGER_ITEMS_TESTED_COUNT / enemiesLeeksCount + " items");
+			for (AbstractEntity entity in team.getAlive()) {
+				AccessibleCells entityAccessibleCells = entity.getInitialAccessibleCells();
+				this._cellsPerDangerItemPerEntity[entity] = [:];
+				
+				integer dangerItemsTestedCount = 0;
+				// get the items which will be off cooldown when this entity will play
+				Array<Item> orderedDangerItems = this.orderAndFilterDangerItems(entity, entity.getOffCooldownsItemsInTurns(1));
+				boolean isAlreadyTestedMeleeItem = false;
+				//Debug.log("OrderedDangerItems : " + orderedDangerItems);
+
+				for (Item item in orderedDangerItems) {
+					if (item.getMaxRange() == 1) {
+						if (isAlreadyTestedMeleeItem) continue;
+						isAlreadyTestedMeleeItem = true;
+					}
+					
+					//Debug.startOpCount();
+					Set<Cell> cellsCanUseItem = item.getCellsCanHitFromCellsIgnore(entityAccessibleCells.getCells(), <entity>);
+					this._cellsPerDangerItemPerEntity[entity]![item] = cellsCanUseItem;
+
+					dangerItemsTestedCount++;
+					if (dangerItemsTestedCount > AI.MAX_DANGER_ITEMS_TESTED_COUNT / enemiesLeeksCount)
+						break;
+					//Debug.log(entity.getName() + " with " + item.getName())										
+					//Debug.stopOpCount("getCellsCanUseFromCellsIgnore : ");		
+					//CellMap.markCells(cellsCanUseItem, COLOR_RED);
+					//pause();
+					//clearMarks();
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Calcul le score de danger pour chaque cell de la map
+	 **/
+	private void calculateDangerMap() {
+		this._dangerMap.resetScore();
+		
+		Map<AbstractEntity, ScoreMap> damageMapPerEntity;
+		for (AbstractEntity entity : Map<Item, Set<Cell>> cellsPerItem in this._cellsPerDangerItemPerEntity) {
+			if (!entity.isEntityAlive()) continue;
+			
+			ScoreMap damageMap = new ScoreMap(<>, 0.0);
+
+			// On prend les stats de l'entité lors de son prochain tour (pas à l'instant actuel)
+			EntityStats entityStatsHisTurn = entity.getStatsInTurns(1);
+
+			// Calcul les dangerScore pour tous les items dangereux de l'entité et les cellules qu'il peut toucher avec
+			for (Item item : Set<Cell> cells in cellsPerItem) {		
+				if (item.getId() == 143) continue;
+				// TODO : gérer plasma
+
+				Map<integer, real> itemDangerScore = [:];
+				// On calcule le score pour toutes les distance d'area possible pour l'item
+				for (integer i = 0; i <= item.getAreaSize(); i++) {
+					itemDangerScore[i] = item.scaleScoreOnCost(item.getScore(this._me, entity, this._me.getStats(), entityStatsHisTurn, i));
+				}
+
+				// TODO: calculer les combos de danger, pour calculer plus précisément les dégats potentiels sur une cell
+				//if (item.getBaseCooldown() == 0) {
+					//for (integer hitDist : real dangerScore in itemDangerScore) {
+						//itemDangerScore[hitDist] = dangerScore;
+					//}
+				//}
+		
+				damageMap.setHighestScores(cells, -(itemDangerScore[0]!));
+
+				// Ajoute les area of effect
+				if (item.getAreaType() != AREA_LASER_LINE && item.getAreaType() != AREA_FIRST_INLINE) {
+					for (Cell cell in CellMap.getEdgeCells(cells)) {
+						for (Cell effCell in item.getEffectiveArea(cell, null)) {
+							integer dist = Cell.getDistance(effCell, cell);
+							if (!setContains(cells, effCell)) {
+								damageMap.setHighestScore(effCell, -itemDangerScore[dist]!);
+							}
+						}
+					}
+				}
+			}
+			
+			damageMapPerEntity[entity] = damageMap;
+		}
+		
+		// Pour toutes les cellules on calcule des scores en fonction des distances avec les alliés, les ennemis ...
+		
+		integer alliesTotalLife = 0;
+		integer alliesAliveLeeksCount = setSize(this._me.getTeam()!.getAliveLeeks());
+		for (AbstractEntity ally in this._me.getTeam()!.getAlive()) {
+			alliesTotalLife += ally.getStats().getLife();
+		}
+		
+		this.calculateEnemyTeamDangerMap(damageMapPerEntity, alliesTotalLife, alliesAliveLeeksCount);
+		this.calculateAllyTeamDangerMap(alliesTotalLife, alliesAliveLeeksCount);
+	}
+
+	private void calculateEnemyTeamDangerMap(Map<AbstractEntity, ScoreMap> damageMapPerEntity, integer alliesTotalLife, integer alliesAliveLeeksCount) {
+		Cell myCell = this._me.getCell()!;
+		
+		real SCORE_PER_DIST = this._highHighMeanScore / 30;
+		
+		for (Team team in this._teams) {
+			integer teamTotalLife = 0;
+			integer teamAlivesLeeksCount = setSize(team.getAliveLeeks());
+			for (AbstractEntity entity in team.getAlive()) {
+				teamTotalLife += round(entity.getStats().getLife() * entity.getScores().getAdjuster().entityType);
+			}
+			
+			real lifeAdvantageScore = max(0.2, 1 + (alliesTotalLife - teamTotalLife) / (2 * EntityStatsDiviser.maxLife));
+			real countAdvantageScore = 1.0 + (alliesAliveLeeksCount - teamAlivesLeeksCount) / GAME.leeksPerTeamCount;
+			real advantageScore = lifeAdvantageScore * countAdvantageScore;
+			Debug.log("advantageScore enemy : " + advantageScore);
+			for (AbstractEntity entity in team.getAlive()) {
+				if (entity == this._me) continue;
+				
+				AccessibleCells entityPathLength = entity.getPathLengthCells();
+				boolean entityIsBulb = entity instanceof Bulb;
+				real entityTypeMult = entity.getScores().getAdjuster().entityType;
+				Cell entityCell = entity.getCell()!;
+				integer entityMP = entity.getStats().getMP();
+				
+				integer distWantedFromEntity = round(entityMP * 2 / advantageScore);
+				real scorePerDistFromEntity = SCORE_PER_DIST * advantageScore * entityTypeMult / GAME.leeksPerTeamCount;
+				real distWantedScore = (1 - distWantedFromEntity / 24) * scorePerDistFromEntity;
+
+				ScoreMap? entityDamageMap = mapGet(damageMapPerEntity, entity, null) as ScoreMap;
+				
+				integer alliesBeforeEntityCount = GAME.timeline.getEntitiesPlayingBetweenEntitiesCount(this._me, entity, true);
+				integer alliesBeforeEntityCountDiviser = 1 + alliesBeforeEntityCount;
+				for (Cell cell in CellMap.getCells()) {
+					if (cell._isObstacle) continue;
+					
+					// Ajoute damage map pour l'entité
+					if (entityDamageMap != null) {
+						real score = entityDamageMap!.getScore(cell);
+						score /= advantageScore;
+						score /= alliesBeforeEntityCountDiviser;
+						this._dangerMap.addScore(cell, score);
+					}
+					
+					// TODO: Quickfix si on n'est pas présent dans le pathLength de l'entité (car le chemin est bloqué par exemple)
+					real distToEntity = 0.0;
+					real meanWeight = 1.5;
+					if (entityPathLength.hasCell(cell)) {
+						distToEntity += entityPathLength.getMpUsed(cell)!;
+						meanWeight += 1.0;
+					}
+					distToEntity += Cell.getDistance(entityCell, cell) * 1.5;
+					distToEntity /= meanWeight;
+					
+					real distScore =  max(0.0, abs(distWantedFromEntity - distToEntity) - 2) * scorePerDistFromEntity;
+					this._dangerMap.addScore(cell, distScore);
+				}
+			}
+		}
+	}
+
+	private void calculateAllyTeamDangerMap(integer alliesTotalLife, integer alliesAliveLeeksCount) {
+		Cell myCell = this._me.getCell()!;
+		
+		real SCORE_PER_DIST = this._highHighMeanScore / 3;
+
+		// Pour voir si les enemis ont beaucoup d'items dangereux en AOE
+		real areaSizeWeightedMean = 0.0;
+		integer areaSizeWeightValue = 0;
+		integer enemyTeamsTotalLife = 0;
+		integer enemyTeamAlivesLeeksCount = 0;
+		for (Team team in this._teams) {
+			if (team == this._me.getTeam()) continue;
+			
+			enemyTeamAlivesLeeksCount += setSize(team.getAliveLeeks());
+			
+			for (AbstractEntity entity in team.getAlive()) {
+				enemyTeamsTotalLife += round(entity.getStats().getLife() * entity.getScores().getAdjuster().entityType);
+				
+				Array<Item> dangerItems = orderAndFilterDangerItems(entity, entity.getOffCooldownsItemsInTurns(1));
+				areaSizeWeightValue += count(dangerItems);
+				for (integer i : Item item in dangerItems) {
+					if (item.getAreaType() != AREA_LASER_LINE && item.getAreaType() != AREA_FIRST_INLINE) {
+						areaSizeWeightedMean += item.getAreaSize();
+					}
+				}
+			}
+		}
+		areaSizeWeightedMean /= areaSizeWeightValue;
+		debug("areaSizeWeightedMean : " + areaSizeWeightedMean);
+		integer distAwayWantedFromEntity = ceil(areaSizeWeightedMean);
+
+		
+		real lifeAdvantageScore = max(0.2, 1.0 + (alliesTotalLife - enemyTeamsTotalLife) / (2 * EntityStatsDiviser.maxLife));
+		real countAdvantageScore = 1.0 + (alliesAliveLeeksCount - enemyTeamAlivesLeeksCount) / GAME.leeksPerTeamCount;
+		real advantageScore = lifeAdvantageScore * countAdvantageScore;
+		Debug.log("advantageScore ally : " + advantageScore);
+		for (AbstractEntity entity in this._me.getTeam()!.getAlive()) {
+			if (entity == this._me) continue;
+
+			AccessibleCells entityPathLength = entity.getPathLengthCells();
+			boolean entityIsBulb = entity instanceof Bulb;
+			real entityTypeMult = entity.getScores().getAdjuster().entityType;
+			Cell entityCell = entity.getCell()!;
+			integer entityMP = entity.getStats().getMP();
+
+			integer distWantedFromEntity = round(entityMP * 0.5 * advantageScore);
+			real scorePerDistFromEntity = SCORE_PER_DIST * entityTypeMult / advantageScore / GAME.leeksPerTeamCount;
+			real distWantedScore = (4 - distWantedFromEntity / 12) * scorePerDistFromEntity;
+
+			integer alliesBeforeEntityCount = GAME.timeline.getEntitiesPlayingBetweenEntitiesCount(this._me, entity, true);
+			integer alliesBeforeEntityCountDiviser = 1 + alliesBeforeEntityCount;
+			for (Cell cell in CellMap.getCells()) {
+				if (cell._isObstacle) continue;
+
+				real distToEntity = 0.0;
+				real meanWeight = 2.5;
+				if (entityPathLength.hasCell(cell)) {
+					distToEntity += entityPathLength.getMpUsed(cell)!;
+					meanWeight += 1.0;
+				}
+				distToEntity += Cell.getDistance(entityCell, cell) * 2.5;
+				distToEntity /= meanWeight;	
+
+				// Si on retire du score de danger
+				if (distToEntity <= distWantedFromEntity) {
+					// On retire un score constant pour toutes les cells à moins de la distance demandée
+					this._dangerMap.removeScore(cell, distWantedScore);
+				} else {
+					// On retire de moins en moins de score plus les cells s'éloignes
+					real distScore = distWantedScore - abs(distWantedFromEntity - distToEntity) * scorePerDistFromEntity;
+					this._dangerMap.removeScore(cell, max(-SCORE_PER_DIST * 10.0, distScore));
+				}
+				
+				if (distToEntity <= distAwayWantedFromEntity) {
+					real distScore = (1 + distToEntity - distAwayWantedFromEntity) * scorePerDistFromEntity * 2;
+					//distScore *= 
+					this._dangerMap.addScore(cell, distScore);
+				}
+			}
+		}
+	}
+
+	private Array<Item> orderAndFilterDangerItems(AbstractEntity entity, Set<Item> items) {
+		EntityStats entityStats = entity.getStatsInTurns(1);
+
+		Map<Item, real> dangerScorePerItem = [:];
+		for (Item item in items) {
+			real score = 0.0;
+
+			for (Effect eff in item.getEffects()) {
+				if (setContains(Effect.dangerEffects, eff.getType())) {
+					if (eff.getType() == EFFECT_INVERT || eff.getType() == EFFECT_ATTRACT || eff.getType() == EFFECT_PUSH) {
+
+					} else {
+						if (item.getId() == 143) continue;
+						// TODO : gérer plasma
+						
+						score += eff.getScore(null, null, this._me, entity, this._me.getStats(), entityStats, 0);
+					}
+				}
+			}
+			
+			dangerScorePerItem[item] = item.scaleScoreOnCost(score);
+		}
+		
+		Array<Item> orderedItems = setToArray(items) as Array<Item>;
+		orderedItems = arrayFilter(orderedItems, function(Item i1) => boolean {
+			return dangerScorePerItem[i1] != 0;
+		}) as Array<Item>;
+		orderedItems = arraySort(orderedItems, function(Item i1, Item i2) => real {
+			return dangerScorePerItem[i1]! - dangerScorePerItem[i2]!;
+		}) as Array<Item>;
+
+		return orderedItems;
 	}
 }
 
@@ -9695,7 +9606,7 @@ class Game {
 	}
 	
 	public void startTurn() {		
-		// Les bulbes peuvent apparaitre Ã  n'importe quel tour, pas seulement au dÃ©but
+		// Les bulbes peuvent apparaitre à n'importe quel tour, pas seulement au début
 		Bulb.initBulbs(getEnemies());
 		Bulb.initBulbs(getAllies());
 		this.updateAllStats();
@@ -9742,7 +9653,7 @@ class Game {
 		this._ai.resetEveryActions();
 	}
 }
-
+ 
 
 if (getFarmerName(getNearestEnemy()) == "Amal" && getFightType() == FIGHT_TYPE_SOLO)
 	return;

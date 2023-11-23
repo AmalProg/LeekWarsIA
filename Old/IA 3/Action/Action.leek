@@ -1,0 +1,65 @@
+class Action {
+	private static allId = 0;
+	private id;
+	private cellToUse;
+	private otherGoodActions;
+	private cellTarget;
+	private item;
+	private itemToTeleport;
+	
+	public constructor() {
+		Action.allId++;
+		
+		this.id = allId;
+		this.cellToUse = null;
+		this.otherGoodActions = [];
+		this.otherGoodActions[this] = this;
+		this.cellTarget = null;
+		this.item = null;
+		this.itemToTeleport = null;
+	} 
+	
+	public constructor(cellToUse, cellTarget, item, itemToTeleport) {
+		this.cellToUse = cellToUse;
+		this.otherGoodActions = [];
+		this.otherGoodActions[this] = this;
+		this.cellTarget = cellTarget;
+		this.item = item;
+		this.itemToTeleport = itemToTeleport;
+	}
+	
+	public setCellToUse(cell) {
+		this.cellToUse = cell;
+	}
+	public addOtherGoodActions(action) {
+		this.otherGoodActions[action] = action;	
+	}
+	public setCellTarget(cell) {
+		this.cellTarget = cell;
+	}
+	public setItem(item) {
+		this.item = item;
+	}
+	public setItemToTeleport(itemToTeleport) {
+		this.itemToTeleport = itemToTeleport;
+	}
+	
+	public getId() {
+		return this.id;	
+	}
+	public getCellToUse() {
+		return this.cellToUse;
+	}
+	public getOtherGoodActions() {
+		return this.otherGoodActions;	
+	}
+	public getCellTarget() {
+		return this.cellTarget;
+	}
+	public getItem() {
+		return this.item;
+	}
+	public getItemToTeleport() {
+		return this.itemToTeleport;
+	}
+}

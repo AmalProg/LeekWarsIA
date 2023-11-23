@@ -1,0 +1,186 @@
+include("Utils/Debug");
+include("Map/CellMap");
+include("Entities/Leek");
+include("Entities/Bulb");
+include("Entities/Chest");
+include("Entities/Turret");
+include("Entities/Timeline");
+include("AI");
+include("Utils/Register");
+
+global Game GAME = Game.getInstance();
+
+class Game {
+	public final AbstractEntity me;
+	public final Timeline timeline;
+	private Set<Team> _teams;
+	private Set<AbstractEntity> _allEntities; public Set<AbstractEntity> getAllEntities() { return _allEntities; }
+	private AI _ai;
+	public final boolean isBR;
+	public final integer leeksPerTeamCount;
+	public final integer allEntitiesCount;
+	
+	private static Game? instance;
+	
+	public static Game getInstance() {
+		if (Game.instance == null) {
+			Game.instance = new Game();
+		}
+		return Game.instance!;
+	};
+	
+	private constructor() {
+		this._allEntities = <>;
+		
+		Debug.enabledLog = true;
+		Debug.enabledOp = false;
+		Debug.enabledInfo = false;
+
+		Debug.startOpCount();
+		CellMap.initCellMap();
+		Debug.stopOpCount("init CellMap : ");
+
+		Debug.startOpCount();
+		Effect.initOnTeamEffects();
+		Effect.initEffectClassPerId();
+		Effect.initFinalEffectScoreFnctPerId();
+		Effect.initGetAppliedValueFnctPerId();
+		EntityEffect.initStatsFctPerType();
+		Debug.stopOpCount("init statics : ");
+
+		this.isBR = getFightType() == FIGHT_TYPE_BATTLE_ROYALE;
+
+		Debug.startOpCount();
+		this._teams = <>;
+		if (this.isBR) {
+			initBRTeams();
+		} else {
+			initTeams()
+		}
+		Debug.stopOpCount("init Leeks and Teams : ");
+
+		AbstractEntity? me = AbstractEntity.get(getEntity());
+		if (me != null) {
+			this.me = me!;
+			
+			Debug.log(me);
+			
+			this._ai = new AI(this.me, this._teams);
+		} else {
+			Debug.error("me is null");
+		}
+		
+		this.timeline = new Timeline(this._allEntities, this.me);
+		
+		this.leeksPerTeamCount = setSize(this.me.getTeam()!.getLeeks());
+	}
+	private void initBRTeams() {
+		for (integer entityId in getEnemies()) {
+			Leek.initLeeks([entityId]);
+			Bulb.initBulbs([entityId]);
+			Chest.initChests([entityId]);
+
+			AbstractEntity? entity = AbstractEntity.get(entityId);
+			if (entity != null) {
+				setPut(this._teams, new Team(<entity!>));
+			}
+			
+			setPut(this._allEntities, AbstractEntity.get(entityId));
+		}
+
+		Leek.initLeeks([getEntity()]);
+		Leek? me = Leek.get(getEntity());
+		if (me != null) {
+			setPut(this._teams, new Team(<me!>));
+				   
+			setPut(this._allEntities, me);
+		}
+	}
+	private void initTeams() {
+		Leek.initLeeks(getAllies());
+		Bulb.initBulbs(getAllies());
+		Turret.initTurrets(getAllies());
+		Set<AbstractEntity> allies = <>;
+		for (integer entityId in getAllies()) {
+			setPut(allies, AbstractEntity.get(entityId));
+			
+			setPut(this._allEntities, AbstractEntity.get(entityId));
+		}
+		setPut(this._teams, new Team(allies));
+
+		Leek.initLeeks(getEnemies());
+		Bulb.initBulbs(getEnemies());
+		Chest.initChests(getEnemies());
+		Turret.initTurrets(getEnemies());
+		Set<AbstractEntity> ennemies = <>;
+		for (integer entityId in getEnemies()) {
+			AbstractEntity? entity = AbstractEntity.get(entityId);
+			if (entity != null) {
+				if (!(entity instanceof Chest)) {
+					setPut(ennemies, entity);
+				} else {
+					// Chests are in their own Team
+					setPut(this._teams, new Team(<entity!>));
+				}
+			}
+			
+			setPut(this._allEntities, AbstractEntity.get(entityId));
+		}
+		setPut(this._teams, new Team(ennemies));
+	}
+	
+	public void updateAllStats() {
+		Bulb.updateBulbsStats();
+		Leek.updateLeeksStats();
+		Chest.updateChestsStats();
+		Turret.updateTurretsStats();
+	}
+	
+	public void startTurn() {		
+		// Les bulbes peuvent apparaitre à n'importe quel tour, pas seulement au début
+		Bulb.initBulbs(getEnemies());
+		Bulb.initBulbs(getAllies());
+		this.updateAllStats();
+		this.me.clearAccessibleCellsWithItem();
+
+		for (Team team in this._teams) { team.update(); }
+		for (Team team in this._teams) { team.updateMapInfos();	}
+		for (Team team in this._teams) { team.updateScores(); }
+		AbstractEntity.updateEntitiesScores();
+		AbstractEntity.updateSimulationStats();
+		
+		
+		Debug.startOpCount();
+		// Need to be done after removing the current entity from the CellMap
+		AbstractEntity.updateEntitiesPathLength();
+		Debug.stopOpCount("updateEntitiesPathLength : ");
+		
+		this._allEntities = <>;
+		for (Team team in this._teams) {
+			for (AbstractEntity entity in team.getEntities()) {
+				setPut(this._allEntities, entity);
+			}
+		}
+		this.timeline.update(this._allEntities);
+
+		for (AbstractEntity entity in this._allEntities) {
+			Debug.log(entity.getScores().getAdjuster());	
+		}
+		
+		this._ai.determineActions();
+		
+		this.updateAllStats();
+		
+		this._ai.executeActions();
+		this._ai.goToEndOfTurnCell();
+		this._ai.selectBestWeapon();
+	}
+	
+	
+	public void triggerEntityDisplacedEvent() {
+		this._ai.resetEveryActions();
+	}
+	public void triggerEntityDiedEvent() {
+		this._ai.resetEveryActions();
+	}
+}

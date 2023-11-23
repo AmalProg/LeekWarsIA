@@ -1,0 +1,82 @@
+include("Entity");
+include("../Items/Weapon");
+
+class Leek extends AbstractEntity {
+	/** leeks pool **/
+	private static final Map<integer, Leek> leeks = [:];
+	public static void initLeeks(Array<integer> entitiesId) {
+		for (integer leekId in entitiesId) {
+			if(getType(leekId) == ENTITY_LEEK) {
+				Leek.leeks[leekId] = new Leek(leekId);
+				AbstractEntity.entities[leekId] = leeks[leekId];
+			}
+		}
+	}
+	public static Leek? get(integer id) {
+		return Leek.leeks[id];
+	}
+	public static integer countLeeks() {
+		return mapSize(Leek.leeks);
+	}
+	/** fin leeks pool **/
+ 
+	private Set<Weapon> _weapons; public Set<Weapon> getLeekWeapons() { return this._weapons; }
+	private Map<integer, PassiveEffect> _passiveItemEffects; public Map<integer, PassiveEffect> getPassiveItemEffects() { return this._passiveItemEffects; }
+	private integer? _equippedWeaponId; public integer? getEquippedWeaponId() { return this._equippedWeaponId; }
+	private Set<Bulb> _summons; public Set<Bulb> getSummons() { return _summons; }
+
+	constructor(integer id) {
+		super(id);
+
+		this._weapons = <>;
+		this._passiveItemEffects = [:];
+		
+		this._summons = <>;
+
+		initBaseStats();
+	}
+
+	public initBaseStats() {
+		for(integer wepId in getWeapons(this._id)!) {
+			Weapon weapon = Weapon.get(wepId);
+			setPut(this._items, weapon);
+			for (Array<any> passiveEffect in getWeaponPassiveEffects(wepId)) {
+				PassiveEffect? passiveItemEffect = PassiveEffect.createEffect(passiveEffect, weapon);
+				if (passiveItemEffect != null)
+					this._passiveItemEffects[passiveItemEffect!.getType()] = passiveItemEffect!;
+			}
+			setPut(this._weapons, weapon);
+			this._cooldowns[weapon] = 0;
+		}
+	}
+
+	public static updateLeeksStats() {
+		for (Leek leek in Leek.leeks) {
+			leek.updateStats();
+		}
+	}
+	protected void updateStats() {
+		this._equippedWeaponId = getWeapon();
+		super.updateStats();
+		
+		if (GAME.isBR)
+			this._powerOnDeath = round(10 + 0.5 * this._stats.getPower());
+		
+	}
+	
+	public void addSummon(Bulb bulb) {
+		setPut(this._summons, bulb);
+	}
+	public void removeSummon(Bulb bulb) {
+		setRemove(this._summons, bulb);
+	}
+	
+	public void simulateItemUse(Item item) {
+		if (item instanceof Weapon and this._equippedWeaponId != item.getId()) {
+			this._equippedWeaponId = item.getId();
+			this.useTP(1);
+		}
+		super.simulateItemUse(item);
+		Debug.info("my tp : " + this._stats.getTP());
+	}
+}

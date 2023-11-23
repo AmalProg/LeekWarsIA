@@ -1,0 +1,132 @@
+include("Weapon");
+include("../Utils/ArrayUtils");
+
+class Combo {
+	private static idIncrement = 0;
+	public id;
+	public items;
+	public totalItemsCount
+	public cost;
+	public childrenCombos;
+
+	public addItem(item, cost) {
+		push(this.items, item);
+		this.totalItemsCount++;
+		this.cost += cost;
+		
+		this.items = arraySort(this.items, function(item1, item2) {
+			if (Item.debuffItems[item1.id]) {
+				if (Item.debuffItems[item2.id]) return 0;
+				else return -1;
+			} else if (Item.buffItems[item1.id]) {
+				if (Item.debuffItems[item2.id]) return 1;
+				else if (Item.buffItems[item2.id]) return 0;
+				else return -1;
+			} else if (Item.vulnerabilityItems[item1.id]) {
+				if (Item.debuffItems[item2.id] or Item.buffItems[item2.id]) return 1;
+				else if (Item.vulnerabilityItems[item2.id]) return 0;
+				else return -1;
+			} else {
+				if (Item.debuffItems[item2.id] or Item.buffItems[item2.id] or Item.vulnerabilityItems[item2.id]) return 1;
+				else return 0;
+			}
+		})
+	}
+	
+	public calculateDamage(target, caster, targetStats, casterStats) {
+		if (this.items == []) return 0;
+		
+		var initialLife = targetStats.life;
+		for (var item in this.items) {
+			for (var effect in item.effects) {
+				effect.applyToForKillCombo(target, caster, targetStats, casterStats, target.cell, 0);
+			}
+		}
+		
+		return initialLife - targetStats.life;
+	}
+	
+	constructor() {
+		Combo.idIncrement++;
+		this.id = Combo.idIncrement;
+		this.items = [];
+		this.totalItemsCount = 0;
+		this.cost = 0;
+		this.childrenCombos = [];
+	}
+	constructor(combo) {
+		Combo.idIncrement++;
+		this.id = Combo.idIncrement;
+		this.items = clone(combo.items);
+		this.totalItemsCount = combo.totalItemsCount;
+		this.cost = combo.cost;
+		this.childrenCombos = [];
+	}
+
+	public static generate(itemList, tp, equippedWeaponId) {
+		var combos = [];
+		insideGenerate(combos, itemList, tp, equippedWeaponId, new Combo());
+		return combos;
+	}
+		
+	private static insideGenerate(combos, itemList, tp, equippedWeaponId, currentCombo) {
+		if (tp <= 0) return [];
+		
+		var noDuplicateItem = clone(itemList);
+		for (var item in itemList) {
+			if (item.baseCooldown != 0 and isItemInCombo(currentCombo, item)) continue;
+			var useCost = item.cost;
+			if (item instanceof Weapon and item.id != equippedWeaponId)
+				useCost += 1;
+			if (useCost <= tp) {
+				var combo = new Combo(currentCombo);
+				combo.addItem(item, useCost);
+				if (!combos[combo.totalItemsCount])
+					combos[combo.totalItemsCount] = [];
+				push(combos[combo.totalItemsCount], combo);
+				var otherCombos = Combo.insideGenerate(combos, noDuplicateItem, tp - useCost, equippedWeaponId, combo);
+			}
+			
+			removeElement(noDuplicateItem, item);
+		}
+		return combos;
+	}		
+	
+	public static getUseableCombos(combosPerItemsCount, caster) {
+		var useableCombos = [];
+		for (var itemsCount : var combos in combosPerItemsCount) {
+			for (var combo in combos) {
+				var useable = true;
+				if (combo.cost > caster.stats.tp) {
+					useable = false;
+				} else {
+					for (var itemId : var item in combo.items) {
+						if (caster.cooldowns[item.id] != 0) {
+							useable = false;
+							break;
+						}
+					}
+				}
+
+				if (useable) {
+					if (!useableCombos[combo.totalItemsCount])
+						useableCombos[combo.totalItemsCount] = [];
+					push(useableCombos[combo.totalItemsCount], combo);
+				}
+			}
+		}
+		
+		return useableCombos;
+	}
+	
+	public string() {
+		var str = this.id + ", ";
+		for (var itemId : var item in this.items) {
+			str += item.name + " "
+		}
+		str += ", " + this.cost; 
+		str += '\n';
+		
+		return str;
+	}
+}

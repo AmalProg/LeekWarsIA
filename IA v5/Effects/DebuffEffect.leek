@@ -1,0 +1,58 @@
+include("Effect");
+
+class DebuffEffect extends Effect {
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
+		affectedEntityStats.debuff(value);
+	}
+	
+	protected real getEffectScore(real value, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
+		EntityScores targetScores = target.getScores();
+		
+		real score = 0.0;
+		for (EntityEffect eff in target.getStats().getEffects()) {
+			if (eff.isIrreductible()) continue;
+			
+			integer effType = eff.getType();
+			real effTypeMult = 1.0;
+			if (setContains(Effect.shieldEffects, effType) || setContains(Effect.rawShieldEffects, effType) || setContains(Effect.dmgReturnEffects, effType) || setContains(Effect.vulnerabilityEffects, effType))
+				effTypeMult = targetScores.getAdjuster().debuffShield;
+			
+			// Pas besoin de calculer un score pour un effet qui va disparaitre au prochain tour de l'entité et qui n'a pas d'importance pour notre tour
+			else if (eff.getTurns() == 1 && eff.getCaster().getTurnOrder() <= target.getTurnOrder()) 
+				continue;
+			
+			else if (setContains(Effect.buffEffects, effType) || setContains(Effect.rawBuffEffects, effType)) {
+				if (effType == EFFECT_BUFF_STRENGTH || effType == EFFECT_RAW_BUFF_STRENGTH || effType == EFFECT_RAW_BUFF_MAGIC)
+					effTypeMult = targetScores.getAdjuster().debuffBuffDamage;
+				
+				else if (effType == EFFECT_BUFF_MP || effType == EFFECT_RAW_BUFF_MP)
+					effTypeMult = targetScores.getAdjuster().debuffBuffMP;
+				
+				else if (effType == EFFECT_BUFF_TP || effType == EFFECT_RAW_BUFF_TP)
+					effTypeMult = targetScores.getAdjuster().debuffBuffTP;
+				
+				else
+					effTypeMult = targetScores.getAdjuster().debuffBuffOtherStats;
+					
+			} else if (setContains(Effect.shackleEffects, effType))
+				effTypeMult = targetScores.getAdjuster().debuffShackles;
+			else 
+				effTypeMult = targetScores.getAdjuster().debuffOther;
+			
+			// Récupère la classe de l'effet
+			Function<integer, AbstractEntity, AbstractEntity, EntityStats, EntityStats, Cell? => real>? getFinalEffectScoreFnct = Effect.finalEffectScoreFnctPerId[effType];
+			if (getFinalEffectScoreFnct != null) {
+				integer newValue = round(eff.getValue() * (1 - (value / 100)));
+				integer removedValue = -(eff.getValue() - newValue);
+				
+				real tmpScore = score;
+				// on multiplie le score par un coeff en fonction du nombre de tours restant pour l'effet
+				score += (1 + (eff.getTurns() - 3) / 5) * (getFinalEffectScoreFnct!)(removedValue, target, caster, targetStats, casterStats, cellTarget) * effTypeMult;
+				
+				//Debug.log("debuffing " + target.getName() + " from " + Effect.effectNamePerType[eff.getType()] + " " + eff.getTurns() + " " + removedValue + " " + (score - tmpScore) + " " + effTypeMult);
+			}
+		}
+		
+		return score;
+	}
+}

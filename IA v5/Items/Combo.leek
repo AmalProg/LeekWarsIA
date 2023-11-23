@@ -1,0 +1,42 @@
+include("Item");
+include("../Entities/Entity");
+
+class Combo {
+	private Set<Item> _items; public Set<Item> getItems() { return this._items; }
+	private integer _cost;
+	
+	constructor() {
+		this._cost = 0;
+		this._items = <>;
+	}
+	constructor(Set<Item> items) {
+		this._cost = 0;
+		for (Item item in items)
+			this.addItem(item);
+	}
+	
+	public boolean canAddItem(Item item, integer tpMax) {
+		return this._cost + item.getCost() <= tpMax;
+	}
+	public void addItem(Item item) {
+		setPut(this._items, item);
+		this._cost += item.getCost();
+	}
+	
+	public static Set<Combo> generateCombos(Set<Item> items, integer tpMax) {	
+		Set<Combo> allCombos = <>;
+		Combo.recursiveGenerateCombos(allCombos, new Combo(<>), clone(items), tpMax);
+		return allCombos;
+	}
+	private static Set<Combo> recursiveGenerateCombos(Set<Combo> allCombos, Combo combo, Set<Item> itemsCanUse, integer tpMax) {
+		for (Item item in itemsCanUse) {
+			if (combo.canAddItem(item, tpMax)) {
+				combo.addItem(item);
+				
+				setRemove(itemsCanUse, item);
+				Combo.recursiveGenerateCombos(allCombos, combo, itemsCanUse, tpMax);
+				setPut(itemsCanUse, item);
+			}
+		}
+	}
+}

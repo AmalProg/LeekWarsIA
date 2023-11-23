@@ -1,0 +1,193 @@
+include("Bulb");
+include("Leek");
+include("Turret");
+
+class Team {
+	/** teams pool **/ 
+	public static teams = [];
+	public static get(id) {
+		if (Team.teams[id] == null) {
+			Team.teams[id] = new Team(id);	
+		}
+		return Team.teams[id];
+	}
+	/** fin teams pool **/
+	
+	public id;
+	
+	public anyEntity = [];
+	public leeks = [];
+	public bulbs = [];
+	public alive = [];
+	public aliveLeeks = [];
+	public deadLeeks = [];
+	public turret;
+	
+	public itemsEffects = [];
+	public turnOrder = [];
+	public turnOrderPerEntity = [];
+	
+	public meanStrengthVal;
+	public maxStrengthVal;
+	public totalAntidoteCount;
+	public totalRemoveShacklesCount;
+	public totalTeamLife;
+	public aliveLeekCount;
+	public leeksCount;
+	public shieldItemsOffCooldownMult;
+	
+	constructor(id) {
+		this.id = id;
+	}
+	
+	public initScoreVals() {
+		var meanStrength = 0;
+		var maxStrength = 0;
+		this.totalTeamLife = 0;
+
+		for (var enemy in this.alive) {
+			meanStrength += enemy.stats.getStrength();
+			if (maxStrength < enemy.stats.getStrength())
+				maxStrength = enemy.stats.getStrength();
+
+			if (!enemy.isASummon) {
+				this.totalTeamLife += enemy.stats.life;
+			}
+		}
+		this.aliveLeekCount = count(this.alive);
+		this.leeksCount = count(this.leeks);
+		this.meanStrengthVal = meanStrength / this.aliveLeekCount / EntityStatsDiviser.strength;
+		this.maxStrengthVal = maxStrength / EntityStatsDiviser.strength;
+
+		this.totalAntidoteCount = 0;
+		this.totalRemoveShacklesCount = 0;
+		for (var ally in this.alive) {
+			if (ally.items[CHIP_ANTIDOTE] and ally.cooldowns[CHIP_ANTIDOTE] == 0) {
+				this.totalAntidoteCount++;
+			}
+			if (ally.items[CHIP_MANUMISSION] and ally.cooldowns[CHIP_MANUMISSION] == 0) {
+				this.totalRemoveShacklesCount++;
+			}
+		}
+	}
+	
+	public add(entity) {
+		if (!inArray(this.anyEntity, entity)) {
+			if (entity.type == ENTITY_BULB) {
+				push(this.alive, entity);
+				push(this.bulbs, entity);
+			} else if (entity.type == ENTITY_TURRET) {
+				this.turret = entity;
+			} else if (entity.type == ENTITY_LEEK) {
+				push(this.leeks, entity);
+				if (entity.alive) {
+					push(this.alive, entity);
+					push(this.aliveLeeks, entity);
+				} else {
+					push(this.deadLeeks, entity);
+				}
+			}
+
+			push(this.anyEntity, entity);
+		}
+	}
+	
+	public initItemsEffects() {
+		this.itemsEffects = [];
+		for (var turnOrder : var caster in this.turnOrder) {
+			var pathLength = Map.getMyPathLength(caster.cell, 60);
+
+			for (var item in caster.items) {
+				if (Item.onAlliesItems[item.id]) {
+					for (var effect in item.effects) {
+						var possibleTargets = [];
+						for (var target in this.alive) {
+							if (effect.canTarget(target, caster) && effect.canApplyTo(target, caster) && pathLength[target.cell.id] != null) {
+								var targetCellMp = pathLength[target.cell.id].mp;
+								for (var cId : var cAcc in pathLength) {
+									if (cAcc.mp + item.maxRange >= targetCellMp) {
+										possibleTargets[target.id] = target;
+										break;
+									}
+								}
+							}
+						}
+
+						if (possibleTargets != []) {
+							if (this.itemsEffects[effect.type] == null)
+								this.itemsEffects[effect.type] = [];
+							push(this.itemsEffects[effect.type], {effect: effect, item: item, cooldown: caster.cooldowns[item.id], caster: caster, possibleTargets: possibleTargets});
+						}
+					}
+				}
+			}
+		}
+		
+		var alliedShieldItemsCount = 0;
+		var alliedShieldItemsOffCooldownCount = 0;
+		for (var effectType : var itemEffects in this.itemsEffects) {
+			if (ItemEffect.shieldEffects[effectType]) {
+				for (var itemEffect in itemEffects) {
+					alliedShieldItemsCount++;
+					if (itemEffect.cooldown <= 1)
+						alliedShieldItemsOffCooldownCount++;
+				}
+			}
+		}
+		var alliedShieldItemsVal = 1;
+		if (alliedShieldItemsCount != 0)
+			alliedShieldItemsVal = alliedShieldItemsOffCooldownCount / alliedShieldItemsCount;
+		this.shieldItemsOffCooldownMult = 1;
+	}
+	
+	public update() {
+		this.bulbs = [];
+		this.leeks = [];
+		this.alive = [];
+		this.aliveLeeks = [];
+		this.deadLeeks = [];
+		for (var entity in this.anyEntity) {
+			if (entity.type == ENTITY_BULB) {
+				if (entity.alive) {
+					push(this.alive, entity);
+					push(this.bulbs, entity);
+				} else {
+					removeElement(this.anyEntity, entity);	
+				}
+			} else if (entity.type == ENTITY_TURRET) {
+				this.turret = entity;
+			} else if (entity.type == ENTITY_LEEK) {
+				push(this.leeks, entity);
+				if (entity.alive) {
+					push(this.alive, entity);
+					push(this.aliveLeeks, entity);
+				} else {
+					push(this.deadLeeks, entity);
+				}
+			}
+		}
+		
+		var tmpTurnOrder = [];
+		for (var entity in this.alive) {
+			tmpTurnOrder[entity.turnOrder] = entity;
+		}
+		tmpTurnOrder = arraySort(tmpTurnOrder, function(to1, e1, to2, e2) {
+			return to1 - to2;
+		})
+		this.turnOrder = [];
+		this.turnOrderPerEntity = [];
+		var i = 0;
+		for (var turnOrder: var entity in tmpTurnOrder) {
+			this.turnOrder[i] = entity;
+			this.turnOrderPerEntity[entity.id] = i;
+			i++;
+		}
+	}
+	
+	public string() {
+		return " { id : " + this.id +
+			"\n any :" + this.anyEntity +
+			" }";
+	}
+
+}

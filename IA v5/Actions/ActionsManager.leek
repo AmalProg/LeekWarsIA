@@ -1,0 +1,452 @@
+include("Action");
+include("../Map/ScoreCell");
+
+class ActionsManager {
+	private Map<integer, Action> _choosenActions;
+	public boolean hasChoosenAction(integer id) { return mapContainsKey(this._choosenActions, id); }
+	public Action? getChoosenAction(integer id) { return mapGet(this._choosenActions, id, null) as Action?; }
+	
+	private Array<Action> _selfActions;
+	private Array<Action> _summonActions;
+	private Array<Action> _orderedOtherActions; 
+	public Array<Action> getOrderedOtherActions() { return this._orderedOtherActions; }
+	public void clearOrderedOtherAction() { arrayClear(this._orderedOtherActions); }
+	
+	private Set<Action> _delayingActions;
+	private Array<Action> _delayedSelfActions;
+	
+	private Map<Action, Action> _linkedPrevActions;
+	private Map<Action, Set<Action>> _sameCellsFromLinkedActions;
+	
+	private Array<Item> _useableMovementItems;
+	public void addUseableMovementItem(Item item) { push(this._useableMovementItems, item); }
+	public void addUseableMovementItems(Set<Item> items) { for (Item item in items) push(this._useableMovementItems, item); }
+	public void clearUseableMovementItems() { arrayClear(this._useableMovementItems); }
+	public Array<Item> getUseableMovementItems() { return this._useableMovementItems; }
+	private Set<Item> _usedMovementItems;
+	public void addUsedMovementItem(Item item) { setPut(this._usedMovementItems, item);}
+	public void removeUsedMovementItem(Item item) { setRemove(this._usedMovementItems, item); }
+	public void clearUsedMovementItems() { setClear(this._usedMovementItems); }
+	public boolean isUsedMovementItem(Item item) { return setContains(this._usedMovementItems, item); }
+
+	private boolean _isDelayedSelfActions;
+	
+	constructor() {
+		this.reset();
+	}
+	
+	public void reset() {
+		this._choosenActions = [:];
+		this._selfActions = [];
+		this._summonActions = [];
+		this._orderedOtherActions = [];
+		this._delayingActions = <>;
+		this._delayedSelfActions = [];
+		this._linkedPrevActions = [:];
+		this._sameCellsFromLinkedActions = [:];
+		this._useableMovementItems = [];
+		this._usedMovementItems = <>;
+		
+		for (Action action in this._orderedOtherActions) {
+			if (action.getTeleportItem() != null) {
+				this.addUseableMovementItem(action.getTeleportItem()!);
+			}
+		}
+		
+		this._isDelayedSelfActions = false;
+	}
+												 
+	public void simulate(AbstractEntity caster) {
+		this.clearUsedMovementItems();
+		
+		this.orderSelfActions();
+		this.orderDelayedSelfActions();
+		
+		this.simulateSelfAction(caster);
+		
+		Set<Action> delayingActions = clone(this._delayingActions) as Set<Action>;
+		boolean isDelayedSelfActions = true;
+		for (Action action in this._orderedOtherActions) {
+			action.simulate(this, caster);
+			
+			// Si l'élément obligeait de delayer les self action, on le retire de _delayingActions
+			setRemove(delayingActions, action);
+			if (setIsEmpty(delayingActions)) {
+				isDelayedSelfActions = false;
+			}
+
+			// On essaye d'exécuter les self action restantes sur cette cell
+			if (!isDelayedSelfActions)
+				this.simulateDelayedSelfAction(caster);
+		}
+		
+		if (isDelayedSelfActions)
+			this.simulateDelayedSelfAction(caster);
+	}
+	private void simulateSelfAction(AbstractEntity caster) {
+		for (Action action in this._selfActions) {
+			action.simulate(this,caster);
+		}
+	}
+	private void simulateDelayedSelfAction(AbstractEntity caster) {
+		for (Action action in this._delayedSelfActions) {
+			action.simulate(this,caster);
+		}
+	}
+	
+	public void addSelfAction(Action action) {
+		this._choosenActions[action.getUniqueId()] = action;
+		
+		if (this._isDelayedSelfActions)
+			push(this._delayedSelfActions, action);
+		else {
+			EntityStats myStats = GAME.me.getStats();
+			boolean isDelayedAction = false;
+			for (Effect eff in action.getItem().getEffects()) {
+				if (!eff.isStackable() && myStats.hasEffectOn(eff)) {
+					Function<Effect, Cell?, Cell?, AbstractEntity, EntityStats, EntityStats, integer, boolean => integer> getAppliedValueFnct = Effect.getAppliedValueFnctPerId[eff.getType()]!;
+					integer originalValue = (setGetOne(myStats.getEffectsOn(eff)) as EntityEffect).getValue();
+					integer afterEffectValue = getAppliedValueFnct(eff, null, null, GAME.me, myStats, myStats, action.getHitCasterDist(), true);
+					// Si la stats original est meilleur que la stats qu'on va ajouter
+					if (originalValue - afterEffectValue > 0)
+						isDelayedAction = true;
+				}
+			}
+
+			if (isDelayedAction)
+				push(this._delayedSelfActions, action);
+			else
+				push(this._selfActions, action);
+		}
+	}
+												 
+	/**
+	 * @params actions : toutes les actions (pas sur soi) ordonnées
+	 * @params isEndOfActions : si c'est la fin de l'algo et qu'on renvoi juste les bonnes actions à réaliser
+	 **/
+	public void setOrderedOtherAction(Array<Action> actions, boolean isEndOfActions = false) {
+		this._orderedOtherActions = actions;
+
+		if (isEndOfActions) return;
+		
+		for (Action action in actions) {
+			this._choosenActions[action.getUniqueId()] = action;
+			
+			// Si l'item donne des TP
+			if (action.getItem().hasEffectType(EFFECT_BUFF_TP) || action.getItem().hasEffectType(EFFECT_RAW_BUFF_TP)) {
+				boolean isHitingCaster = false;
+				// Et que l'effet affecte le caster
+				for (Effect eff in action.getItem().getEffectsOfTypes(<EFFECT_BUFF_TP, EFFECT_RAW_BUFF_TP>)) {
+					if (eff.isAffectingCaster())
+						isHitingCaster = true;
+				}
+				
+				// Ou qu'on est dans l'area
+				if (setContains(action.getTargets(), GAME.me))
+					isHitingCaster = true;
+				
+				if (isHitingCaster) {
+					// On va mettre un delai sur les self actions
+					this._isDelayedSelfActions = true;
+					setPut(this._delayingActions, action);
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Retourne le coût de l'utilisation des actions, dans l'ordre donné, par caster
+	 **/
+	public integer getOrderedActionsCost(Array<Action> actions, SimulationEntity caster) {
+		integer cost = 0;
+		for (Action action in actions) {
+			Item item = action.getItem();
+			
+			if (item instanceof Weapon && item.getId() != caster.getEquippedWeaponId()) {
+				cost++;
+				caster.setEquippedWeaponId(item.getId());
+			}
+			cost += item.getCost();
+		}
+		
+		caster.resetEquippedWeaponId();
+		
+		return cost;
+	}
+	
+	/**
+	 * @params ScoreMap dangerMap : les scores les plus bas seront considéré comme les meilleures cells
+	 **/
+	public void executeChoosenActions(DangerMap dangerMap) {
+		this.clearUsedMovementItems();
+		
+		this.orderSelfActions();
+		this.orderDelayedSelfActions();
+		
+		Debug.log("Delaying self actions : " + this._isDelayedSelfActions);
+		Array<Action> notExecutedSelfActions = clone(this._selfActions) as Array<Action>;
+		this.tryExecuteSelfActions(notExecutedSelfActions);
+		
+		// Gérer toutes les autres actions
+		for (integer i : Action action in this._orderedOtherActions) {
+			AbstractEntity.updatePositions();
+			Cell myCell = GAME.me.getCell()!;
+			AccessibleCells myCellsAcc;
+			if (action.getTeleportItem() != null) {
+				myCellsAcc = CellMap.getAccessibleCellsWithTeleport(myCell, getMP(), action.getTeleportItem()!);
+			} else {
+				myCellsAcc = CellMap.getAccessibleCells(myCell, getMP());
+			}
+
+			Map<Cell, MoveCell> moveCellPerCell = [:];
+			Array<ScoreCell> scoredCellsFrom = [];
+			for (MoveCell moveCell in action.getCellsFrom()) {
+				if (!myCellsAcc.hasCell(moveCell.cell)) continue;
+				
+				// On récupère la moveCell des AccessibleCells de myCell pour être sûr de ne pas utiliser une moveCell simulée d'une autre manière
+				moveCellPerCell[moveCell.cell] = myCellsAcc.getMoveCell(moveCell.cell);
+				
+				// Récupère le plus petit score de danger accessible via cette moveCell
+				real lowestDangerScore = dangerMap.getLowestDangerScoreAccessible(CellMap.getAccessibleCells(moveCell.cell, moveCell.mpRemain));
+				push(scoredCellsFrom, new ScoreCell(moveCell.cell, lowestDangerScore));
+			}
+
+			// Ordonne les cell en fonction du score de danger, puis en fonction du path length avec notre cell actuelle
+			scoredCellsFrom = arraySort(scoredCellsFrom, function(ScoreCell sc1, ScoreCell sc2) => real {
+				if (sc1.score == sc2.score) {
+					return myCellsAcc.getMpUsed(sc1.cell) - myCellsAcc.getMpUsed(sc2.cell) as real;
+				}
+				return sc1.score - sc2.score;
+			}) as Array<ScoreCell>;
+			
+			if (isEmpty(scoredCellsFrom)) {
+				Debug.error("Couldn't find any accessible cells to realise " + action);
+				Debug.log("Target cells : " + action.getTargetCells());
+				Debug.log("Move cells : " + action.getCellsFrom());
+			} else {
+				Cell bestCellFrom = this.getBestCellFromToExecuteAction(action, scoredCellsFrom, moveCellPerCell, myCellsAcc, i==0);
+
+				action.execute(this, notExecutedSelfActions, moveCellPerCell[bestCellFrom]);
+				// Si l'élément obligeait de delayer les self action, on le retire de _delayingActions
+				setRemove(this._delayingActions, action);
+				if (setIsEmpty(this._delayingActions)) {
+					if (this._isDelayedSelfActions)
+						Debug.log("End of delaying, we can use self actions");
+					this._isDelayedSelfActions = false;
+				}
+
+				// On essaye d'exécuter les self action restantes sur cette cell	
+				this.tryExecuteSelfActions(notExecutedSelfActions, bestCellFrom);	
+				if (!this._isDelayedSelfActions)
+					this.tryExecuteSelfActions(this._delayedSelfActions, bestCellFrom);
+			}
+		}
+	
+		// S'il reste des actions delayée, ont les réalisent
+		this.tryExecuteSelfActions(this._delayedSelfActions);
+	}
+
+	private Cell getBestCellFromToExecuteAction(Action action, Array<ScoreCell> scoredCellsFrom, Map<Cell, MoveCell> moveCellPerCell, AccessibleCells myCellsAcc, boolean isFirstAction) {
+
+		Cell bestCellFrom = (arrayGet(scoredCellsFrom, 0) as ScoreCell).cell;
+		// Si ce n'est pas la première action et que elle a un item pour se téléporter
+		if (!isFirstAction && action.getTeleportItem() != null) {
+			Cell myCell = CellMap.getCell(getCell()!)!;
+			for (ScoreCell scoreCell in scoredCellsFrom) {
+				MoveCell moveCell = moveCellPerCell[scoreCell.cell]!;
+				// Si je peux aller sur la cell pour me teleport
+				if (myCellsAcc.hasCell(moveCell.cellFromTeleport!)) {
+					integer mpLeft = myCellsAcc.getMoveCell(moveCell.cellFromTeleport!)!.mpRemain;
+					// Et que je peux aller sur la cell avec les mp restants
+					if (setContains(CellMap.getAccessibleCells(moveCell.cellToTeleport!, mpLeft).getCells(), moveCell.cell)) {
+						// Cette cell est bien accessible via la cell actuelle
+						bestCellFrom = scoreCell.cell;
+						break;
+					}
+				}
+			}
+		}
+		
+		return bestCellFrom;
+	}
+
+	private void tryExecuteSelfActions(Array<Action> actions, Cell cellFrom = CellMap.getCell(getCell()!)!) {
+		// Gérer les actions sur soi même
+		for (Action action in clone(actions) as Array<Action>) {
+			// On n'essaye que les actions pas déjà exécutés
+			if (this.tryExecuteSelfAction(action, cellFrom)) {
+				removeElement(actions, action);
+			} else {
+				Debug.warning("Someone in the self cast aoe : " + " for " + action);
+			}
+		}
+	}
+
+	private boolean tryExecuteSelfAction(Action action, Cell cellFrom) {
+		integer distWanted = action.getHitCasterDist();
+		if (action.getHitCasterDist() == 0) {
+			if (setSize(action.getItem().getSimulationTargets(cellFrom, null, GAME.me)) == 0) {
+				// Si on est la seule entité affecté par l'item
+				action.setTargetCells(<new TargetCell(cellFrom, null)>);		  
+				action.execute(this);
+			} else {
+				return false;
+			}
+		} else {
+			boolean isActionExecuted = false;
+			for (Cell cell in action.getItem().getEffectiveArea(cellFrom, null)) {
+				if (Cell.getDistance(cellFrom, cell) == distWanted && setSize(action.getItem().getSimulationTargets(cell, null, GAME.me)) == 0) {
+					// If there is no targets, it means we will only hit ourself
+					action.setTargetCells(<new TargetCell(cell, null)>);
+					action.execute(this);
+					isActionExecuted = true;
+					break;
+				}
+			}
+			
+			if (!isActionExecuted)
+				return false;
+		}
+		
+		return true;
+	}
+
+	public Array<Action> orderSelfActions() {
+		this._selfActions = arraySort(this._selfActions, function(Action a1, Action a2) => integer {
+			return this.compareSelfActionOrder(a1, a2) as integer;
+		}) as Array<Action>;
+	}
+	public Array<Action> orderDelayedSelfActions() {
+		this._delayedSelfActions = arraySort(this._delayedSelfActions, function(Action a1, Action a2) => integer {
+			return this.compareSelfActionOrder(a1, a2) as integer;
+		}) as Array<Action>;
+	}
+
+	public Array<Action> orderOtherActions(Array<Action> actions) {
+		return arraySort(actions, function(Action a1, Action a2) => integer {
+			Set<AbstractEntity> sameTargets = setIntersection(a1.getTargets(), a2.getTargets()) as Set<AbstractEntity>;
+			if (setContains(sameTargets, GAME.me))
+				return this.compareSelfActionOrder(a1, a2) as integer;
+			if (!setIsEmpty(sameTargets))
+				return this.compareActionOrder(a1, a2);
+			return 0;
+		}) as Array<Action>;
+	}
+
+	/*
+	 * @returns -1 if a1 need to be done first, 0 if they can be done in any order, 1 if a2 need to be done first
+	 */
+	public real compareSelfActionOrder(Action a1, Action a2) {
+		return getSelfActionOrderScore(a1) - getSelfActionOrderScore(a2);
+	}
+	public real getSelfActionOrderScore(Action action) {
+		integer score = 0;
+		for (Effect effect in action.getItem().getEffects()) {
+			integer effType = effect.getType();
+			 if (effType == EFFECT_DEBUFF) {
+				score += 0;
+			 } else if(effType == EFFECT_BUFF_AGILITY or effType == EFFECT_RAW_BUFF_AGILITY) {
+				score += 1;
+			} else if(effType == EFFECT_BUFF_TP or effType == EFFECT_RAW_BUFF_TP) {
+				score += 2;
+			} else if(setContains(Effect.buffEffects, effType) or setContains(Effect.rawBuffEffects, effType)) {
+				score += 3;
+			} else if(setContains(Effect.augmentMaxLifeEffects, effType)) {
+				score += 5;
+			} else if(setContains(Effect.healEffects, effType) or setContains(Effect.shieldEffects, effType) or setContains(Effect.dmgReturnEffects, effType)) {
+				score += 7;
+			} else if(effType == EFFECT_ANTIDOTE or effType == EFFECT_REMOVE_SHACKLES) {
+				score += 11;
+			} else if(effType == EFFECT_SUMMON) {
+				score += 20;
+			} else {
+				score += 9;
+			}
+		}
+		
+		return score / count(action.getItem().getEffects());
+	}
+
+	/*
+	 * @returns -1 if a1 need to be done first, 0 if they can be done in any order, 1 if a2 need to be done first
+	 */
+	public integer compareActionOrder(Action a1, Action a2) {
+		boolean a1HasEffectDebuff = a1.getItem().hasEffectType(EFFECT_DEBUFF);
+		boolean a2HasEffectDebuff = a2.getItem().hasEffectType(EFFECT_DEBUFF);
+		if (a1HasEffectDebuff && !a2HasEffectDebuff)
+			return -1;
+		if (!a1HasEffectDebuff && a2HasEffectDebuff)
+			return 1;
+		
+		
+		boolean a1HasEffectNovaVitality = a1.getItem().hasEffectType(EFFECT_NOVA_VITALITY);
+		boolean a2HasEffectNovaVitality = a2.getItem().hasEffectType(EFFECT_NOVA_VITALITY);
+		boolean a1HasEffectHeal = a1.getItem().hasEffectTypeIn(Effect.healEffects);
+		boolean a2HasEffectHeal = a2.getItem().hasEffectTypeIn(Effect.healEffects);
+		if (a1HasEffectNovaVitality && !a2HasEffectNovaVitality)
+			if (a2HasEffectHeal)
+				return -1;
+		if (!a1HasEffectNovaVitality && a2HasEffectNovaVitality)
+			if (a1HasEffectHeal)
+				return 1;
+		
+		
+		boolean a1HasEffectVulnerability = a1.getItem().hasEffectTypeIn(Effect.vulnerabilityEffects);
+		boolean a2HasEffectVulnerability = a2.getItem().hasEffectTypeIn(Effect.vulnerabilityEffects);
+		boolean a1HasEffectDamage = a1.getItem().hasEffectTypeIn(Effect.directDamageEffects);
+		boolean a2HasEffectDamage = a2.getItem().hasEffectTypeIn(Effect.directDamageEffects);
+		if ((a1HasEffectVulnerability && !a2HasEffectVulnerability) || (a1HasEffectHeal && !a2HasEffectHeal))
+			if (a2HasEffectDamage)
+				return -1;
+		if ((!a1HasEffectVulnerability && a2HasEffectVulnerability) || (!a1HasEffectHeal && a2HasEffectHeal))
+			if (a1HasEffectDamage)
+				return 1;
+		
+		
+		boolean a1HasEffectNoveDamage = a1.getItem().hasEffectType(EFFECT_NOVA_DAMAGE);
+		boolean a2HasEffectNoveDamage = a2.getItem().hasEffectType(EFFECT_NOVA_DAMAGE);
+		if (a1HasEffectDamage && !a2HasEffectDamage)
+			if (a2HasEffectNoveDamage)
+				return -1;
+		if (!a1HasEffectDamage && a2HasEffectDamage)
+			if (a1HasEffectNoveDamage)
+				return 1;
+		
+		return 0;
+	}
+
+	public Action getLinkedPrevActions(Action action) {
+		return mapGet(this._linkedPrevActions, action, null) as Action;	
+	}
+	public void linkPrevActions(Action action, Action prevAction) {
+		this._linkedPrevActions[action] = prevAction;
+	}
+
+	public Set<Action> getSameCellsFromLinkedActions(Action action) {
+		return mapGet(this._sameCellsFromLinkedActions, action, <>) as Set<Action>;	
+	}
+	public void linkSameCellsFromActions(Action a1, Action a2) {
+		if (!mapContainsKey(this._sameCellsFromLinkedActions, a1)) {
+			this._sameCellsFromLinkedActions[a1] = <>;
+		}
+		setPut(this._sameCellsFromLinkedActions[a1]!, a2);
+		
+		if (!mapContainsKey(this._sameCellsFromLinkedActions, a2)) {
+			this._sameCellsFromLinkedActions[a2] = <>;
+		}
+		setPut(this._sameCellsFromLinkedActions[a2]!, a1);
+
+		// Pour toutes les actions déjà lié à a1 on les lie avec a2
+		for (Action linkedAction in clone(mapGet(this._sameCellsFromLinkedActions, a1, <>)) as Set<Action>) {
+			setPut(this._sameCellsFromLinkedActions[linkedAction]!, a2);
+			setPut(this._sameCellsFromLinkedActions[a2]!, linkedAction);
+		}
+		for (Action linkedAction in clone(mapGet(this._sameCellsFromLinkedActions, a2, <>)) as Set<Action>) {
+			setPut(this._sameCellsFromLinkedActions[linkedAction]!, a1);
+			setPut(this._sameCellsFromLinkedActions[a1]!, linkedAction);
+		}
+	}
+	public void unlinkEveryActions() {
+		mapClear(this._sameCellsFromLinkedActions);
+	}
+}

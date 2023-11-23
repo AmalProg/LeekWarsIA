@@ -1,0 +1,10 @@
+include("Game");
+include("Utils/Debug");
+
+if (getFarmerName(getNearestEnemy()) == "Amal" && getFightType() == FIGHT_TYPE_SOLO)
+	return;
+
+GAME.startTurn();
+
+Debug.log(getUsedRAM() + " / " + getMaxRAM());
+Debug.log("Operations this turn : " + getOperations());

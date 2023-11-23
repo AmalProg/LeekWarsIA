@@ -1,0 +1,110 @@
+include("Entity");
+
+class EntityEffect {
+	private Function<EntityStats, integer => void>? _statsFct; public Function<EntityStats, integer => void>? getStatsFct() { return _statsFct; }
+	private integer _type; public integer getType() { return _type; }
+	private integer _value; public integer getValue() { return _value; }
+	private AbstractEntity _caster; public AbstractEntity getCaster() { return _caster; }
+	private integer _turns;  public integer getTurns() { return _turns; }
+	private boolean _critical; public boolean isCritical() { return _critical; }
+	private integer _itemId; public integer getItemId() { return _itemId; }
+	private AbstractEntity|null _target; public AbstractEntity|null getTarget() { return _target; }
+	private integer _modifiers; public integer getModifiers() { return _modifiers; }
+	private boolean _isIrreductible; public boolean isIrreductible() { return _isIrreductible; }
+	
+	constructor(Array<boolean|integer> effectArray) {
+		this._type = effectArray[0] as integer;
+		this._statsFct = EntityEffect._statsFctPerType[this._type];
+		this._value = effectArray[1] as integer;
+		this._caster = AbstractEntity.get(round(effectArray[2] as integer))!;
+		this._turns = effectArray[3] as integer;
+		this._critical = effectArray[4] == 1;
+		this._itemId = effectArray[5] as integer;
+		this._target = AbstractEntity.get(effectArray[6] as integer);
+		this._modifiers = effectArray[7] as integer;
+
+		this._isIrreductible = (this._modifiers & EFFECT_MODIFIER_IRREDUCTIBLE) != 0;
+	}
+	constructor(Function<EntityStats, integer => void>? statsFct, integer type, integer value, AbstractEntity caster, integer turns, boolean critical, integer itemId, AbstractEntity? target, integer modifiers) {
+		this._statsFct = statsFct;
+		this._type = type;
+		this._value = value;
+		this._caster = caster;
+		this._turns = turns;
+		this._critical = critical;
+		this._itemId = itemId;
+		this._target = target;	
+		this._modifiers = modifiers;	
+		
+		this._isIrreductible = (this._modifiers & EFFECT_MODIFIER_IRREDUCTIBLE) != 0;
+	}
+	
+	public void apply(EntityStats stats) {
+		if (this._statsFct != null)
+			(this._statsFct!)(stats, this._value);
+	}
+	public void remove(EntityStats stats) {
+		if (this._statsFct != null)
+			(this._statsFct!)(stats, -this._value);
+	}
+	
+	private static Map<integer, Function<EntityStats, integer => void>> _statsFctPerType;
+	public static Function<EntityStats, integer => void>? getstatsFctPerType(integer type) {
+		return _statsFctPerType[type];
+	}
+	public static initStatsFctPerType() {
+		EntityEffect._statsFctPerType = [:];
+		EntityEffect._statsFctPerType[EFFECT_HEAL] = EntityStats.addLifeStatic;
+		 
+		EntityEffect._statsFctPerType[EFFECT_BUFF_AGILITY] = EntityStats.addAgilityStatic;
+		EntityEffect._statsFctPerType[EFFECT_BUFF_RESISTANCE] = EntityStats.addResistanceStatic;
+		EntityEffect._statsFctPerType[EFFECT_BUFF_STRENGTH] = EntityStats.addStrengthStatic;
+		EntityEffect._statsFctPerType[EFFECT_BUFF_WISDOM] = EntityStats.addWisdomStatic;
+		EntityEffect._statsFctPerType[EFFECT_BUFF_MP] = EntityStats.addMPStatic;
+		EntityEffect._statsFctPerType[EFFECT_BUFF_TP] = EntityStats.addTPStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_BUFF_AGILITY] = EntityStats.addAgilityStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_BUFF_MAGIC] = EntityStats.addMagicStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_BUFF_POWER] = EntityStats.addPowerStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_BUFF_RESISTANCE] = EntityStats.addResistanceStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_BUFF_SCIENCE] = EntityStats.addScienceStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_BUFF_STRENGTH] = EntityStats.addStrengthStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_BUFF_WISDOM] = EntityStats.addWisdomStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_BUFF_MP] = EntityStats.addMPStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_BUFF_TP] = EntityStats.addTPStatic;
+		EntityEffect._statsFctPerType[EFFECT_ABSOLUTE_SHIELD] = EntityStats.addAbsoStatic;
+		EntityEffect._statsFctPerType[EFFECT_RELATIVE_SHIELD] = EntityStats.addRelStatic;
+		EntityEffect._statsFctPerType[EFFECT_STEAL_ABSOLUTE_SHIELD] = EntityStats.addAbsoStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_ABSOLUTE_SHIELD] = EntityStats.addAbsoStatic;
+		EntityEffect._statsFctPerType[EFFECT_RAW_RELATIVE_SHIELD] = EntityStats.addRelStatic;
+		EntityEffect._statsFctPerType[EFFECT_DAMAGE_RETURN] = EntityStats.addDmgReturnStatic;
+		EntityEffect._statsFctPerType[EFFECT_SHACKLE_AGILITY] = EntityStats.removeAgilityStatic;
+		EntityEffect._statsFctPerType[EFFECT_SHACKLE_MAGIC] = EntityStats.removeMagicStatic;
+		EntityEffect._statsFctPerType[EFFECT_SHACKLE_MP] = EntityStats.removeMPStatic;
+		EntityEffect._statsFctPerType[EFFECT_SHACKLE_TP] = EntityStats.removeTPStatic;
+		EntityEffect._statsFctPerType[EFFECT_SHACKLE_STRENGTH] = EntityStats.removeStrengthStatic;
+		EntityEffect._statsFctPerType[EFFECT_SHACKLE_WISDOM] = EntityStats.removeWisdomStatic;
+		EntityEffect._statsFctPerType[EFFECT_VULNERABILITY] = EntityStats.removeRelStatic;
+		EntityEffect._statsFctPerType[EFFECT_ABSOLUTE_VULNERABILITY] = EntityStats.removeAbsoStatic;
+		
+		EntityEffect._statsFctPerType[EFFECT_DAMAGE_TO_ABSOLUTE_SHIELD] = EntityStats.addAbsoStatic;
+		EntityEffect._statsFctPerType[EFFECT_DAMAGE_TO_STRENGTH] = EntityStats.addStrengthStatic;
+		EntityEffect._statsFctPerType[EFFECT_POISON_TO_SCIENCE] = EntityStats.addScienceStatic;
+		EntityEffect._statsFctPerType[EFFECT_NOVA_DAMAGE_TO_MAGIC] = EntityStats.addMagicStatic;
+		EntityEffect._statsFctPerType[EFFECT_MOVED_TO_MP] = EntityStats.addMPStatic;
+		EntityEffect._statsFctPerType[EFFECT_ALLY_KILLED_TO_AGILITY] = EntityStats.addAgilityStatic;
+		EntityEffect._statsFctPerType[EFFECT_KILL_TO_TP] = EntityStats.addTPStatic;
+	}
+	
+	public string string() {
+		return 	"{ type: " + Effect.effectNamePerType[this._type] +
+				", value: " + this._value +
+				", caster: " + this._caster.getName() +
+				", turns: " + this._turns +
+				", critical: " + this._critical +
+				", itemId: " + this._itemId +
+				", target: " + (this._target != null ? this._target!.getName() : "null") +
+				", modifiers: " + this._modifiers +
+				", isIrreductible: " + this._isIrreductible +
+			" }\n";
+	}
+}

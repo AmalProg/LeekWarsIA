@@ -1,0 +1,192 @@
+include("Leek");
+include("Bulb");
+include("Combi");
+include("Outils");
+
+global _UnsafeCells = [];
+
+global _LeekDmgOnCellWithItem = [];
+global _ItemTested = [];
+
+function createDangerMap()
+{
+	var op = getOperations();
+	
+	_UnsafeCells = [];
+
+	var leek = getLeek();
+	var enes = getAliveEnemies();
+	var nbrEnes = 0;
+	for(var e in enes)
+		if(!isSummon() || _BulbsNameChip[e] == CHIP_FIRE_BULB || _BulbsNameChip[e] == CHIP_LIGHTNING_BULB)
+			nbrEnes++;
+	if(nbrEnes == 0)
+		return;
+
+	var maxItems = max(1, round(4 - nbrEnes/2));
+	
+	var totalLife = _ActualStats[leek]["TotalLife"];
+	var life = _ActualStats[leek]["Life"];
+	var abs = 0;
+	var rel = 0;
+	
+	var solo = getFightType() == FIGHT_TYPE_SOLO;
+	
+	for(var effect: var effectData in _LeeksEffects[leek]){
+		if(effect == EFFECT_RELATIVE_SHIELD){
+			for(var item in effectData["items"]) {
+			var effectItemData = effectData[item][0];
+				if(willHeStillHaveEffectFromItemNextTurn(item, effect, leek, leek, effectItemData))
+					rel += effectItemData["value"];
+			}
+		}
+		else if(effect == EFFECT_ABSOLUTE_SHIELD){
+			for(var item in effectData["items"]) {
+			var effectItemData = effectData[item][0];
+				if(willHeStillHaveEffectFromItemNextTurn(item, effect, leek, leek, effectItemData))
+					abs += effectItemData["value"];
+			}
+		}
+	}
+	var relMult = (1 - rel/100);
+
+	_LeekDmgOnCellWithItem = [];
+	_ItemTested = [];
+	
+	for (var e in enes) {
+		if (isSummon(e) && (_BulbsNameChip[getName(e)] != CHIP_FIRE_BULB && _BulbsNameChip[getName(e)] != CHIP_LIGHTNING_BULB)) continue;
+
+		var eStr =@ (1 + _ActualStats[e]["Strength"]/100);
+		var eMag =@ (1 + _ActualStats[e]["Magic"]/100);
+		var eStrMult =@ ((1<eStr)?eStr:1);
+		var eMagMult =@ ((1<eMag)?eMag:1);
+
+		if(eStr < 4 / getLevelCoeff() && eMag < 4 / getLevelCoeff())
+			continue;
+
+		var eC =@ _LeeksCells[e];
+		var eMP =@ getMP(e);
+		var ePT =@ getTP(e);
+
+		var itemsToTest = getSortedBestDmgItems(e);
+		var meleeAlreadyTested = false;
+		_ItemTested[e] = [];
+
+		var entitiesIgnored = [];
+		for(var ene in getNextEnemiesOrder(leek, false, true)) {
+			push(entitiesIgnored, ene);
+			if(ene == e)
+				break;
+		}
+		debug("entitiesIgnored : " + e + _BaseStats[e]["Name"] + " , " + entitiesIgnored);
+
+		var nbrItems = 0;
+		for (var item in itemsToTest) {
+			var itemInfos =@ _ItemsInfos[item];
+
+			if((itemInfos["scopeMax"] <= 1 && meleeAlreadyTested) || item == CHIP_BURNING)
+				continue; // on enlève les armes de CaC et la puce brulis
+
+			++nbrItems;
+			if(nbrItems > maxItems){
+				if(meleeAlreadyTested)
+					break; // si on à testé assez d'armes, on arrête pour cet ennemi
+				else if(itemInfos["scopeMax"] > 1)
+					continue;
+			}
+
+			if(itemInfos["scopeMax"] <= 1)
+				meleeAlreadyTested = true;
+
+			_ItemTested[e][item] = true;
+				
+			var area = (itemInfos["area"]-2 <= 0) ? 0 : itemInfos["area"]-2;
+
+			var cellsFocused = [];
+			cellsFocused[0] = getCellsCanFocusWithItemWithMove(item, eC, eMP, 0, entitiesIgnored);
+
+			for(var k = 0; k <= area; k++){
+				var mult = 1;
+
+				if(k > 0) {
+					mult = 1 - 0.5 * k / area;
+
+					cellsFocused[k] = [];
+					for(var c: var z in cellsFocused[0])
+						getAoe(cellsFocused[k], c, k);
+				}
+
+				for(var c: var z in cellsFocused[k]) {
+					if(cellsFocused[k-1][c]) continue;
+
+					if(!_LeekDmgOnCellWithItem[c])
+						_LeekDmgOnCellWithItem[c] = [];
+						
+					var distToHit = getCellsCanMoveLength(eC, eMP, c);
+
+					var dmg = (itemInfos[EFFECT_DAMAGE]["max"] * eStrMult * mult) * relMult - abs;
+					if(itemInfos[EFFECT_POISON])
+						dmg += (itemInfos[EFFECT_POISON]["max"] * eMagMult * mult) * sqrt(itemInfos[EFFECT_POISON]["turn"]);
+							// le poison n'étant pas instantanné, il représente moins de danger
+					if(!_LeekDmgOnCellWithItem[c][e])
+						_LeekDmgOnCellWithItem[c][e] = [];
+					_LeekDmgOnCellWithItem[c][e][item] = dmg * (0.75 + (eMP - distToHit) / (eMP * 2));
+				}
+			}
+		}
+	}
+	
+	for (var i = 0; i <= 612; ++i) {
+		if(!_Obstacles[i]){
+			_UnsafeCells[i] = 0;
+		}
+	}
+
+	for (var e in enes) {
+		var combis = [];
+		generateCombis(combis, _ItemTested[e], getTP(e));
+		
+		for (var i = 0; i <= 612; ++i) {
+			if(!_Obstacles[i]){				
+				var bestDmg = getBestDmg(combis, _LeekDmgOnCellWithItem[i][e]);				
+				_UnsafeCells[i] += bestDmg;
+			}
+		}
+	}
+
+	/*var maxi = arrayMax(_UnsafeCells);
+	for(var c: var score in _UnsafeCells) {
+		mark(c, getColor(score / maxi * 255, 0, 0));
+	}*/
+	
+	debug(" map danger : " + (getOperations() - op));
+}
+
+function removeLeekFromMap(@leek) {
+	var combis = [];
+	generateCombis(combis, _ItemTested[leek], getTP(leek));
+
+	for (var i = 0; i <= 612; ++i) {
+		if(!_Obstacles[i]){				
+			var bestDmg = getBestDmg(combis, _LeekDmgOnCellWithItem[i][leek]);				
+			_UnsafeCells[i] += bestDmg;
+		}
+	}
+}
+
+function getBestDmg(@combis, @dmgPerItem) {
+	if(dmgPerItem === null) return 0;
+
+	var dmgs = [];
+
+	var i = 0;
+	for(var combi in combis) {
+		dmgs[i] = 0;
+		for(var item in combi) {
+			dmgs[i] += dmgPerItem[item];
+		}
+		i++;
+	}
+	assocSort(dmgs, SORT_DESC);
+	return getFirstElement(dmgs);
+}

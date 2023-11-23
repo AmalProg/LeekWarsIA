@@ -1,0 +1,69 @@
+include("Effect");
+
+class LifeDamageEffect extends Effect {
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
+		EntityStats casterStats = caster.getStats();
+		real baseDmg = value / 100 * casterStats.getLife() * casterStats.getPowerMult();
+		integer dmgReturn = round(baseDmg * affectedEntityStats.getDmgReturn() / 100);
+		integer dmg = round(baseDmg * (1 - affectedEntityStats.getRel() / 100) - affectedEntityStats.getAbso());
+
+		if (dmg > 0) {
+			affectedEntityStats.removeLife(dmg, EFFECT_LIFE_DAMAGE);
+			affectedEntity.updateAliveState(caster);
+		}
+		if (!(caster == affectedEntity)) {
+			if (dmgReturn > 0) {
+				casterStats.removeLife(dmgReturn, EFFECT_DAMAGE);
+				caster.updateAliveState(caster);
+			}
+		}
+	}
+	
+	protected real getEffectScore(real value, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
+		EntityScores targetScores = target.getScores();
+		EntityScores casterScores = caster.getScores();
+		
+		real baseDmg = value / 100 * casterStats.getLife() * casterStats.getPowerMult();
+		integer dmgReturn = round(baseDmg * targetStats.getDmgReturn() / 100);
+		integer dmg = round(baseDmg * (1 - targetStats.getRel() / 100) - targetStats.getAbso());
+
+		integer casterAllyDmgMult = caster.isAnAlly() ? -1 : 1;
+		integer casterAllyOtherMult = caster.isAnAlly() ? 1 : -1;
+		integer targetAllyMult = target.isAnAlly() ? -1 : 1;
+
+		real score = 0.0;
+		if (dmg > 0) {
+			integer overDmg = 0;
+			if (dmg > targetStats.getLife()) {
+				dmg = targetStats.getLife();
+
+				// On ne gère l'over dmg que pour un ennemi
+				if (!target.isAnAlly())
+					overDmg = dmg - targetStats.getLife(); 
+				
+				score += targetScores.getKillScore() * targetAllyMult;
+				score += targetScores.getPowerScore(target.getPowerOnDeath()) * casterAllyOtherMult;
+
+				Debug.log("I can kill !");
+			}
+			score += targetScores.getDmgScore(dmg, targetStats.getLife()) * targetAllyMult * targetScores.getAdjuster().directDmg;
+			if (overDmg > 0)
+				score -= 0.25 * targetScores.getDmgScore(overDmg, targetStats.getLife());
+		}
+		
+		if (caster != target) {			
+			if (dmgReturn > 0) {
+				score += casterScores.getDmgScore(dmgReturn, casterStats.getLife()) * casterAllyDmgMult;
+			}
+		}
+		return score;
+		
+		// TODO: add score for erosion
+	}
+	
+	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
+		real baseValue = this.getBaseValueToApply(cellTarget, cellFrom, caster, dist, isCasterHit);
+		real baseDmg = baseValue / 100 * casterStats.getLife() * casterStats.getPowerMult();
+		return round(baseDmg * (1 - targetStats.getRel() / 100) - targetStats.getAbso());
+	}
+}

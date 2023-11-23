@@ -1,0 +1,128 @@
+include("../CellContent/Entity");
+
+class EntityEffect {
+	public type;
+	public value;
+	public caster;
+	public turns; 
+	public critical;
+	public itemId;
+	public target;
+	
+	constructor(effectArray) {
+		this.type = effectArray[0];
+		this.value = effectArray[1];
+		this.caster = Entity.get(effectArray[2]);
+		this.turns = effectArray[3];
+		this.critical = effectArray[4];
+		this.itemId = effectArray[5];
+		this.target = Entity.get(effectArray[6]);
+	}
+	constructor(type, value, caster, turns, critical, itemId, target) {
+		this.type = type;
+		this.value = value;
+		this.caster = caster;
+		this.turns = turns;
+		this.critical = critical;
+		this.itemId = itemId;
+		this.target = target;		
+	}
+	
+	public applyTo(entityStats) {
+		if (this.type == EFFECT_BUFF_AGILITY) {
+			entityStats.addAgility(this.value);
+			
+		} else if (this.type == EFFECT_BUFF_RESISTANCE) {
+			entityStats.addResistance(this.value);
+			
+		} else if (this.type == EFFECT_BUFF_WISDOM) {
+			entityStats.addWisdom(this.value);
+			
+		} else if (this.type == EFFECT_BUFF_MP) {
+			entityStats.addMP(this.value);
+			
+		} else if (this.type == EFFECT_BUFF_TP) {
+			entityStats.addTP(this.value);
+			
+		} else if (this.type == EFFECT_BUFF_STRENGTH) {
+			entityStats.addStrength(this.value);
+			
+		} else if (this.type == EFFECT_RAW_BUFF_AGILITY) {
+			entityStats.addAgility(this.value);
+			
+		} else if (this.type == EFFECT_RAW_BUFF_RESISTANCE) {
+			entityStats.addResistance(this.value);
+			
+		} else if (this.type == EFFECT_RAW_BUFF_WISDOM) {
+			entityStats.addWisdom(this.value);
+			
+		} else if (this.type == EFFECT_RAW_BUFF_MP) {
+			entityStats.addMP(this.value);
+			
+		} else if (this.type == EFFECT_RAW_BUFF_TP) {
+			entityStats.addTP(this.value);
+			
+		} else if (this.type == EFFECT_RAW_BUFF_STRENGTH) {
+			entityStats.addStrength(this.value);
+			
+		} else if (this.type == EFFECT_RAW_BUFF_MAGIC) {
+			entityStats.addMagic(this.value);
+			
+		} else if (this.type == EFFECT_SHACKLE_AGILITY) {
+			entityStats.removeAgility(this.value);
+
+		} else if (this.type == EFFECT_SHACKLE_WISDOM) {
+			entityStats.removeWisdom(this.value);
+
+		} else if (this.type == EFFECT_SHACKLE_MP) {
+			entityStats.removeMP(this.value);
+
+		} else if (this.type == EFFECT_SHACKLE_TP) {
+			entityStats.removeTP(this.value);
+
+		} else if (this.type == EFFECT_SHACKLE_STRENGTH) {
+			entityStats.removeStrength(this.value);
+
+		} else if (this.type == EFFECT_SHACKLE_MAGIC) {
+			entityStats.removeMagic(this.value);
+
+		} else if (this.type == EFFECT_ABSOLUTE_SHIELD) {
+			entityStats.addAbso(this.value);
+			
+		} else if (this.type == EFFECT_RELATIVE_SHIELD) {
+			entityStats.addRel(this.value);
+			
+		} else if (this.type == EFFECT_ABSOLUTE_VULNERABILITY) {
+			entityStats.removeAbso(this.value);
+			
+		} else if (this.type == EFFECT_VULNERABILITY) {
+			entityStats.removeRel(this.value);
+			
+		} else if (this.type == EFFECT_STEAL_ABSOLUTE_SHIELD) {
+			entityStats.addAbso(this.value);
+			
+		} else if (this.type == EFFECT_RAW_ABSOLUTE_SHIELD) {
+			entityStats.addAbso(this.value);
+			
+		} else if (this.type == EFFECT_DAMAGE_RETURN) {
+			entityStats.addDmgReturn(this.value);
+			
+		}
+	}
+	
+	public removeTo(entityStats) {
+		this.value = -this.value;
+		this.applyTo(entityStats);
+		this.value = -this.value;
+	}
+	
+	public string() {
+		return 	"{ type: " + this.type +
+				"\n value: " + this.value +
+				"\n caster: " + (this.caster != null ? this.caster.name : "null") +
+				"\n turns: " + this.turns +
+				"\n critical: " + this.critical +
+				"\n itemId: " + this.itemId +
+				"\n target: " + (this.target != null ? this.target.name : "null") + " }\n";
+	}
+}

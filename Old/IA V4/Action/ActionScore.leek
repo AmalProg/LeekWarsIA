@@ -1,0 +1,47 @@
+include("../Debug");
+
+class ActionScore {
+	public item; public getItem() { return this.item; }
+	public cell;
+	public cellFrom;
+	public cellFocused;
+	public caster;
+	public aoeDist;
+	public score;
+	public targetsPerEffect;
+	public kill;
+	
+	constructor(item, cell, cellFrom, cellFocused) {
+		this.item = item;
+		this.cell = cell;
+		this.cellFrom = cellFrom;
+		this.cellFocused = cellFocused;
+		this.caster = null;
+		this.aoeDist = null;
+		this.score = 0;
+		this.targetsPerEffect = [];
+		this.kill = [];
+	}
+	
+	public addTargetsPerEffect(effect, targets) {
+		if (this.targetsPerEffect[effect.type] == null)
+			this.targetsPerEffect[effect.type] = [];
+		for (var target in targets) {
+			this.targetsPerEffect[effect.type][target.id] = target;
+		}
+	}
+	
+	public string() {
+		if (this.cell != null) {
+		return "{ " + this.item.name +
+			" | " + this.cell.id +
+			" | " + this.aoeDist +
+			" | " + this.score + " }";
+		}
+		
+		return "{ " + this.item.name +
+			" | " + 'null' +
+			" | " + this.aoeDist +
+			" | " + this.score + " }";
+	}
+}

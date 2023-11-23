@@ -1,0 +1,50 @@
+	recup les cellules sur le chemin
+	pour prochain itemScore regarder si on peut utiliser ces cellules
+	ajouter aux cellules accessibles pour les calculs
+
+	si rien de possible avec danger map : faire un truc
+
+	prendre compte self cast dans action
+	on peut faire sur n;importe qu;elle case (sauf type devil strike)
+
+multi effect (type devil strike) qui ne tue pas avec 1 effet avec tous ceux cumulés
+
+IA pas bas niveau à cause des constantes en dur : voir pour modifier
+
+prendre en compte les cd des enemies (libé)
+prendre en compte le temps restant de effets (rel, abso, buff)
+
+prendre en compte que l'enemie ne va pas se bloquer la ligne de vue durant son tour dans la map de danger
+
+//pres des allies
+se rapprocher de ceux qui peuvent nous aider rapidement si besoin (needHeal, healItemsOffCDCount, turnOrder)
+	se rapprocher des enemies si on est en surnombre
+//ne pas être trop packé (1 case d'interval au moins, évité même ligne)
+	meilleure map de danger
+regarder le cd des buff ennemi, de libé si buffé, le cd des effets en cour tel que dmgreturn / rel / abso
+regarder combien de cellule en ligne jusqu'a un obstacle (les lignes sont souvent le plus dangereux)
+
+care game construction when it's a bulb turn
+
+si on veut utiliser libé, regarder les actions précédente, voir si on fait des dégats, et si c'est pas l'une des dernière action possible, sauf si allié joue après
+
+si on pense qu'on tue, effectuer les actions, puis vérifier que la cible est morte avant de continer la génération des actions
+Verifier que on est pas tué la cible de notre action après chaque utilisation (pour na pas faire les actions suivantes dans le vide)
+
+Créer une moyenne des itemsScore utilisé, pour déterminer le seuil ou l'item devient inutile
+
+Incorporer un système de bait de libé / antidote avant d'envoyer les plus gros items
+
+Attaquer les personnes isolés
+Ne pas partir au front sans protection
+Eviter de s'isoler
+
+Faire en sorte de pouvoir recalculer les actions après en avoir exécuté et qu'une information imprévue survient (crit / kill ...)
+
+NE PAS BLOQUER LE PATH DE SES ALLI2S
+
+utiliser la danger map pour déterminer les gens qui sont en danger
+
+Avoir un registre avec les chip et weapons du dernier combat
+Save les kill combo et recalculer si change d'item
+Clear les registre en rapport si les items on changés

@@ -1,0 +1,18 @@
+include("Debug"); 
+include("Game");
+
+Debug.enabledCodePosition = false;
+Debug.enabledLog = true;
+Debug.enabledError = false;
+Debug.enabledWarning = false;
+
+global game = new Game();
+
+game.turn();
+// calcul des scores des entities
+// calcul simple du score de chaque items
+// tests des cellToUse les meilleurs items pour voit si on peux se cacher après
+// se cacher sur la meilleure cell
+
+debugC(getOperations(), COLOR_BLUE); 
+

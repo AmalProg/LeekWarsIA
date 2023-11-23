@@ -1,0 +1,95 @@
+include("IA 3/Game");
+
+global OBSTACLES = [100, 118, 136, 151, 153, 154, 169, 170,
+172, 185, 187, 202, 205, 219, 223, 236, 237, 253, 255, 273,
+291, 321, 322, 339, 340, 341, 356, 358, 359, 374, 375, 389,
+392, 406, 407, 409, 423, 425, 427, 441, 442, 459, 477, 495];
+global CUMUL_COUT_CE_TOUR=0, CUMUL_COUT_TOTAL=0;
+
+function getLeeksCells(){
+    var turn = getTurn();
+    if(turn===1) return [306,309,357];
+    if(turn===2) return [168,309,327];
+}
+mark(OBSTACLES, COLOR_RED);
+mark(getLeeksCells(), COLOR_BLUE);
+
+global game;
+if(getTurn()==1){
+    bench('Calculs en début de partie', function(){
+		game = new Game();
+		game.startTurn();
+    });
+    bench('Calculs en début de tour', function(){
+		for (var cell in Cell.getCells()) {
+			cell.setContent(null);
+		}
+		for (var o in OBSTACLES) {
+			Cell.get(o).setContent(new Obstacle());
+		}
+		for (var l in getLeeksCells()) {
+			Cell.get(l).setContent(new Leek(getEntity()));
+		}
+    }); 
+    bench('Cases accessibles depuis le centre avec 12 MP',
+        function(){return pathMap(306,12);});
+    bench('Cases accessibles depuis le centre avec 3 MP',
+        function(){return pathMap(306,3);});
+    bench('Cases accessibles depuis le centre avec 0 MP',
+        function(){return pathMap(306,0);});
+
+    bench('Cases accessibles depuis la case 357 avec 12 MP',
+        function(){return pathMap(357,12);});
+    say("Opérations cumulées ce tour : "+CUMUL_COUT_CE_TOUR);
+    say("Opérations cumulées au total : "+CUMUL_COUT_TOTAL);
+}
+if(getTurn()==2){
+    CUMUL_COUT_CE_TOUR=0;
+    bench('Calculs en début de tour', function(){
+		for (var cell in Cell.getCells()) {
+			if (!(cell.getContent() instanceof Obstacle))
+				cell.setContent(null);
+		}
+		for (var l in getLeeksCells()) {
+			Cell.get(l).setContent(new Leek(getEntity()));
+		}
+    });
+    bench('Cases accessibles depuis le centre avec 12 MP',
+        function(){return pathMap(306,12);});
+
+    bench('Cases accessibles depuis la case 220 avec 6 MP',
+        function(){return pathMap(220,6);});
+    bench('Cases accessibles depuis la case 220 avec 700 MP',
+        function(){return pathMap(220,700);});
+    say("Opérations cumulées ce tour : "+CUMUL_COUT_CE_TOUR);
+    say("Opérations cumulées au total : "+CUMUL_COUT_TOTAL);
+}
+function countOperations(func){
+    var avant = getOperations();
+    func();
+    return getOperations()-avant-3; // -3 pour les op de calcul des op
+}
+function bench(label, func){
+    var cout = countOperations(func);
+    CUMUL_COUT_CE_TOUR+=cout;
+    CUMUL_COUT_TOTAL+=cout;
+    debugC(label+" -> opérations : "+cout, COLOR_GREEN);
+    var res = func();
+    if(!res) return;
+    if(!res[0]) res = arrayMap(res, function(k,v){return k;});
+    mark(res,getColor(randInt(0,255),randInt(0,255),randInt(0,255)));
+    pause();
+}
+function pathMap(fromCell, MP){
+	var myCells = Map.getCellsAccessible(Cell.get(fromCell), MP);
+	
+	/*myCells = arrayFlatten(myCells, 1);
+	//debug(myCells);
+	var cells = [];
+	for (var c : var mp in myCells) {
+		cells[c.id] = true;
+	}*/
+	return myCells;
+}
+
+// amusez-vous !

@@ -1,0 +1,15 @@
+include("Cell");
+
+class ScoreCell {
+	public final Cell cell;
+	public real score;
+	
+	constructor(Cell cell, real score) {
+		this.cell = cell;
+		this.score = score;
+	}
+	
+	public string string() {
+		return "{cell : " + this.cell + ", score : " + this.score + "}";
+	}
+}

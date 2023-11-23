@@ -1,0 +1,136 @@
+include("../Debug")
+include("Map");
+include("../Entity/Entity");
+
+class Cell {
+	/** fin cells pool **/
+	
+	private N = null;
+	private E = null;
+	private S = null;
+	private W = null;
+	
+	private id;
+	private y;
+	private x;
+	private hasObstacle = false;
+	private hasEntity = false;
+	private hasEntityNotMe = false;
+	private walkable = true;
+	private entity = null;
+	private type;
+	
+	/**
+	 * params
+	 * cells : tableau des cellules
+	 * cells2 : tableau des cellules
+	 * 
+	 * return
+	 * cells : tableau des cellules présentent dans les deux params d'entrée
+	 **/
+	public static intersection(cells, cells2) {
+		var newCells = [];
+		for(var id : var c in cells) {
+			if(cells2[id]) {
+				newCells[id] = c;
+			}
+		}
+		
+		return newCells;
+	}
+	
+	/**
+	 * params
+	 * cells : tableau des cellules
+	 * cells2 : tableau des cellules à ajouter
+	 * 
+	 * return
+	 * cells : tableau des cellules 
+	 **/
+	public static add(cells, cells2) {
+		for(var id : var c in cells2) {
+			if(!cells[id]) {
+				cells[id] = c;
+			}
+		}
+		
+		return cells;
+	}
+	
+	public static getBarycenterId(cells) {
+		var nbrCells = count(cells);
+		if (nbrCells == 0) return null;
+		
+		var x = 0, y = 0;
+		for(var cell in cells){
+			x += getCellX(cell.id);
+			y += getCellY(cell.id);
+		}
+
+		return getCellFromXY(x / nbrCells, y / nbrCells);
+	}
+	
+	public static sameLine(c1, c2) {
+		return c1.x === c2.x || c1.y === c2.y;
+	}
+	
+	constructor(id) {
+		Debug.debugCodePosition("Creating Cell object for id : " + id, COLOR_GREEN);
+		
+		this.id = id;
+		this.x = getCellX(id);
+		this.y = getCellY(id);
+		
+		init();
+	}
+	constructor(x, y) {	
+		Debug.debugCodePosition("Creating Cell object for id : " + id, COLOR_GREEN);
+
+		this.x = x;
+		this.y = y;
+		this.id = getCellFromXY(x, y);
+		
+		init();
+	}
+	
+	private init() {
+		this.type = getCellContent(this.id);
+		this.hasObstacle = this.type == CELL_OBSTACLE;
+		this.hasEntity = this.type == CELL_ENTITY;
+		if(this.hasEntity)
+			this.entity = Entity.get(getEntityOnCell(this.id));
+		this.walkable = !this.hasObstacle and !this.hasEntity;
+		this.hasEntityNotMe = this.hasEntity;	
+	}
+	
+	/**
+	 * l'entité à quitté la cell
+	 **/
+	public entityOff() {
+		this.type = CELL_EMPTY;
+		this.hasEntity = false;
+		this.entity = null;
+	}
+	
+	/**
+	 * l'entité entre sur la cell
+	 **/
+	public entityOn(entity) {
+		this.type = CELL_ENTITY;
+		this.hasEntity = true;
+		this.entity = entity;
+	}
+	
+	public setSelfCell() {
+		this.hasEntityNotMe = false;
+		this.walkable = true;
+	}
+	
+	
+	string() {
+		return
+			"{ id:" + this.id + " | " +
+			"x:" + this.x + " | " +
+			"y:" + this.y + " }";
+	}
+}

@@ -1,0 +1,27 @@
+class TargetsPerEffect {
+	public targets;
+	public effect;
+	
+	constructor(effect, targets) {
+		this.targets = targets;
+		this.effect = effect;
+	}
+	
+	public getTargets() {
+		return this.targets;
+	}
+	public setTargets(targets) {
+		this.targets = targets;
+	}
+	public addTarget(target) {
+		push(this.targets, target);
+	}
+	
+	public getEffect() {
+		return this.effect;
+	}
+	public setEffect(effect) {
+		this.effect = effect;
+	}
+	
+}

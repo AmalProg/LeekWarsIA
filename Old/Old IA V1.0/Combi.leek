@@ -1,0 +1,133 @@
+include("Item");
+
+function generateCombis(@combis, @items, @pt) // génère toutes les combis avec les items donné et avec au max ce nombre de PT
+{
+	createCombis(combis, [], items, pt, pt, true);
+}
+function createCombis(@combis, @combi, items, @pt, @ptBase, @firstWeap)
+{
+	if(pt <= 0)
+	{
+		push(combis, combi);
+		return;
+	}
+
+	var lastItem = null;
+	for(var item : var z in items)
+	{
+		if(lastItem)
+			items[lastItem] = false;
+
+		var itemCost = _ItemsInfos[item]["cost"];
+		if(itemCost <= pt)
+		{
+			if(items[item])
+			{
+				var isWeap = _IsWeap[item];
+				var inCombi = inArray(combi, item);
+				if(firstWeap and isWeap and !inCombi)
+				{
+					firstWeap = false;
+					push(combi, item);
+					createCombis(combis, combi, items, pt - itemCost, ptBase, firstWeap);
+					var nbrI = count(combis[count(combis)-1]);
+					pop(combi);
+
+					firstWeap = true;
+				}
+				else if(isWeap and (itemCost + 1) <= pt and !inCombi)
+				{
+					push(combi, item);
+					createCombis(combis, combi, items, pt - itemCost - 1, ptBase, firstWeap);
+					pop(combi);
+				}
+				else if((_ItemsInfos[item]["cooldown"] == 0 and inCombi) or (!isWeap and !inCombi))
+				{
+					push(combi, item);
+					createCombis(combis, combi, items, pt - itemCost, ptBase, firstWeap);
+					pop(combi);
+				}
+			}
+		}
+		lastItem = item;
+	}
+	
+	push(combis, combi);
+}
+
+function getCombiDamageOnLeek(@combi, @caster, @target, @gotlibe, @hasVulnerability)
+{
+	var damage = 0;
+
+	var abs =@ (_ActualStats[target]["Abso"]);
+	var rel =@ (_ActualStats[target]["Rel"]);
+	if(gotlibe){
+		abs /= 2;
+		rel /= 2;
+	}
+	if(hasVulnerability){
+		rel -= 20;
+	}
+	var relMult =@ (1 - rel/100);
+
+	var str =@ (1+_ActualStats[caster]["Strength"]/100);
+
+	var critMult = 1;
+	if(_ActualStats[caster]["Agility"] >= 500)
+		critMult = 1.2;
+	else if(_ActualStats[caster]["Agility"] >= 900)
+		critMult = 1.4;
+
+	for(var item in combi) {
+		damage += (_ItemsInfos[item][EFFECT_DAMAGE]["moy"] * str * critMult) * relMult - abs;
+	}
+
+	return @damage;
+}
+
+function getCombiDamageOnMe(@combi, @caster, @target)
+{
+	var damage = 0;
+
+	var abs =@ (_ActualStats[caster]["Abso"]);
+	var rel =@ (_ActualStats[caster]["Rel"]);
+	var relMult =@ (1 - rel/100);
+	var str =@ (1+_ActualStats[caster]["Strength"]/100);
+	
+	var critMult = 1;
+	if(_ActualStats[caster]["Agility"] >= 500)
+		critMult = 1.2;
+	else if(_ActualStats[caster]["Agility"] >= 900)
+		critMult = 1.4;
+		
+	for(var item in combi) {
+		var itemTargets;
+		if (_ItemsInfos[item]["area"] == AREA_LASER_LINE) {
+			itemTargets = [target: true]; // compliqué à traiter car il faut la cell de laquelle on tire
+		} else {
+			itemTargets = getItemTargetsFrom(item, getCell(target), null, caster);
+		}
+			
+		for(var l : var z in itemTargets) {	
+			var dReturnPercent =@ (_ActualStats[l]["Return"]/100);
+	
+			damage += max(0, (_ItemsInfos[item][EFFECT_DAMAGE]["max"] * str * critMult) * dReturnPercent * relMult - abs);	
+		}
+	}
+
+	return @damage;
+}
+
+function getCombiCost(@combi)
+{
+	var alreadySwitched = [];
+	var cost = 0;
+	for(var item in combi){
+		if (isWeapon(item) && getWeapon() != item && !alreadySwitched[item]){
+			cost += 1;
+			alreadySwitched[item] = true;
+		}
+		cost += _ItemsInfos[item]["cost"];
+	}
+	return @cost;
+}

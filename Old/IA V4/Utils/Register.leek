@@ -1,0 +1,23 @@
+class Register {
+	private key;
+	private data;
+	
+	constructor(key) {
+		this.key = key;
+		this.data = getRegister(key);
+		if (this.data != null)
+			this.data = jsonDecode(getRegister(key));
+	}
+	
+	public get() {
+		return this.data;
+	}
+	
+	public write(value) {
+		setRegister(this.key, jsonEncode(value));
+	}
+	
+	public clear() {
+		deleteRegister(this.key);
+	}
+}

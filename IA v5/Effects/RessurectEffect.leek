@@ -1,0 +1,7 @@
+include("Effect");
+
+class RessurectEffect extends Effect {
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
+		affectedEntity.resurrection(cellTarget);
+	}
+}

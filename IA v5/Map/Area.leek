@@ -1,0 +1,386 @@
+include("../Utils/Memoize");
+include("../Utils/CollectionUtils");
+include("Cell");
+
+global Function<integer, integer, null | Array<integer> | integer => boolean?> | Function<integer, integer => boolean?> currentLoS = lineOfSight;
+
+class Area {
+	private static Map<string, integer> incrementPerDirection = ["N": 1, "NE": 2, "E": 1, "SE": 2, "S": 1, "SW": 2, "W": 1, "NW": 2]
+	
+	
+	/**
+	 * Récupère la première cellule permettant d'utilier l'item sur la cellule target
+	 * 
+	 * params
+	 * target : la cellule à viser
+	 * item : l'item utilisé
+	 * 
+	 * return
+	 *  : la cellule
+	 **/
+	public static Cell? getFirstCellToHitLaser(Item item, Cell target, string direction) {
+		Cell currentCell = target;
+		for (integer i = 0; i <= item.getMaxRange() and !currentCell.isObstacle(); i++) {
+			if (i >= item.getMinRange())
+				return currentCell;
+			currentCell = currentCell[direction] as Cell;
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Récupère une ligne
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * @params direction : direction ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getLine(Set<Cell> cells, Cell cell, integer distMin, integer distMax, string direction) {
+		Cell? currentCell = cell;
+		for(integer i = 0; i <= distMax && currentCell != null; i += Area.incrementPerDirection[direction]) {
+			if (i >= distMin && !currentCell!.isObstacle()) 
+				setPut(cells, currentCell);
+			
+			currentCell = currentCell![direction] as Cell;
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone en forme de +
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getPlusArea(Cell cell, integer distMin, integer distMax) {	
+		return Area.plusAreaMemo.apply(cell, distMin, distMax) as Set<Cell>;
+	}
+	private static Memoize3 plusAreaMemo = new Memoize3(function(Cell cell, integer distMin, integer distMax) {
+			Set<Cell> cells = <>;
+			Area.getLine(cells, cell, distMin, distMax, "N");
+			Area.getLine(cells, cell, distMin, distMax, "E");
+			Area.getLine(cells, cell, distMin, distMax, "S");
+			Area.getLine(cells, cell, distMin, distMax, "W");
+		
+			return cells;
+		}, function(Cell cell, integer distMin, integer distMax) {
+			return cell.id << 17 | distMin << 5 | distMax;
+		}
+	);
+	
+	/**
+	 * Récupère une zone en forme de + avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getPlusAreaLos(Cell cell, integer distMin, integer distMax) {	
+		Set<Cell> cells = <>;
+		
+		for (Cell c in Area.getPlusArea(cell, distMin, distMax)) {
+			if (currentLoS(cell.id, c.id))
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone en forme de + pour les inversion
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getInvertPlusArea(Cell cell, integer distMin, integer distMax) {
+		Set<Cell> cells = <>;
+		
+		for (Cell c in getPlusArea(cell, distMin, distMax)) {
+			if (c.hasEntity())
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+	public static Set<Cell> getInvertPlusAreaIgnore(Cell cell, integer distMin, integer distMax, Set<AbstractEntity> ignoredEntities) {
+		Set<Cell> cells = <>;
+		
+		for (Cell c in getPlusArea(cell, distMin, distMax)) {
+			if (c.hasEntity() && !setContains(ignoredEntities, c.getCellEntity()))
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone en forme de + pour les inversion
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getInvertPlusAreaLos(Cell cell, integer distMin, integer distMax) {
+		Set<Cell> cells = <>;
+		
+		for (Cell c in getPlusArea(cell, distMin, distMax)) {
+			if (c.hasEntity() && currentLoS(cell.id, c.id))
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+	public static Set<Cell> getInvertPlusAreaLosIgnore(Cell cell, integer distMin, integer distMax, Set<AbstractEntity> ignoredEntities) {
+		Set<Cell> cells = <>;
+		
+		for (Cell c in getPlusArea(cell, distMin, distMax)) {
+			if (c.hasEntity() && !setContains(ignoredEntities, c.getCellEntity()) && currentLoS(cell.id, c.id))
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone circulaire
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getArea(Cell cell, integer distMin, integer distMax) {
+		return Area.areaMemo.apply(cell, distMin, distMax) as Set<Cell>;
+	}
+	private static Memoize3 areaMemo = new Memoize3(function(Cell cell, integer distMin, integer distMax) {
+			Set<Cell> cells = <>;
+			for (integer i = distMin; i <= distMax; i++) {
+				for (Cell c in Area.getCircle(cell, i)) {
+					if (!c.isObstacle())
+						setPut(cells, c);
+				}
+			}
+			return cells;
+		}, function(Cell cell, integer distMin, integer distMax) {
+			return cell.id << 17 | distMin << 5 | distMax;
+		}
+	);
+	
+	public static Set<Cell> getCircle(Cell cell, integer size) {
+		return Area.circleMemo.apply(cell, size) as Set<Cell>;
+	} 
+	
+	private static Memoize2 circleMemo = new Memoize2(function(Cell cell, integer size) {
+			if (size < 0) return <>;
+			if (size == 0) return <cell>;
+			
+			Set<Cell> cells = <>;
+			Set<Cell> precPrecCircleCells = Area.getCircle(cell, size - 2);
+			Set<Cell> precCircleCells = Area.getCircle(cell, size - 1);
+
+			for(Cell c in precCircleCells) {
+				Cell? ngbC = c.N;
+				if (ngbC != null && !setContains(precPrecCircleCells, ngbC)) 
+					setPut(cells, ngbC);
+
+				ngbC = c.E;
+				if (ngbC != null && !setContains(precPrecCircleCells, ngbC)) 
+					setPut(cells, ngbC);
+
+				ngbC = c.S;
+				if (ngbC != null && !setContains(precPrecCircleCells, ngbC)) 
+					setPut(cells, ngbC);
+
+				ngbC = c.W;
+				if (ngbC != null && !setContains(precPrecCircleCells, ngbC)) 
+					setPut(cells, ngbC);
+			}
+				
+			return cells;
+		}, function(Cell cell, integer size) {
+			return cell.id << 12 | size;
+		}
+	);
+	
+	/**
+	 * Récupère une zone circulaire avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getAreaLos(Cell cell, integer distMin, integer distMax) {		
+		Set<Cell> cells = <>;
+		
+		for (Cell c in getArea(cell, distMin, distMax)) {
+			if (currentLoS(cell.id, c.id))
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone circulaire avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getInvertArea(Cell cell, integer distMin, integer distMax) {	
+		Set<Cell> cells = <>;
+		
+		for (Cell c in getArea(cell, distMin, distMax)) {
+			if (c.hasEntity())
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+	public static Set<Cell> getInvertAreaIgnore(Cell cell, integer distMin, integer distMax, Set<AbstractEntity> ignoredEntities) {		
+		Set<Cell> cells = <>;
+
+		for (Cell c in getArea(cell, distMin, distMax)) {
+			if (c.hasEntity() && !setContains(ignoredEntities, c.getCellEntity()))
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone circulaire avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getInvertAreaLos(Cell cell, integer distMin, integer distMax) {		
+		Set<Cell> cells = <>;
+
+		for (Cell c in getArea(cell, distMin, distMax)) {
+			if (c.hasEntity() and currentLoS(cell.id, c.id))
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+	public static Set<Cell> getInvertAreaLosIgnore(Cell cell, integer distMin, integer distMax, Set<AbstractEntity> ignoredEntities) {		
+		Set<Cell> cells = <>;
+
+		for (Cell c in getArea(cell, distMin, distMax)) {
+			if (c.hasEntity() && !setContains(ignoredEntities, c.getCellEntity()) && currentLoS(cell.id, c.id))
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+
+	/**
+	 * Récupère une zone diagonale avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getDiagonalArea(Cell cell, integer distMin, integer distMax) {	
+		return Area.diagonalAreaMemo.apply(cell, distMin, distMax) as Set<Cell>;
+	}
+	private static Memoize3 diagonalAreaMemo = new Memoize3(function(Cell cell, integer distMin, integer distMax) {
+			Set<Cell> cells = <>;
+			Area.getLine(cells, cell, distMin, distMax, "NE");
+			Area.getLine(cells, cell, distMin, distMax, "SE");
+			Area.getLine(cells, cell, distMin, distMax, "SW");
+			Area.getLine(cells, cell, distMin, distMax, "NW");
+		
+			return cells;
+		}, function(Cell cell, integer distMin, integer distMax) {
+			return cell.id << 17 | distMin << 5 | distMax;
+		}
+	);
+	
+	/**
+	 * Récupère une zone diagonale avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getDiagonalAreaLos(Cell cell, integer distMin, integer distMax) {		
+		Set<Cell> cells = <>;
+				
+		for (Cell c in getDiagonalArea(cell, distMin, distMax)) {
+			if (currentLoS(cell.id, c.id))
+				setPut(cells, c);
+		}
+		
+		return cells;
+	}
+
+	/**
+	 * Récupère une zone star avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getStarArea(Cell cell, integer distMin, integer distMax) {			
+		return Area.starAreaMemo.apply(cell, distMin, distMax) as Set<Cell>;
+	}
+	private static Memoize3 starAreaMemo = new Memoize3(function(Cell cell, integer distMin, integer distMax) {	
+			Set<Cell> cells = Area.getDiagonalArea(cell, distMin, distMax);
+			cells = setUnion(cells, Area.getPlusArea(cell, distMin, distMax)) as Set<Cell>;
+			return cells;
+		}, function(Cell cell, integer distMin, integer distMax) {
+			return cell.id << 17 | distMin << 5 | distMax;
+		}
+	);
+	
+	/**
+	 * Récupère une zone star avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getStarAreaLos(Cell cell, integer distMin, integer distMax) {		
+		Set<Cell> cells = <>;
+		
+		for (Cell c in getStarArea(cell, distMin, distMax)) {
+			if (currentLoS(cell.id, c.id))
+				setPut(cells, c);
+		}
+						
+		return cells;
+	}
+}

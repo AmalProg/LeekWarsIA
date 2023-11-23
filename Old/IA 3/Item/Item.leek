@@ -1,0 +1,327 @@
+include("../Debug");
+include("../CellContent/Entity");
+include("../Map/Map");
+include("../Memoize");
+
+class Item {
+	/** items pool **/
+	public static items = [];
+	public static get(id) {
+		return Item.items[id];
+	}
+	/** fin items pool **/
+	
+	public static getPriorityDangerItem(caster, target) {
+		var items = [];
+		for (var item in caster.items) {
+			var priorityScore = 0;
+			
+			for (var effect in item.effects) {
+				var mult = 1;
+				if (effect.type == EFFECT_DAMAGE)
+					mult = EffectScoreMultiplier.damage * caster.stats.strengthMult;
+				else if (effect.type == EFFECT_LIFE_DAMAGE)
+					mult = EffectScoreMultiplier.lifeDamage * caster.stats.life / 500;
+				else if (effect.type == EFFECT_NOVA_DAMAGE)
+					mult = EffectScoreMultiplier.novaDamage * caster.stats.scienceMult;
+				else if (effect.type == EFFECT_POISON)
+					mult = EffectScoreMultiplier.poison * caster.stats.magicMult;
+				else if (effect.type == EFFECT_VULNERABILITY)
+					mult = EffectScoreMultiplier.relVulnerability * 2;
+				else if (effect.type == EFFECT_ABSOLUTE_VULNERABILITY)
+					mult = EffectScoreMultiplier.absoVulnerability * 2;
+				
+				if (effect.canTarget(target, caster) and (ItemEffect.damageEffects[effect.type] or ItemEffect.vulnerabilityEffects[effect.type])) {
+					priorityScore += effect.meanValue * (effect.turns != 0 ? effect.turns : 1) / item.cost * mult;
+					priorityScore += (item.maxRange - item.minRange) * 5;
+				}
+			}
+
+			if (priorityScore != 0)
+				items[item.id] = {item: item, priorityScore: priorityScore};
+		}
+		items = arraySort(items, function(itemPriorityScore1, itemPriorityScore2) {
+			return itemPriorityScore2.priorityScore - itemPriorityScore1.priorityScore;
+		})
+		
+		return items;
+	}
+	
+	public static getItemEffectiveArea(item, cell, from) {
+		return Item.effectiveAreaMemo.apply(item, cell, from);
+	}
+
+	private static effectiveAreaMemo = new Memoize3(function(item, cell, from) {
+			var cells = [];
+			if (item.areaType == AREA_POINT) {
+				cells[cell.id] = cell;
+				return cells;
+			} else if (item.areaType == AREA_FIRST_INLINE) {
+				return Map.getAreaFirstInLine(cells, item.maxRange - item.minRange, cell, from);
+			} else if (item.areaType == AREA_LASER_LINE) {
+				return 	Map.getAreaLaserLine(cells, item.maxRange - item.minRange, cell, from);
+			} else if (item.areaType == AREA_CIRCLE_1) {
+				return 	Map.getAreaCircle1(cells, cell);
+			} else if (item.areaType == AREA_CIRCLE_2) {
+				return 	Map.getAreaCircle2(cells, cell);
+			} else if (item.areaType == AREA_CIRCLE_3) {
+				return 	Map.getAreaCircle3(cells, cell);
+			} else if (item.areaType == AREA_PLUS_1) {
+				return 	Map.getAreaPlus1(cells, cell);
+			} else if (item.areaType == AREA_PLUS_2) {
+				return 	Map.getAreaPlus2(cells, cell);
+			} else if (item.areaType == AREA_PLUS_3) {
+				return 	Map.getAreaPlus3(cells, cell);
+			} else if (item.areaType == AREA_SQUARE_1) {
+				return 	Map.getAreaSquare1(cells, cell);
+			} else if (item.areaType == AREA_SQUARE_2) {
+				return 	Map.getAreaSquare2(cells, cell);
+			} else if (item.areaType == AREA_X_1) {
+				return 	Map.getAreaCross1(cells, cell);
+			} else if (item.areaType == AREA_X_2) {
+				return 	Map.getAreaCross2(cells, cell);
+			} else if (item.areaType == AREA_X_3) {
+				return 	Map.getAreaCross3(cells, cell);
+			}
+		}, function(item, cell, from) {
+			return (from ? from.id : 614) << 18 | cell.id << 8 | item.areaType;
+	});
+	
+	public static onAlliesItems = [];
+	public static onEnemiesItems = [];
+	public static initOnTeamItems() {
+		for (var item in Item.items) {
+			for (var effect in item.effects) {
+				if (effect.type == EFFECT_DAMAGE) {
+					onEnemiesItems[item.id] = true;
+					
+				} else if (effect.type == EFFECT_POISON) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_LIFE_DAMAGE) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_NOVA_DAMAGE) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_HEAL) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_NOVA_VITALITY) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_BOOST_MAX_LIFE) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_BUFF_AGILITY) {
+					onAlliesItems[item.id] = true;
+					
+				} else if (effect.type == EFFECT_BUFF_RESISTANCE) {
+					onAlliesItems[item.id] = true;
+					
+				} else if (effect.type == EFFECT_BUFF_WISDOM) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_BUFF_MP) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_BUFF_TP) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_BUFF_STRENGTH) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_RAW_BUFF_AGILITY) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_RAW_BUFF_RESISTANCE) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_RAW_BUFF_WISDOM) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_RAW_BUFF_MP) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_RAW_BUFF_TP) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_RAW_BUFF_STRENGTH) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_RAW_BUFF_MAGIC) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_SHACKLE_AGILITY) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_SHACKLE_WISDOM) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_SHACKLE_MP) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_SHACKLE_TP) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_SHACKLE_STRENGTH) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_SHACKLE_MAGIC) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_REMOVE_SHACKLES) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_ABSOLUTE_SHIELD) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_RELATIVE_SHIELD) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_ABSOLUTE_VULNERABILITY) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_VULNERABILITY) {
+					onEnemiesItems[item.id] = true;
+				} else if (effect.type == EFFECT_STEAL_ABSOLUTE_SHIELD) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_RAW_ABSOLUTE_SHIELD) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_DAMAGE_RETURN) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_AFTEREFFECT) {
+					onEnemiesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_ANTIDOTE) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_DEBUFF) {
+					onEnemiesItems[item.id] = true;
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_TELEPORT) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_INVERT) {
+					onEnemiesItems[item.id] = true;
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_RESURRECT) {
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_KILL) {
+					onEnemiesItems[item.id] = true;
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_ATTRACT) {
+					onEnemiesItems[item.id] = true;
+					onAlliesItems[item.id] = true;
+
+				} else if (effect.type == EFFECT_PUSH) {
+					onEnemiesItems[item.id] = true;
+					onAlliesItems[item.id] = true;
+
+				}
+			}
+		}
+	}
+	
+	public id;
+	public name;
+	public areaType;
+	public cost;
+	public baseCooldown;
+	public minRange;
+	public maxRange;
+	public launchType;
+	public needLos;
+	public effects = [];
+	public effectsDamage = [];
+	public effectsTypeList = [];
+	
+	public cooldown;
+
+	constructor(id) {
+		this.id = id;
+	}
+	
+	public getEffectiveArea(cell, from) {
+		return Item.effectiveAreaMemo.apply(this, cell, from);
+	}
+	
+	public getItemTargets(cell, from, caster) {
+		var targets = [];
+		
+		for (var cId : var c in getEffectiveArea(cell, from)) {
+			if (c.hasEntity and c.content.alive() and this.canTarget(c.content, caster)) {
+				targets[c.content.id] = c.content;
+			};
+		}
+		return targets;
+	}
+
+	public canTarget(target, caster) {
+		for (var effect in this.effects) {
+			if (effect.canTarget(target, caster))
+				return true;
+		}
+		return false;
+	}
+	
+	public hasEffectType(effectType) {
+		return this.effectsTypeList[effectType];
+	}
+	
+	public getAoeMult(dist) {
+		var areaType = this.areaType;
+		if (areaType == AREA_LASER_LINE or areaType == AREA_FIRST_INLINE or areaType == AREA_POINT) {
+			return 1;
+		} else {
+			return 1 - dist * 0.2;	
+		}
+	}
+	
+	public getAreaSize() {
+		if (this.areaType == AREA_CIRCLE_1) { 
+			return 1;
+		} else if (this.areaType == AREA_CIRCLE_2) {
+			return 2;
+		} else if (this.areaType == AREA_CIRCLE_3) {
+			return 3;
+		} else if (this.areaType == AREA_PLUS_1) {
+			return 1;
+		} else if (this.areaType == AREA_PLUS_2) {
+			return 2;
+		} else if (this.areaType == AREA_PLUS_3) {
+			return 3;
+		} else if (this.areaType == AREA_SQUARE_1) {
+			return 2;
+		} else if (this.areaType == AREA_SQUARE_2) {
+			return 4;
+		} else if (this.areaType == AREA_X_1) {
+			return 2;
+		} else if (this.areaType == AREA_X_2) {
+			return 4;
+		} else if (this.areaType == AREA_X_3) {
+			return 6;
+		} else if (this.areaType == AREA_POINT) {
+			return 0;
+		} else if (this.areaType == AREA_FIRST_INLINE) {
+			return 0;
+		} else if (this.areaType == AREA_LASER_LINE) {
+			return 0;
+		}
+	}
+	
+	public use(cell) {}
+
+	public apply(cell) {}
+
+	string() {
+		return " { name : " + this.name + " } ";	
+	}
+}

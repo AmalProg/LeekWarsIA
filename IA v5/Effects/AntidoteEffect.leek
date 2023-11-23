@@ -1,0 +1,31 @@
+include("Effect");
+
+class AntidoteEffect extends Effect {
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
+		affectedEntityStats.removePoisons();
+	}
+	
+	protected real getEffectScore(real value, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
+		EntityScores targetScores = target.getScores();
+		
+		
+		real score = 0.0;
+		for (EntityEffect eff in target.getStats().getEffects()) {
+			if (eff.isIrreductible()) continue;
+			
+			integer effType = eff.getType();
+			if (effType == EFFECT_POISON) {
+				// Récupère la classe de l'effet
+				Function<integer, AbstractEntity, AbstractEntity, EntityStats, EntityStats, Cell? => real>? getFinalEffectScoreFnct = Effect.finalEffectScoreFnctPerId[effType];
+				if (getFinalEffectScoreFnct != null) {
+					// on multiplie le score par un coeff en fonction du nombre de tours restant pour l'effet
+					// le poison étant un effet négatif pour les alliés, on soustrait le score, pour qu'il devienne positif
+					score -= (1 + (eff.getTurns() - 3) / 5) * (getFinalEffectScoreFnct!)(eff.getValue(), target, caster, targetStats, casterStats, cellTarget);
+				}
+			}
+		}
+				
+		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
+		return score * targetAllyMult * targetScores.getAdjuster().antidote;
+	}
+}

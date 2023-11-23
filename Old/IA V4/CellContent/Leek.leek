@@ -1,0 +1,64 @@
+include("../Debug");
+include("Entity");
+include("../Item/Weapon");
+include("../Item/ItemEffect");
+
+class Leek extends Entity {
+	/** leeks pool **/
+	private static leeks = [];
+	public static initLeeks(entitiesId) {
+		for (var leekId in entitiesId) {
+			if(getType(leekId) == ENTITY_LEEK) {
+				leeks[leekId] = new Leek(leekId);
+				Entity.entities[leekId] = leeks[leekId];
+			}
+		}
+	}
+	public static get(id) {
+		return Leek.leeks[id];
+	}
+	/** fin leeks pool **/
+ 
+	public weapons = [];
+	public passiveItemEffects = [];
+	public equippedWeaponId;
+
+	constructor(id) {
+		super(id);
+
+		this.id = id;
+		initBaseStats();
+	}
+
+	public initBaseStats() {
+		for(var wepId in getWeapons(this.id)) {
+			var weapon = Weapon.get(wepId);
+			this.items[wepId] = weapon;
+			for (var passiveEffect in getWeaponPassiveEffects(wepId)) {
+				var passiveItemEffect = new ItemEffect(passiveEffect, weapon);
+				this.passiveItemEffects[passiveItemEffect.type] = passiveItemEffect;
+			}
+			this.weapons[wepId] = weapon;
+			this.cooldowns[wepId] = 0;
+		}
+	}
+
+	public static updateLeeksStats() {
+		for (var leek in Leek.leeks) {
+			leek.updateStats();
+		}
+	}
+	public updateStats() {
+		this.equippedWeaponId = getWeapon();
+		super.updateStats();
+	}
+	
+	public simulateItemUse(item) {
+		if (item instanceof Weapon and this.equippedWeaponId != item.id) {
+			this.equippedWeaponId = item.id;
+			this.useTP(1);
+		}
+		super.simulateItemUse(item);
+		debug("my tp : " + this.stats.tp)
+	}
+}

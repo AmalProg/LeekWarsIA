@@ -1,0 +1,29 @@
+include("../Effect");
+
+class PassiveEffect extends Effect {
+	protected real|integer _triggerValue;
+	
+	public constructor(Array<any> effectArray, Item item) {
+		super(effectArray, item);
+	}
+	public static PassiveEffect? createEffect(Array<any> effectArray, Item item) {
+		integer type = effectArray[0] as integer;
+		Class? effectClass = Effect.effectClassPerId[type];
+		if (effectClass != null) {
+			return (effectClass!)(effectArray, item);
+		}
+		return null;
+	}
+	
+	public void applyPassiveTo(AbstractEntity target, AbstractEntity caster, integer dist, real|integer triggerValue) {
+		this._triggerValue = triggerValue;
+		
+		super.applyTo(null, null, target, caster, target.getStats(), caster.getStats(), dist, false);
+	}
+	
+	protected real getPassiveEffectScore(AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, real|integer triggerValue) {
+		this._triggerValue = triggerValue;
+
+		return super.getScore(null, null, target, caster, targetStats, casterStats, 0);
+	}
+}

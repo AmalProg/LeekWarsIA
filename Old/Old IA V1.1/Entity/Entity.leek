@@ -1,0 +1,602 @@
+include("../Debug");
+include("../Effect/EntityEffect");
+include("../Map/Cell");
+include("../Item/Chip");
+include("../Entity/EntityScoreDiviser");
+include("../Entity/EntityScore");
+
+class Entity {
+	/** entities pool **/
+	private static entities = [];
+	public static get(id) {
+		return Entity.entities[id];
+	}
+	/** fin entities pool **/
+	
+	private id;
+	private type;
+	private farmerName;
+	private name;
+	private level;
+	private isAnAlly;
+	private isASummon;
+	private items = [];
+
+	private baseMaxLife;
+	private baseStrength;
+	private baseWisdom;
+	private baseAgility;
+	private baseResistance;
+	private baseScience;
+	private baseMagic;
+	private baseFrequency;
+	private baseTp;
+	private baseMp;
+
+	private maxLife;
+	private life;
+	private alive;
+	private strength;
+	private wisdom;
+	private agility;
+	private resistance;
+	private science;
+	private magic;
+	private tp;
+	private mp;
+	private abso;
+	private rel;
+	private dmgReturn;
+	private cell;
+	private effects = [];
+	private launchedEffects = [];
+	private passiveEffects = [];
+	private summons = [];
+	private turnOrder;
+	
+	private strengthMult;
+	private wisdomMult;
+	private agilityMult;
+	private resistanceMult;
+	private scienceMult;
+	private magicMult;
+	private lifePercentage;
+	
+	private scores;
+	
+	public static bulbsNameChip = ["puny_bulb" : CHIP_PUNY_BULB, "rocky_bulb" : CHIP_ROCKY_BULB, 
+		"iced_bulb" : CHIP_ICED_BULB, "healer_bulb" : CHIP_HEALER_BULB, 
+		"metallic_bulb" : CHIP_METALLIC_BULB, "fire_bulb" : CHIP_FIRE_BULB, 
+		"lightning_bulb" : CHIP_LIGHTNING_BULB, 
+		 "wizard_bulb" : CHIP_WIZARD_BULB,
+		 "tactician_bulb" : CHIP_TACTICIAN_BULB, 
+		 "savant_bulb" : CHIP_SAVANT_BULB
+	];
+	
+	constructor(id, map) {
+		Debug.debugCodePosition("Creating Entity object for id : " + id, COLOR_GREEN);
+
+		this.id = id;
+		initStats(map);
+	}
+	
+	/**
+	 * Simule l'inversion de 2 entités
+	 **/
+	public static invert(e1, e2) {
+		var tmpE1Cell = e1.cell;
+		e1.cell = e2.cell;
+		e1.cell.entityOn(e1);
+		e2.cell = tmpE1Cell;
+		e2.cell.entityOn(e2);
+	}
+	
+	/**
+	 * Simule le déplacement
+	 **/
+	public move(cell, mp) {
+		this.cell.entityOff();
+		this.cell = cell;
+		this.cell.entityOn(this);
+		this.mp -= mp;
+	}
+	
+	/**
+	 * Simule la téléportation
+	 **/
+	public teleport(cell) {
+		this.cell.entityOff();
+		this.cell = cell;
+		this.cell.entityOn(this);
+	}
+	
+	/**
+	 * Test si l'effet affecte l'entité, corespondant au type et à l'item de l'effet donné
+	 * 
+	 * params
+	 * eff : l'effet recherché
+	 * 
+	 * return
+	 * true : si l'entité est affecté par l'effet
+	 * false : sinon
+	 **/
+	public hasEffectOn(eff) {
+		for (var effect in this.effects) {
+			if (effect.type == eff.type && effect.itemId == eff.item.id)
+				return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Récupère l'effet qui affecte l'entité, corespondant au type et à l'item de l'effet donné
+	 * 
+	 * params
+	 * eff : l'effet recherché
+	 * 
+	 * return
+	 * effect : si l'entité est affecté par l'effet
+	 * null : sinon
+	 **/
+	public getEffectsOn(eff) {
+		var effectsMatching = [];
+		for (var effect in this.effects) {
+			if (effect.type == eff.type && effect.itemId == eff.item.id)
+				push(effectsMatching, effect);
+		}
+		return effectsMatching;
+	}
+	
+	/**
+	 * Applique les effets de l'item sur l'entité
+	 **/
+	public applyItem(item, caster, cellTarget, dist) {
+		for (var eff in item.effects) {
+			eff.applyTo(this, caster, cellTarget, dist);
+		}
+	}
+	
+	public calculateScore(game) {
+		var relVal = this.rel / EntityScoreDiviser.rel;
+		var absoVal = this.abso / EntityScoreDiviser.abso;
+		var lifeVal = this.life / EntityScoreDiviser.maxLife;
+		var maxLifeVal = this.maxLife / EntityScoreDiviser.maxLife;
+		var strVal = this.strength / EntityScoreDiviser.strength;
+		var magicVal = this.magic / EntityScoreDiviser.magic;
+		var wisdomVal = this.wisdom / EntityScoreDiviser.wisdom;
+		var resistanceVal = this.resistance / EntityScoreDiviser.resistance;
+		var agilityVal = this.agility / EntityScoreDiviser.agility;
+		var dmgReturnVal = this.dmgReturn / EntityScoreDiviser.dmgReturn;
+		
+		if (this.alive) {
+			var wisdomNbrItems = 0;
+			var resistanceNbrItems = 0;
+			var agilityNbrItems = 0;
+			for (var item in items) {
+				if(item.cooldown == 0) {
+					for (var eff in item.effects) {
+						if (eff.type == EFFECT_HEAL or eff.type == EFFECT_BOOST_MAX_LIFE) {
+							wisdomNbrItems++;
+						} else if (eff.type == EFFECT_RELATIVE_SHIELD or eff.type == EFFECT_ABSOLUTE_SHIELD) {
+							resistanceNbrItems++;
+						} else if (eff.type == EFFECT_DAMAGE_RETURN) {
+							agilityNbrItems++;
+						}
+					}
+				}
+			}
+
+			var nbrEffectsPoison = 0;
+			var poisonDmgT1 = 0;
+			var poisonDmgT2 = 0;
+			for (var eff in this.effects) {
+				if (eff.type == EFFECT_POISON) {
+					nbrEffectsPoison++;
+					if (eff.turns >= 1)
+						poisonDmgT1 += eff.value;
+					if (eff.turns >= 2)
+						poisonDmgT2 += eff.value;
+				}
+			}
+
+			var a, b, c;
+			var x;
+
+			// life / turnOrder / nbrEnemiesEffects / nbrAlliesEffect
+			//\frac{\max\left(1-1.5x^{2},\ \frac{1}{\max\left(1\right)}\left(1-x\right)\right)14}{14+d}
+			//max(1 - 1.5x², 1 - x) * 14 / (14 + a)
+			a = this.turnOrder;
+			x = lifeVal;
+			var damageScore = max(1 - 1.5 * x * x, 0.75 - 0.25 * x) * 14 / (14 + a)
+			this.scores.damage = damageScore;
+			this.scores.poison = damageScore;
+			this.scores.lifeDamage = damageScore;
+			this.scores.novaDamage = damageScore;
+
+			//\max\left(\left(1-\left(1.3\ +\ 0.8a\ +\ 0.8b\right)x^{2}\right),\frac{0.5}{\max\left(1,\ a+b\right)}(1-x)\right)\left(1-0.4c\right)
+			//max(1 - (1.3 + 0.8a + 0.8b)x², 0.5 / max(1, a + b) * (1 - x))(1 - 0.4c)
+			a = lifeVal;
+			b = absoVal;
+			c = relVal;
+			x = this.lifePercentage;
+			this.scores.heal = max(1 - (1.3 + 0.8*a + 0.8*b) * x * x, 0.5 / max(1, a + b) * (1 - x)) * (1 - 0.4 * c);
+
+			//0.75-0.5x
+			x = maxLifeVal;
+			var maxLifeScore = (0.2 / x > 1) ? 1 : (0.2 / x);
+			this.scores.novaVitality = maxLifeScore;
+			this.scores.boostMaxLife = maxLifeScore;		
+
+			if (agilityNbrItems == 0) {
+				x = strVal + magicVal + agilityVal;
+				this.scores.buffAgility = (x < 0.7) ? (x * x) : 0.7;
+			}
+			else {
+				x = agilityVal;
+				a = agilityNbrItems;
+				this.scores.buffAgility = ((x < 0.8) ? (x * x) : 0.8) * ((a < 2) ? (a / 2) : 1);
+			}
+			this.scores.rawBuffAgility = this.scores.buffAgility;
+
+			x = resistanceVal;
+			a = resistanceNbrItems;
+			this.scores.buffResistance = ((x < 0.8) ? (x * x) : 0.8) * ((a < 2) ? (a / 3) : 1);
+			this.scores.rawBuffResistance = this.scores.buffResistance;
+
+			x = wisdomVal;
+			a = wisdomNbrItems;
+			this.scores.buffWisdom = ((x < 0.8) ? (x * x) : 0.8) * ((a < 2) ? (a / 3) : 1);
+			this.scores.rawBuffWisdom = this.scores.buffWisdom;
+
+			x = strVal + magicVal;
+			this.scores.buffMp = x < 0.8 ? x : 0.8;
+			this.scores.rawBuffMp = this.scores.buffMp;
+			this.scores.buffTp = x < 0.8 ? x : 0.8;
+			this.scores.rawBuffTp = this.scores.buffTp;
+
+			x = strVal; // turnorder / distance
+			this.scores.buffStrength = (x < 0.8) ? (x * x) : 0.8;
+			this.scores.rawBuffStrength = this.scores.buffStrength;
+
+			x = absoVal;
+			a = relVal;
+			this.scores.abso = (x > 0) ? max(1 - x * (1 + a), 0.15) : 1;
+
+			x = relVal;
+			a = absoVal;
+			this.scores.rel = max((1 - (1 + a) * (x * x)) * (1 - 0.3 * a), 0);
+
+			x = absoVal;
+			this.scores.absoVulnerability = min(0.25 + 0.5 * x, 1);
+
+			x = relVal;
+			this.scores.relVulnerability = min(0.35 + 0.5 * x, 1);
+
+			x = absoVal;
+			this.scores.stealAbso = min(x * x, 1);
+
+			x = dmgReturnVal;
+			this.scores.damageReturn = (x < 1) ? ((-1 + x) ** 2) : 0;
+
+			x = poisonDmgT1 / this.life;
+			b = poisonDmgT2 / this.life;
+			this.scores.antidote = min(1 - (1 - x) ** (4 - (3 - 3 * b)), 1);
+
+			x = relVal;
+			a = absoVal;
+			this.scores.debuff = min(1 + a / 2 - (-1 + x) * (-1 + x), 1);
+
+			this.scores.teleport = 0;
+
+			this.scores.invert = 0;
+			
+			// joue prochain tour et meurt du poison
+			// est vraiment utile à l'ennemi ?
+			this.scores.kill = 1;
+			
+			
+			var nbSummonHeal = 0;
+			var nbSummonRes = 0;
+			var nbSummonDamage = 0;
+			var nbSummonPoison = 0;
+			var nbSummonMove = 0;
+			var nbSummonNova = 0;
+			for(var bulb in game.allies.bulbs) {
+				if (Entity.bulbsNameChip[bulb.name] == CHIP_HEALER_BULB)
+					nbSummonHeal++;
+				else if (Entity.bulbsNameChip[bulb.name] == CHIP_METALLIC_BULB)
+					nbSummonRes++;
+				else if (Entity.bulbsNameChip[bulb.name] == CHIP_LIGHTNING_BULB or Entity.bulbsNameChip[bulb.name] == CHIP_FIRE_BULB or Entity.bulbsNameChip[bulb.name] == CHIP_ICED_BULB
+ or Entity.bulbsNameChip[bulb.name] == CHIP_ROCKY_BULB)
+					nbSummonDamage++;
+				else if (Entity.bulbsNameChip[bulb.name] == CHIP_WIZARD_BULB)
+					nbSummonPoison++;
+				else if (Entity.bulbsNameChip[bulb.name] == CHIP_TACTICIAN_BULB)
+					nbSummonMove++;
+				else if (Entity.bulbsNameChip[bulb.name] == CHIP_SAVANT_BULB)
+					nbSummonNova++;
+			}
+			
+			this.scores.summonHeal = 125 / (nbSummonHeal + 1);
+			
+			this.scores.summonRes = 175 / (nbSummonRes + 1);
+			
+			this.scores.summonDamage = 90 / (nbSummonDamage + 1);
+			
+			this.scores.summonPoison = 100 / (nbSummonPoison + 1);
+			
+			this.scores.summonMove = 60 / (nbSummonMove + 1);
+			
+			this.scores.summonNova = 60 / (nbSummonNova + 1);
+
+			/*for(var eff in this.launchedEffects) {
+
+			}
+
+			for(var e in game.entities.leeks) {
+
+			}*/
+		} else {
+			this.scores.ressurect = 0;
+		}
+	}
+
+	public initStats(map) {
+		this.type = getType(this.id);
+		this.farmerName = getFarmerName(this.id);
+		this.name = getName(this.id);
+		this.level = getLevel(this.id);
+		this.cell = map.getCell(getCell(this.id));
+		this.isAnAlly = isAlly(this.id);
+		this.isASummon = isSummon(this.id);
+		for(var chipId in getChips(this.id)) {
+			push(this.items, new Chip(chipId, this));
+		}
+		this.baseMaxLife = getTotalLife(this.id);
+		this.baseStrength = getStrength(this.id);
+		this.baseWisdom = getWisdom(this.id);
+		this.baseAgility = getAgility(this.id);
+		this.baseResistance = getResistance(this.id);
+		this.baseScience = getScience(this.id);
+		this.baseMagic = getMagic(this.id);
+		this.baseFrequency = getFrequency(this.id);
+		this.baseTp = getTotalTP(this.id);
+		this.baseMp = getTotalMP(this.id);
+		this.scores = new EntityScore();
+	}
+
+	public updateStats(map) {
+		this.maxLife = getTotalLife(this.id);
+		this.life = getLife(this.id);
+		this.alive = isAlive(this.id);
+		this.strength = getStrength(this.id);
+		this.wisdom = getWisdom(this.id);
+		this.agility = getAgility(this.id);
+		this.resistance = getResistance(this.id);
+		this.science = getScience(this.id);
+		this.magic = getMagic(this.id);
+		this.tp = getTP(this.id);
+		this.mp = getMP(this.id);
+		this.abso = getAbsoluteShield(this.id);
+		this.rel = getRelativeShield(this.id);
+		this.dmgReturn = getDamageReturn(this.id);
+		this.cell = map.getCell(getCell(this.id));
+		this.effects = [];
+		for (var effect in getEffects(this.id)) {
+			push(this.effects, new EntityEffect(effect));
+		}
+		this.launchedEffects = [];
+		for (var effect in getLaunchedEffects(this.id)) {
+			push(this.launchedEffects, new EntityEffect(effect));
+		}
+		this.passiveEffects = [];
+		for (var effect in getPassiveEffects(this.id)) {
+			push(this.passiveEffects, new EntityEffect(effect));
+		}
+		this.summons = [];
+		for (var summonId in getSummons(this.id)) {
+			push(this.summons, Entity.get(summonId));
+		}
+		this.turnOrder = getEntityTurnOrder(this.id) - getEntityTurnOrder();
+		for (var item in this.items) {
+			item.updateCooldown();
+		}
+		
+		this.strengthMult = (1 + (this.strength >= 0 ? this.strength : 0) / 100);
+		this.wisdomMult = (1 + (this.wisdom >= 0 ? this.wisdom : 0) / 100);
+		this.agilityMult = (1 + (this.agility >= 0 ? this.agility : 0) / 100);
+		this.resistanceMult = (1 + (this.resistance >= 0 ? this.resistance : 0) / 100);
+		this.scienceMult = (1 + (this.science >= 0 ? this.science : 0) / 100);
+		this.magicMult = (1 + (this.magic >= 0 ? this.magic : 0) / 100);
+		this.lifePercentage = this.life / this.maxLife;
+	}
+	
+	public updateStatsFromEffects() {
+		this.strength = this.baseStrength;
+		this.wisdom = this.baseWisdom;
+		this.agility = this.baseAgility;
+		this.resistance = this.baseResistance;
+		this.science = this.baseScience;
+		this.magic = this.baseMagic;
+		this.tp = this.baseTp;
+		this.mp = this.baseMp;
+		this.abso = 0;
+		this.rel = 0;
+		this.dmgReturn = 0;
+		
+		for (var eff in this.effects) {
+			eff.applyTo(this)
+		}
+	}
+	
+	public kill() {
+		this.alive = false;
+		this.strength = this.baseStrength;
+		this.wisdom = this.baseWisdom;
+		this.agility = this.baseAgility;
+		this.resistance = this.baseResistance;
+		this.science = this.baseScience;
+		this.magic = this.baseMagic;
+		this.tp = this.baseTp;
+		this.mp = this.baseMp;
+		this.abso = 0;
+		this.rel = 0;
+		this.dmgReturn = 0;
+		this.cell.entityOff();
+		this.cell = null;
+		for (var eff in this.effects) {
+			eff.caster.removeLaunchedEffect(eff);
+		}
+		this.effects = [];
+		for (var eff in this.launchedEffects) {
+			eff.target.removeEffect(eff);
+		}
+		this.launchedEffects = [];
+		for (var sum in this.summons) {
+			sum.kill();
+		}
+		this.summons = [];
+		this.turnOrder = null;
+	}
+	
+	public resurrection(cell) {
+		this.maxLife =  max(10, round(this.maxLife * 0.5));
+		this.life = this.maxLife / 2;
+		this.alive = true;
+		cell.entityOn(this);
+		this.cell = cell;
+	}
+	
+	public addMaxLife(value) {
+		this.maxLife += value;
+	}
+	
+	public removeMaxLife(value) {
+		this.maxLife -= value;
+		this.triggerPassive(value, EFFECT_NOVA_DAMAGE);
+	}
+	
+	public addLife(value) {
+		this.life += value;
+		if (this.life > this.maxLife)
+			this.life = this.maxLife;
+	}
+	
+	public removeLife(value, type) {
+		this.life -= value;
+		if (this.life < 0) {
+			this.life = 0;
+			if (this.alive) 
+				this.kill();
+		}
+		this.triggerPassive(value, type);
+
+		var erosionMult = type == EFFECT_POISON ? 0.10 : 0.05;
+		var erosionValue = round(value * erosionMult);
+		this.removeMaxLife(erosionValue);
+	}
+	
+	public addEffect(type, value, caster, turns, critical, itemId, target) {
+		if (turns != 0)
+			push(this.effects, new EntityEffect(type, value, caster, turns, critical, itemId, target));
+	}
+	
+	public removeEffect(effect) {
+		if (effect != null) {
+			removeElement(this.effects, effect);
+			this.updateStatsFromEffects();
+		}
+	}
+	
+	public removeEffects(effects) {
+		if (effects != null or effects != []) {
+			for (var effect in effects)
+				removeElement(this.effects, effect);
+			this.updateStatsFromEffects();
+		}
+	}
+	
+	public removeLaunchedEffect(effect) {
+		removeElement(this.launchedEffects, effect);
+	}
+	
+	public removeShackles() {
+		var newEffects = [];
+		for (var eff in this.effects) {
+			if (eff.type == EFFECT_SHACKLE_AGILITY or eff.type == EFFECT_SHACKLE_WISDOM or eff.type == EFFECT_SHACKLE_MP or eff.type == EFFECT_SHACKLE_TP or eff.type == EFFECT_SHACKLE_STRENGTH or eff.type == EFFECT_SHACKLE_MAGIC) {
+				eff.caster.removeLaunchedEffect(eff);
+			} else {
+				push(newEffects, eff);
+			}
+		}
+		this.effects = newEffects;
+		this.updateStatsFromEffects();
+	}
+	
+	public removePoisons() {
+		var newEffects = [];
+		for (var eff in this.effects) {
+			if (eff.type != EFFECT_POISON) {
+				eff.caster.removeLaunchedEffect(eff);
+			} else {
+				push(newEffects, eff);
+			}
+		}
+		this.effects = newEffects;
+	}
+	
+	public debuff(value) {
+		var newEffects = [];
+		for (var eff in this.effects) {
+			var newValue = round(eff.value * (1 - value) / 100);
+			if (newValue > 0) {
+				push(newEffects, new EntityEffect(eff.type, newValue, eff.casterId, eff.turns, eff.critical, eff.itemId, eff.target.id));
+			}
+		}
+		this.effects = newEffects;
+		this.updateStatsFromEffects();
+	}
+	
+	public triggerPassive(value, type) {
+		for (var eff in this.passiveEffects) {
+			if(eff.type == EFFECT_DAMAGE_TO_ABSOLUTE_SHIELD && type == EFFECT_DAMAGE) {
+				var val = value * eff.value / 100;
+				this.addEffect(EFFECT_RAW_ABSOLUTE_SHIELD, val, this, eff.turns, false, eff.itemId, this);
+				
+			} else if(eff.type == EFFECT_DAMAGE_TO_STRENGTH && type == EFFECT_DAMAGE) {
+				var val = value * eff.value / 100;
+				this.addEffect(EFFECT_RAW_BUFF_STRENGTH, val, this, eff.turns, false, eff.itemId, this);
+				
+			} else if(eff.type == EFFECT_POISON_TO_SCIENCE && type == EFFECT_POISON) {
+				var val = value * eff.value / 100;
+				this.addEffect(EFFECT_RAW_BUFF_SCIENCE, val, this, eff.turns, false, eff.itemId, this);
+				
+			} else if(eff.type == EFFECT_NOVA_DAMAGE_TO_MAGIC && type == EFFECT_NOVA_DAMAGE) {
+				var val = value * eff.value / 100;
+				this.addEffect(EFFECT_RAW_BUFF_MAGIC, val, this, eff.turns, false, eff.itemId, this);
+				
+			} else if(eff.type == EFFECT_MOVED_TO_MP) {
+			}
+		}
+	}
+	
+	public string() {
+		return "{ name : " + this.name +
+			" | turnOrder : " + this.turnOrder +
+			" | maxLife : " + this.maxLife +
+			" | life : " + this.life +
+			" | strength : " + this.strength +
+			" | wisdom : " + this.wisdom +
+			" | agility : " + this.agility +
+			" | resistance : " + this.resistance +
+			" | science : " + this.science +
+			" | magic : " + this.magic +
+			" | tp : " + this.tp +
+			" | mp : " + this.mp +
+			" | abso : " + this.abso +
+			" | rel : " + this.rel +
+			" | dmgReturn : " + this.dmgReturn +
+			" | cell : " + this.cell +
+			" |/n scores : " + this.scores + " }";
+	}
+}

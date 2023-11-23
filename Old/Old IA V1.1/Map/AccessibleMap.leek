@@ -1,0 +1,69 @@
+include("Map");
+include("../Effect/EffectScoreMultiplier");
+include("../Item/Chip");
+include("../Entity/Entity");
+include("AccessibleCell");
+
+class AccessibleMap extends Map {
+	private mps = [];
+	
+	public constructor(cells) {
+		for (var c in cells) {
+			this.cells[c.id] = new AccessibleCell(c, null);
+		}
+	}
+
+	public resetMps() {
+		for (var c in this.cells) {
+			c.mp = null;
+		}
+	}
+	
+	/**
+	 * Récupère les cellules accessible
+	 * 
+	 * params
+	 * cell : la cellule initial
+	 * mp : le nombre de MP
+	 * 
+	 * return
+	 * cells : tableau des cellules 
+	 **/
+	public getCellsAccessible(cs, cell, mp) {
+		if(cell == null) return cells;
+		resetMps();
+		
+		cs[cell.id] = this.cells[cell.id];
+		for(var i = 1; i <= mp; i++) {
+			for(var c in clone(cs)) {
+				if (c.mp < i-1) continue;
+				
+				var n = c.cell.N;
+				if(n.cell != null && !cs[n.id] and n.cell.walkable) {
+					n.mp = i;
+					cs[n.id] = n;
+				}
+
+				var e = c.cell.E;
+				if(e != null && !cs[e.id] and e.cell.walkable) {
+					e.mp = i;
+					cs[e.id] = e;
+				}
+
+				var s = c.cell.S;
+				if(s != null && !cs[s.id] and s.cell.walkable) {
+					s.mp = i;
+					cs[s.id] = s;
+				}
+
+				var w = c.cell.W;
+				if(w != null && !cs[w.id] and w.cell.walkable) {
+					w.mp = i;
+					cs[w.id] = w;
+				}
+			}
+		}
+		
+		return cs;
+	}
+}

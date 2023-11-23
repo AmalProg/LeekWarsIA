@@ -1,0 +1,32 @@
+class Debug {
+	public static enabledCodePosition = false;
+	public static enabledLog = true;
+	public static enabledWarning = false;
+	public static enabledError = false;
+
+	private constructor() {}
+
+	public static log(object) {
+		if (enabledLog) {
+			debug(object);
+		}
+	}
+
+	public static debugCodePosition(object, color) {
+		if (enabledCodePosition) {
+			debugC(object, color);
+		}
+	}
+
+	public static error(object) {
+		if (enabledError) {
+			debugE(object);
+		}
+	}
+
+	public static warning(object) {
+		if (enabledWarning) {
+			debugW(object);
+		}
+	}
+}

@@ -1,0 +1,94 @@
+include("Game");
+
+global game = Game.getInstance();
+
+Leek me = Leek.get(getEntity());
+AccessibleCells cAcc = CellMap.getAccessibleCells(me.getCell(), 30);
+
+CellMap.markAccessibleCells(cAcc);
+CellMap.markCells(<CellMap.getCell(404)>, COLOR_RED);
+
+global Set<integer> visitedCells = <>;
+
+
+
+/* Explorateur */
+//if (!setContains(visitedCells, 0))
+	//doTheMove(0)
+
+//if (getCell() == 0 && !setContains(visitedCells, 0)) {
+	//setPut(visitedCells, 0);
+//}
+
+//if (!setContains(visitedCells, 0)) {
+	//return;
+//}
+
+//useChipOnCell(CHIP_WINGED_BOOTS, getCell());
+//for (integer i = 0; i < 35; i++) {
+	//for (integer j = 0; j < 18; j++) {
+		//if (getMP() == 0) return;
+
+		//if (i%4 == 0) {
+			//integer cellId = i * 17 + i / 2 + j;
+			//doTheMove(cellId)
+
+			//if (getMP() == 0) return;
+
+			//if (j != 17) {
+				//cellId = cellId + 18;
+				//doTheMove(cellId)
+			//}
+		//} else if (i%4 == 2){
+			//integer cellId = (i * 17) + i / 2 + (17 - j);
+			//doTheMove(cellId)
+
+			//if (getMP() == 0) return;
+
+			//if (j != 17) {
+				//cellId = cellId + 17;
+				//doTheMove(cellId)
+			//}
+		//}
+	//}
+	//debug("-----------");
+//}
+
+//function doTheMove(integer cellId) {
+	//if (!isObstacle(cellId) && !setContains(visitedCells, cellId)) {
+		//if (cellId == getCell(getNearestEnemy()) && getCellDistance(cellId, getCell())) {
+			//useChipOnCell(CHIP_INVERSION, cellId);
+		//}
+		
+		//while(getCell() != cellId && getMP() != 0) {
+			//moveTowardCell(cellId, 1);
+			//setPut(visitedCells, getCell());
+		//}
+	//}
+//}
+
+/* Sur le fil */
+//for (integer i = 0; i < 6666665; i++) {
+//}
+
+//getOperations()
+//getOperations()
+
+
+
+
+/* XII */
+//global op = 0;
+//if (getTurn() != 64) {
+	//for (integer i = 0; i < 20000000; i++) {
+		//if (getOperations() > 19000000)
+			//break;
+	//}
+	//op += getOperations() + 3;
+//} else {
+	//integer reste = (1212121212 - op - 27) / 3
+	//for (integer i = 0; i < reste; i++) {
+		
+	//}
+	//op + getOperations();
+//}

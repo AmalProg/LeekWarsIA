@@ -1,0 +1,310 @@
+include("Cell");
+include("MoveCell");
+include("ScoreMap");
+include("AccessibleCells");
+
+class CellMap {
+	public static final integer xMin = -17;
+	public static final integer yMin = -17;
+	public static final integer xMax = 17;
+	public static final integer yMax = 17;
+		
+	private static final Map<integer, Cell> _cells = [:]; public static Map<integer, Cell> getCells() { return CellMap._cells; }
+	private static final Set<Cell> _occupiedCells = <>;
+	private static string _occupiedCellsHash; public static string getOccupiedCellsHash() { return CellMap._occupiedCellsHash; }
+
+	private constructor() {}
+	public static initCellMap() {
+		for (integer x = CellMap.xMin; x <= CellMap.xMax; x++) {
+			integer absX = abs(x);
+			for (integer y = CellMap.yMin; y <= CellMap.yMax; y++) {
+				if (absX + abs(y) <= CellMap.yMax) {
+					integer cellId = getCellFromXY(x, y)!;
+					integer cellType = getCellContent(cellId);
+					CellMap._cells[cellId] = new Cell(cellId, cellType);
+				}
+			}
+		}
+			
+		CellMap.initNeighboursCells();
+	}
+	
+	public static Cell? getCell(integer id) {
+		return CellMap._cells[id];
+	}
+	
+	public static void triggerCellTypeChangedEvent(Cell cell, integer newType) {
+		boolean isModified = false;
+		if (newType == CELL_ENTITY) {
+			isModified = setPut(CellMap._occupiedCells, cell);
+		} else {
+			isModified = setRemove(CellMap._occupiedCells, cell);
+		}
+		
+		if (isModified) {
+			Array<Cell> orderedOccupiedCells = arraySort(setToArray(CellMap._occupiedCells), function(Cell c1, Cell c2) => integer {
+				return c1.id - c2.id;
+			}) as Array<Cell>;
+			CellMap._occupiedCellsHash = "";
+			for (Cell c in orderedOccupiedCells) {
+				CellMap._occupiedCellsHash += c.id + "|";
+			} 
+		}
+	}
+	
+	private static void initNeighboursCells() {
+		for (integer x = CellMap.xMin; x <= CellMap.xMax; x++) {
+			integer absX = abs(x);
+			for (integer y = CellMap.yMin; y <= CellMap.yMax; y++) {
+				if (absX + abs(y) <= CellMap.yMax) {
+					integer? id = getCellFromXY(x, y);
+					if (id == null) continue;
+					
+					Cell? cell = CellMap.getCell(id!);
+					if (cell == null) continue;
+
+					integer? n = getCellFromXY(x, y + 1);
+					if(n != null)
+						cell!.N = CellMap.getCell(n!);
+
+					integer? ne = getCellFromXY(x - 1, y + 1);
+					if(ne != null)
+						cell!.NE = CellMap.getCell(ne!);
+
+					integer? e = getCellFromXY(x - 1, y);
+					if(e != null)
+						cell!.E = CellMap.getCell(e!);
+
+					integer? se = getCellFromXY(x - 1, y - 1);
+					if(se != null)
+						cell!.SE = CellMap.getCell(se!);
+
+					integer? s = getCellFromXY(x, y - 1);
+					if(s != null)
+						cell!.S = CellMap.getCell(s!);
+
+					integer? sw = getCellFromXY(x + 1, y - 1);
+					if(sw != null)
+						cell!.SW = CellMap.getCell(sw!);
+
+					integer? w = getCellFromXY(x + 1, y)
+					if(w != null)
+						cell!.W = CellMap.getCell(w!);
+
+					integer? nw = getCellFromXY(x + 1, y + 1)
+					if(nw != null)
+						cell!.NW = CellMap.getCell(nw!);
+				}
+			}
+		}
+	}
+	
+	public static AccessibleCells getAccessibleCells(Cell startCell, integer mp) {
+		return CellMap.accessibleCellsMemo.apply(startCell, mp) as AccessibleCells;
+	}
+	private static Memoize2 accessibleCellsMemo = new Memoize2(function (Cell startCell, integer mp) => AccessibleCells {
+		AccessibleCells accessibleCells = new AccessibleCells();
+		accessibleCells.addMoveCell(new MoveCell(startCell, 0, max(0, mp)));
+		Set<Cell> pastMpTravelledCells = <>;
+		setPut(pastMpTravelledCells, startCell);
+
+		for (integer i = 1; i <= mp; i++) {
+			Set<Cell> clonedTravelledCells = clone(pastMpTravelledCells) as Set<Cell>;
+			setClear(pastMpTravelledCells);
+			for (Cell c in clonedTravelledCells) {
+				Cell? tmpC = c.N;
+				if (tmpC != null && !accessibleCells.hasCell(tmpC!) && tmpC!.isWalkable()) {
+					accessibleCells.addMoveCell(new MoveCell(tmpC!, i, mp - i));
+					setPut(pastMpTravelledCells, tmpC);
+				}
+				tmpC = c.E;
+				if (tmpC != null && !accessibleCells.hasCell(tmpC!) && tmpC!.isWalkable()) {
+					accessibleCells.addMoveCell(new MoveCell(tmpC!, i, mp - i));
+					setPut(pastMpTravelledCells, tmpC);
+				}
+				tmpC = c.S;
+				if (tmpC != null && !accessibleCells.hasCell(tmpC!) && tmpC!.isWalkable()) {
+					accessibleCells.addMoveCell(new MoveCell(tmpC!, i, mp - i));
+					setPut(pastMpTravelledCells, tmpC);
+				}
+				tmpC = c.W;
+				if (tmpC != null && !accessibleCells.hasCell(tmpC!) && tmpC!.isWalkable()) {
+					accessibleCells.addMoveCell(new MoveCell(tmpC!, i, mp - i));
+					setPut(pastMpTravelledCells, tmpC);
+				}
+			}
+		}
+		return accessibleCells;
+	}, function(Cell startCell, integer mp) {
+		return CellMap.getOccupiedCellsHash() + "," + startCell.id + "," + max(0, mp);
+	});
+	public static void resetAccessibleCellsMemo() {
+		CellMap.accessibleCellsMemo.reset();
+	}
+
+	//public static AccessibleCells getAccessibleCellsWithTeleport(Cell startCell, integer mp, Item item) {
+		//return CellMap.accessibleCellsWithTeleportMemo.apply(startCell, mp, item) as AccessibleCells;
+	//}
+	//private static Memoize3 accessibleCellsWithTeleportMemo = new Memoize3(function (Cell startCell, integer mp, Item item) => AccessibleCells {
+		//AccessibleCells accessibleCells = CellMap.getAccessibleCells(startCell, mp);
+		//Set<Cell> cellCenHitTested = <>;
+
+		//AccessibleCells accessibleCellsWithTP = new AccessibleCells();
+		//for (MoveCell moveCell in accessibleCells.getOrderedPerMpUsedMoveCell(true)) {
+			//Set<Cell> cellsCanHitTeleport = item.getCellsCanHitFrom(moveCell.cell);
+			//for (Cell cellToHitTP in cellsCanHitTeleport) {
+				//if (setContains(cellCenHitTested, cellToHitTP)) continue;
+				//setPut(cellCenHitTested, cellToHitTP);
+				//// Si on n'a pas encore mis de score sur la cellToHitTP ou que les mpUsed est < au score déjà mis
+				//if (!accessibleCellsWithTP.hasCell(cellToHitTP) || moveCell.mpUsed < accessibleCellsWithTP.getMpUsed(cellToHitTP)) {
+					//for (MoveCell moveCellAfterTP in CellMap.getAccessibleCells(cellToHitTP, moveCell.mpRemain).getMoveCells()) {
+						//if (!accessibleCellsWithTP.hasCell(moveCellAfterTP.cell) || moveCell.mpUsed + moveCellAfterTP.mpUsed < accessibleCellsWithTP.getMpUsed(moveCellAfterTP.cell)) {
+							//accessibleCellsWithTP.removeMoveCell(moveCellAfterTP.cell);
+							//accessibleCellsWithTP.addMoveCell(new MoveCell(moveCellAfterTP.cell, moveCell.mpUsed + moveCellAfterTP.mpUsed, mp - (moveCell.mpUsed + moveCellAfterTP.mpUsed), item, moveCell.cell, cellToHitTP));
+						//}
+					//}
+				//}
+			//}
+		//}
+
+		//accessibleCellsWithTP.addMoveCell(new MoveCell(startCell, 0, max(0, mp)));
+
+		//return accessibleCellsWithTP;
+	//}, function(Cell startCell, integer mp, Item item) {
+		//return CellMap.getOccupiedCellsHash() + "," + item.getId() + "," + startCell.id + "," + max(0, mp);
+	//});
+	//public static void resetAccessibleCellsWithTeleportMemo() {
+		//return CellMap.accessibleCellsWithTeleportMemo.reset();
+	//}
+
+
+	public static AccessibleCells getAccessibleCellsWithTeleport(Cell startCell, integer mp, Item item) {
+		return CellMap.accessibleCellsWithTeleportMemo.apply(startCell, mp, item) as AccessibleCells;
+	}
+	private static Memoize3 accessibleCellsWithTeleportMemo = new Memoize3(function (Cell startCell, integer mp, Item item) => AccessibleCells {
+		AccessibleCells accessibleCells = CellMap.getAccessibleCells(startCell, mp);
+		Map<Cell, MoveCell> cellFromToTeleportCells = [:];
+		Map<integer, Set<Cell>> cellsPerMpToTeleport = [:];
+
+		for (integer i = 0; i <= mp; i++) {
+			cellsPerMpToTeleport[i] = <>;
+		}
+		
+		AccessibleCells accessibleCellsWithTP = new AccessibleCells();
+		for (MoveCell moveCell in accessibleCells.getOrderedPerMpUsedMoveCell(true)) {
+			Set<Cell> cellsCanHitTeleport = item.getCellsCanHitFrom(moveCell.cell);
+			for (Cell cellToHitTP in cellsCanHitTeleport) {
+				// Si on n'a pas encore mis de mpUsed sur la cellToHitTP
+				if (!mapContainsKey(cellFromToTeleportCells, cellToHitTP)) {
+					cellFromToTeleportCells[cellToHitTP] = moveCell;
+					setPut(cellsPerMpToTeleport[moveCell.mpUsed]!, cellToHitTP);
+				}
+			}
+		}
+		
+		for (integer mpUsed : Set<Cell> cells in cellsPerMpToTeleport) {			
+			integer curMpUsed = mpUsed + 1;
+			for (Cell c in cells) {
+				Cell cellFromTeleport;
+				Cell cellToTeleport;
+				if (!accessibleCellsWithTP.hasCell(c)) {
+					cellFromTeleport = cellFromToTeleportCells[c]!.cell;
+					cellToTeleport = c;
+					accessibleCellsWithTP.addMoveCell(new MoveCell(c, mpUsed, mp - mpUsed, item, cellFromTeleport, cellToTeleport));
+				} else {
+					cellFromTeleport = accessibleCellsWithTP.getMoveCell(c)!.cellFromTeleport!;
+					cellToTeleport = accessibleCellsWithTP.getMoveCell(c)!.cellToTeleport!;
+				}
+				
+				if (mpUsed < mp) {
+					Cell? tmpC = c.N;
+					if (tmpC != null && tmpC!.isWalkable() && (!mapContainsKey(cellFromToTeleportCells, tmpC) || curMpUsed < cellFromToTeleportCells[tmpC!]!.mpUsed)) {
+						accessibleCellsWithTP.addMoveCell(new MoveCell(tmpC!, curMpUsed, mp - curMpUsed, item, cellFromTeleport, cellToTeleport));
+						setPut(cellsPerMpToTeleport[curMpUsed]!, tmpC);
+					}
+					tmpC = c.E;
+					if (tmpC != null && tmpC!.isWalkable() && (!mapContainsKey(cellFromToTeleportCells, tmpC) || curMpUsed < cellFromToTeleportCells[tmpC!]!.mpUsed)) {
+						accessibleCellsWithTP.addMoveCell(new MoveCell(tmpC!, curMpUsed, mp - curMpUsed, item, cellFromTeleport, cellToTeleport));
+						setPut(cellsPerMpToTeleport[curMpUsed]!, tmpC);
+					}
+					tmpC = c.S;
+					if (tmpC != null && tmpC!.isWalkable() && (!mapContainsKey(cellFromToTeleportCells, tmpC) || curMpUsed < cellFromToTeleportCells[tmpC!]!.mpUsed)) {
+						accessibleCellsWithTP.addMoveCell(new MoveCell(tmpC!, curMpUsed, mp - curMpUsed, item, cellFromTeleport, cellToTeleport));
+						setPut(cellsPerMpToTeleport[curMpUsed]!, tmpC);
+					}
+					tmpC = c.W;
+					if (tmpC != null && tmpC!.isWalkable() && (!mapContainsKey(cellFromToTeleportCells, tmpC) || curMpUsed < cellFromToTeleportCells[tmpC!]!.mpUsed)) {
+						accessibleCellsWithTP.addMoveCell(new MoveCell(tmpC!, curMpUsed, mp - curMpUsed, item, cellFromTeleport, cellToTeleport));
+						setPut(cellsPerMpToTeleport[curMpUsed]!, tmpC);
+					}
+				}
+			}
+		}
+
+		accessibleCellsWithTP.addMoveCell(new MoveCell(startCell, 0, max(0, mp)));
+
+		return accessibleCellsWithTP;
+	}, function(Cell startCell, integer mp, Item item) {
+		return CellMap.getOccupiedCellsHash() + "," + item.getId() + "," + startCell.id + "," + max(0, mp);
+	});
+	public static void resetAccessibleCellsWithTeleportMemo() {
+		return CellMap.accessibleCellsWithTeleportMemo.reset();
+	}
+	
+	public static Set<Cell> getEdgeCells(Set<Cell> cells) {
+		Set<Cell> edgeCells = <>;
+		for (Cell cell in cells) {
+			if ((cell.N != null && !setContains(cells, cell.N)) || (cell.E != null && !setContains(cells, cell.E)) || (cell.S != null && !setContains(cells, cell.S)) || (cell.W != null && !setContains(cells, cell.W)))
+				setPut(edgeCells, cell);
+		}
+		return edgeCells;
+	}
+	
+	public static void showRandCellNeighbour() {
+		integer id = randInt(0, 613);
+		Cell? c = CellMap._cells[id];
+		if (c == null) return;
+		
+		mark([c!.id], COLOR_GREEN);
+		if (c!.N != null)
+			mark([c!.N!.id], COLOR_RED);
+		if (c!.NE != null)
+			mark([c!.NE!.id], COLOR_RED);
+		if (c!.E != null)
+			mark([c!.E!.id], COLOR_RED);
+		if (c!.SE != null)
+			mark([c!.SE!.id], COLOR_RED);
+		if (c!.S != null)
+			mark([c!.S!.id], COLOR_RED);
+		if (c!.SW != null)
+			mark([c!.SW!.id], COLOR_RED);
+		if (c!.W != null)
+			mark([c!.W!.id], COLOR_RED);
+		if (c!.NW != null)
+			mark([c!.NW!.id], COLOR_RED);
+	}
+	
+	public static void markAccessibleCells(AccessibleCells accessibleCells, integer color = COLOR_GREEN) {
+		for (MoveCell moveCell in accessibleCells.getMoveCells()) {
+			mark(moveCell.cell.id, getColor(0, 0, 0));
+			markText(moveCell.cell.id, moveCell.mpUsed, color);
+		}
+	}
+	
+	public static void markCells(Set<Cell> cells, integer color = COLOR_GREEN) {
+		mark(arrayMap(setToArray(cells), function(Cell c) => integer { return c.id; }) as Array<integer>, color);
+	}
+
+	public static void markMoveCells(Set<MoveCell> cells, integer color = COLOR_GREEN) {
+		mark(arrayMap(setToArray(cells), function(MoveCell mc) => integer { return mc.cell.id; }) as Array<integer>, color);
+	}
+
+	public static void markCellsFrom(Set<TargetCell> cells, integer color = COLOR_GREEN) {
+		mark(arrayMap(setToArray(cells), function(TargetCell tc) => integer { return tc.cellFrom!.id; }) as Array<integer>, color);
+	}
+
+	public static void markTargetCells(Set<TargetCell> cells, integer color = COLOR_GREEN) {
+		mark(arrayMap(setToArray(cells), function(TargetCell tc) => integer { return tc.cellTarget.id; }) as Array<integer>, color);
+	}
+
+}

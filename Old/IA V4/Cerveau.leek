@@ -1,0 +1,24 @@
+include("IA");
+include("Debug");
+
+Debug.enabledWarning = false;
+Debug.enabledError = false;
+Debug.enabledLogC = false;
+Debug.enabledLog = false;
+Debug.enabledOp = false;
+if (getFightContext() == FIGHT_CONTEXT_TEST or getFightContext() == FIGHT_CONTEXT_CHALLENGE) {
+	Debug.enabledLog = false;
+	Debug.enabledLogC = false;
+	Debug.enabledInfo = false;
+	Debug.enabledOp = false;
+}
+
+global ia = new IA();
+
+ia.start();
+ia.execute(); 
+ia.end();
+
+Debug.log("Ram ce tour : " + getUsedRAM());
+Debug.logC("Operations ce tour : " + getOperations(), getColor(220, 120, 220));
+

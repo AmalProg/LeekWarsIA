@@ -1,0 +1,45 @@
+include("Entity");
+
+class Chest extends AbstractEntity {
+	public static final integer WOOD_CHEST_BASE_LIFE = 2_000;
+	public static final integer IRON_CHEST_BASE_LIFE = 5_000;
+	public static final integer DIAMOND_CHEST_BASE_LIFE = 20_000;
+	
+	/** Chests pool **/
+	private static final Map<integer, Chest> chests = [:];
+	public static initChests(Array<integer> entitiesId) {
+		for (var chestId in entitiesId) {
+			if (getType(chestId) == ENTITY_CHEST) {
+				Chest.chests[chestId] = new Chest(chestId);
+				AbstractEntity.entities[chestId] = Chest.chests[chestId];
+			}
+		}
+	}
+	public static Chest? get(integer id) {
+		return Chest.chests[id];
+	}
+	/** fin chests pool **/
+
+	constructor(integer id) {
+		super(id);
+		
+		if (this._baseStats.getMaxLife() == WOOD_CHEST_BASE_LIFE) {
+			this._powerOnDeath = 10;
+		} else if (this._baseStats.getMaxLife() == WOOD_CHEST_BASE_LIFE) {
+			this._powerOnDeath = 50;
+		} else if (this._baseStats.getMaxLife() == WOOD_CHEST_BASE_LIFE) {
+			this._powerOnDeath = 100;
+		}
+	}
+	
+	public static updateChestsStats() {
+		for (Chest chest in Chest.chests) {
+			chest.updateStats();
+		}
+	}
+	protected void updateStats() {
+		super.updateStats();
+		// can't move
+		this._stats.useMP(this._stats.getMP());
+	}
+}

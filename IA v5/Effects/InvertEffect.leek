@@ -1,0 +1,15 @@
+include("Effect");
+
+class InvertEffect extends Effect {
+	public void applyTo(Cell? cellTarget, Cell? cellFrom, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
+		caster.invert(target, cellFrom!);
+	}
+	
+	protected real getScore(Cell? cellTarget, Cell? cellFrom, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
+		
+	}
+	
+	protected real getEffectScore(real value, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
+		return 0.0;
+	}
+}

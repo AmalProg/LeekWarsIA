@@ -1,0 +1,243 @@
+include("../Map/TargetCell");
+include("../Map/MoveCell");
+
+class Action {
+	public static final integer SIMULATING_DEBUG_COLOR = getColor(50, 168, 90);
+	
+	private static integer idCounter = 0;
+	
+	private integer _id;
+	public integer getUniqueId() { return this._id; }
+	
+	private Item _item; 
+	public void setItem(Item item) { this._item = item; }
+	public Item getItem() { return this._item; }
+	
+	private Set<TargetCell> _targetCells;
+	public void setTargetCells(Set<TargetCell> cells) { this._targetCells = cells; }
+	public Set<TargetCell> getTargetCells() { return this._targetCells; }
+	
+	private string _targetsHash;
+	public void setTargetsHash(string targetsHash) { this._targetsHash = targetsHash; }
+	public string getTargetsHash() { return this._targetsHash; }
+	
+	private Set<AbstractEntity> _targets;
+	publci void addTarget(AbstractEntity target) { setPut(this._targets, target); }
+	public void setTargets(Set<AbstractEntity> targets) { this._targets = targets; }
+	public Set<AbstractEntity> getTargets() { return this._targets; }
+	
+	private Set<MoveCell> _cellsFrom;
+	public void setCellsFrom(Set<MoveCell> cells) { this._cellsFrom = cells; }
+	public Set<MoveCell> getCellsFrom() { return this._cellsFrom; }
+	public void clearCellsFrom() { setClear(this._cellsFrom); }
+	public void removeCellsFrom(Set<MoveCell> cells) {
+		for (MoveCell moveCellToRemove in cells) {
+			if (setContains(this._cellsFrom, moveCellToRemove))
+				setRemove(this._cellsFrom, moveCellToRemove);
+		}
+	}
+	
+	private integer _hitCasterDist;
+	public void setHitCasterDist(integer dist) { this._hitCasterDist = dist; }
+	public integer getHitCasterDist() { return this._hitCasterDist; }
+	
+	private Item? _teleportItem;
+	public void setTeleportItem(Item? teleportItem) { this._teleportItem = teleportItem; }
+	public Item? getTeleportItem() { return this._teleportItem; }
+	
+	private real _score;
+	public void setScore(real score) { this._score = score; }
+	public real getScore() { return this._score; }
+	
+	
+	private integer _useCount;
+	public void addUse() { this._useCount++; }
+	public integer getUseCount() { return this._useCount; }
+	
+	constructor() {	
+		this._id = Action.idCounter++;
+		this._targetCells = <>;
+		this._targetsHash = "";
+		this._targets = <>;
+		this._cellsFrom = <>;
+		this._hitCasterDist = -1;
+		this._teleportItem = null;
+		this._score = 0.0;
+		this._useCount = 0;
+	}
+	constructor(Action action) {	
+		this._id = action._id;
+		this._item = action._item;
+		this._targetCells = clone(action._targetCells) as Set<TargetCell>;
+		this._targetsHash = action._targetsHash;
+		this._targets = clone(action._targets) as Set<AbstractEntity>;
+		this._cellsFrom = clone(action._cellsFrom) as Set<MoveCell>;
+		this._hitCasterDist = action._hitCasterDist;
+		this._teleportItem = action._teleportItem;
+		this._score = action._score;
+		this._useCount = action._useCount;
+	}
+	public Action clone() {
+		return new Action(this);
+	}
+	
+	public void simulate(ActionsManager manager, AbstractEntity caster) {
+		integer useCount = this._useCount;
+		while (useCount-- > 0) {
+			if (!setIsEmpty(this._targetCells)) {
+				MoveCell moveCell = setGetOne(this._cellsFrom) as MoveCell;
+				// On ne se téléporte que à la première réalisation de l'action
+				if (this._teleportItem != null && !manager.isUsedMovementItem(this._teleportItem!)) {
+					manager.addUsedMovementItem(this._teleportItem!);
+
+					moveCell.itemTeleport!.applyOnCell(moveCell.cellToTeleport!, moveCell.cellFromTeleport, caster, 0);
+					caster.simulateItemUse(moveCell.itemTeleport!);
+
+					Debug.log("Simulating teleport with " + moveCell.itemTeleport + " on " + moveCell.cellToTeleport + " from " + moveCell.cellFromTeleport, Action.SIMULATING_DEBUG_COLOR);
+					Debug.log("I have " + caster.getStats().getTP() + " tp left");
+				}
+
+				TargetCell targetCell = setGetOne(this._targetCells) as TargetCell;
+				Debug.log("Simulating " + this._item + " on " + targetCell + " from " + targetCell.cellFrom + " with caster at dist " + this._hitCasterDist + " for a score of " + this._score, Action.SIMULATING_DEBUG_COLOR);
+				Debug.log("cellsFrom : " + this._cellsFrom, Action.SIMULATING_DEBUG_COLOR);
+				Debug.log("targetCells : " + this._targetCells, Action.SIMULATING_DEBUG_COLOR);
+				this._item.applyOnCell(targetCell.cellTarget, targetCell.cellFrom, caster, this._hitCasterDist);
+			} else {
+				Debug.log("Simulating " + this + " on self ", Action.SIMULATING_DEBUG_COLOR);
+				this._item.applyTo(caster, caster, this._hitCasterDist, true);
+			}
+
+			caster.simulateItemUse(this._item);
+			Debug.log("I have " + caster.getStats().getTP() + " tp left");
+		}
+	}
+	
+	public void execute(ActionsManager manager, Array<Action> notExecutedSelfActions = [], MoveCell? moveCell = null) {
+		while (this._useCount-- > 0) {
+			if (moveCell != null) {
+				string log = "Moving to " + moveCell!.cell.id;
+
+				// Si on doit utiliser un item de TP
+				if (this._teleportItem != null && !manager.isUsedMovementItem(this._teleportItem!)) {
+					manager.addUsedMovementItem(this._teleportItem!);
+					
+					log += " using tp item " + moveCell!.itemTeleport + " from " + moveCell!.cellFromTeleport + " to " + moveCell!.cellToTeleport;
+					
+					do {
+						manager.tryExecuteSelfActions(notExecutedSelfActions);	
+					} while(moveTowardCell(moveCell!.cellFromTeleport!.id, 1));
+					
+					moveCell!.itemTeleport!.use(moveCell!.cellToTeleport!);
+					// On retire l'item de téléportation pour les prochaines réalisations de l'action
+					this._teleportItem = null;
+				}
+
+				Debug.log(log);
+				do {
+					manager.tryExecuteSelfActions(notExecutedSelfActions);	
+				} while(moveTowardCell(moveCell!.cell.id, 1));
+			}
+
+			Cell myCell = CellMap.getCell(getCell()!)!;
+
+			integer useResult = -99;
+			for (TargetCell targetCell in this._targetCells) {							
+				Debug.log("Using " + this._item.getName() + " on " + targetCell.cellTarget + " from " + myCell);
+				if (this._item.getAreaType() == AREA_LASER_LINE || this._item.getAreaType() == AREA_FIRST_INLINE) {
+					if (Cell.isOnSameDirection(targetCell.cellTarget, targetCell.cellFrom!, myCell) && this._item.canUseItemOnCell(targetCell.cellTarget)) {
+						string targetsHash = AbstractEntity.getTargetsHash(this._item.getSimulationTargets(targetCell.cellTarget, targetCell.cellFrom, GAME.me), targetCell.cellTarget, true);
+						Debug.log(targetsHash + " / " + this._targetsHash)
+
+						useResult = this._item.use(targetCell.cellTarget);
+					}
+				} else {
+					if (this._item.canUseItemOnCell(targetCell.cellTarget)) {
+						string targetsHash = AbstractEntity.getTargetsHash(this._item.getSimulationTargets(targetCell.cellTarget, null, GAME.me), targetCell.cellTarget);
+						if (this._hitCasterDist != -1) {
+							integer dist = Cell.getDistance(myCell, targetCell.cellTarget);
+							targetsHash += GAME.me.getId() + "|" + dist + ",";
+						}
+
+						Debug.log(targetsHash + " / " + this._targetsHash)
+
+						if (targetsHash == this._targetsHash) {
+							useResult = this._item.use(targetCell.cellTarget);
+						} else {
+							// On test en retirant les entité mortes du targetsHash
+							string newTargetsHash = "";
+							for (string targetsDist in split(this._targetsHash, ",")) {
+								string targetId = split(targetsDist, "|")[0];
+								if (isAlive(number(targetId) as integer))
+									newTargetsHash += targetsDist + ",";
+							}
+
+							string newCurrentTargetsHash = "";
+							for (string targetsDist in split(targetsHash, ",")) {
+								string targetId = split(targetsDist, "|")[0];
+								if (isAlive(number(targetId) as integer))
+									newCurrentTargetsHash += targetsDist + ",";
+							}
+
+							Debug.log(newCurrentTargetsHash + " / " + newTargetsHash)
+
+							if (newCurrentTargetsHash == newTargetsHash)
+								useResult = this._item.use(targetCell.cellTarget);
+						}
+					}
+				}
+
+
+				if (useResult != -99) {
+					if (useResult <= 0) {
+						Debug.log("Target cells : " + this._targetCells);
+						Debug.log("Cells from : " + this._cellsFrom);
+						Debug.log("Use result : " + useResult);
+					}
+
+					if (useResult == USE_FAILED)
+						Debug.error("The item use as failed");
+					else if (useResult == USE_INVALID_COOLDOWN)
+						Debug.error("The item use as failed cause the item is on cooldown");
+					else if (useResult == USE_INVALID_POSITION)
+						Debug.error("The item use as failed cause the positions aren't good");
+					else if (useResult == USE_INVALID_TARGET)
+						Debug.error("The item use as failed cause the target isn't valid");
+					else if (useResult == USE_NOT_ENOUGH_TP)
+						Debug.error("The item use as failed cause you don't have enough TP");
+					else if (useResult == USE_RESURRECT_INVALID_ENTITY)
+						Debug.error("The item use as failed cause the entity can't be ressurected");
+					else if (useResult == USE_TOO_MANY_SUMMONS)
+						Debug.error("The item use as failed cause you already have too many summons on the field");
+
+					break;
+				}
+			}
+
+			if (useResult == -99) {
+				Debug.error("Action couldn't be made");
+			}
+		}
+	}
+	
+	public string string() {
+		string ret = "{id : " + this._id
+			+ ", item : " + this._item
+			//+ "cellsTo : " + this._targetCells + "\n"
+			+ ", score : " + this._score
+			+ ", useCount : " + this._useCount;
+		
+		if (this._teleportItem != null) {
+			ret += ", teleportItem : " + this._teleportItem;
+		}
+		if (this._hitCasterDist != -1) {
+			ret += ", distHitTarget : " + this._hitCasterDist;
+		}
+		//if (!setIsEmpty(this._targetCells)) {
+			//ret += ", one target cell : " + setGetOne(this._targetCells);
+		//}
+		
+		ret += "}";
+		
+		return ret;
+	}
+}

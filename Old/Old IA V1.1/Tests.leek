@@ -1,0 +1,90 @@
+include("Game")
+
+Debug.enabledCodePosition = false;
+Debug.enabledLog = true;
+Debug.enabledError = false;
+Debug.enabledWarning = false;
+
+global game = new Game();
+//game.turn();
+var map = game.dangerMap;
+var accessMap = game.accessibleMap;
+Leek.updateLeeksStats(map);
+Bulb.updateBulbsStats(map);
+Turret.updateTurretsStats();
+map.initTypeOnCell();
+
+var cells = [];
+var cellsCanGo = Map.getCellsAccessible([], game.me.cell, game.me.mp);
+var cell306 = map.getCell(306);
+var cell0 = map.getCell(111);
+var cellRand = map.getCell(randInt(0, 613));
+var wep = new Weapon(WEAPON_M_LASER, game.me);
+
+game.me.cell.setSelfCell()
+
+/*debug(getOperations());
+
+var cells1 = Map.getCellsAccessible([], game.me.cell, 11);
+
+debug(getOperations());
+
+var cells2 = accessMap.getCellsAccessible([], game.me.cell, 11);
+
+debug(getOperations());
+
+debug(cells1)
+debug(cells2)*/
+
+// test gctulaser
+/*Map.getCellsToUseLaserOnCell(cells, cellRand, wep);
+
+var tab = []
+var tab2 = []
+for(var c in cells) {
+	push(tab2, Map.getCellToHitLaser(wep, cellRand, c).id)
+	push(tab, c.id);
+}
+clearMarks()
+mark([cellRand.id], COLOR_BLUE)
+mark(tab, COLOR_RED)
+pause();
+mark(tab2, COLOR_GREEN)
+pause();*/
+
+// tests sur les getEffectiveArea
+//for (var cId in [3, 140, 507, 600, 0, 612, 595, 17]) {
+	//for (var item in game.me.items) {
+		//var op = getOperations();
+		//cells = item.getEffectiveArea(Cell.get(cId), null);
+		//debug("test op " + (getOperations() - op));
+		//var tab = []
+		//for(var c in cells) {
+			//push(tab, c.id);
+		//}
+		//debug(item.name)
+		//clearMarks()
+		//mark(tab, COLOR_RED)
+
+		//pause()
+	//}
+//}
+
+// test gtcu
+//for (var item in game.me.items) {
+	//cells = [];
+	//var op = getOperations();
+	//cells = Map.getCellsToUseItemOnCell(cellsCanGo, item, cell306);
+	//debug("test op " + (getOperations() - op));
+
+	//var tab = []
+	//for(var c in cells) {
+		//push(tab, c.id);
+	//}
+	//debug(cells)
+	//debug(item.name)
+	//clearMarks()
+	//mark(tab, COLOR_RED)
+
+	//pause()
+//}

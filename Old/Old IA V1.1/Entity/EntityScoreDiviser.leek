@@ -1,0 +1,11 @@
+class EntityScoreDiviser {
+	private static maxLife = 2000;
+	private static abso = 200;
+	private static rel = 100;
+	private static dmgReturn = 100;
+	private static strength = 500;
+	private static magic = 500;
+	private static wisdom = 500;
+	private static resistance = 400;
+	private static agility = 500;
+}

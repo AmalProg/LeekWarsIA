@@ -1,0 +1,16 @@
+include("Effect");
+
+class AttractEffect extends Effect {
+	private constructor(Array<any> effectArray, Item item) {
+		setPut(this._triggerableEffects, EFFECT_MOVED_TO_MP);
+		
+		super(effectArray, item);
+	}
+	
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
+		affectedEntity.attract(cellTarget!);
+		
+		this.tryTriggerPassive(affectedEntity, caster, 1);
+	}
+	
+}

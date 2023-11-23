@@ -1,0 +1,7 @@
+include("CellContent");
+
+class Obstacle extends CellContent {
+	public constructor() {
+		this.contentType = CELL_OBSTACLE;
+	}
+}

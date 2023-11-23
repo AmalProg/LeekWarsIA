@@ -1,0 +1,32 @@
+include("../Debug");
+include("Entity");
+
+class Bulb extends Entity {
+	/** Bulbs pool **/
+	private static bulbs = [];
+	public static initBulbs(entitiesId, map) {
+		for (var bulbId in entitiesId) {
+			if (getType(bulbId) == ENTITY_BULB) {
+				bulbs[bulbId] = new Bulb(bulbId, map);
+				Entity.entities[bulbId] = bulbs[bulbId];
+			}
+		}
+	}
+	public static get(id) {
+		return Bulb.bulbs[id];
+	}
+	/** fin bulbs pool **/
+	
+	constructor(id, map) {
+		super(id, map);
+	}
+	
+	public static updateBulbsStats(map) {
+		for (var bulb in Bulb.bulbs) {
+			bulb.updateStats(map);
+		}
+	}
+	public updateStats(map) {
+		super.updateStats(map);
+	}
+}

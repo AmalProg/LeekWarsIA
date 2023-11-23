@@ -1,0 +1,339 @@
+ class EntityScoresAdjuster {
+	public static real maxLife = 0.66;
+	public static real dmg = 1.1;
+	public static real heal = 1.2;
+	public static real abso = 1.8;
+	public static real rel = 1.4;
+	public static real dmgReturn = 1.0;
+	public static real strength = 1.9;
+	public static real power = 1.0;
+	public static real magic = 1.6;
+	public static real wisdom = 1.0;
+	public static real resistance = 0.9;
+	public static real agility = 1.2;
+	public static real science = 1.0;
+	public static real poison = 1.5;
+	public static real mp = 1.0;
+	public static real tp = 1.2;
+	
+	public real kill;
+	public real entityType;
+	public real turnOrderNear;
+	public real turnOrderFar;
+	public real isolation;
+	public real debuffOther;
+	public real debuffShield;
+	public real debuffBuffDamage;
+	public real debuffBuffMP;
+	public real debuffBuffTP;
+	public real debuffBuffOtherStats;
+	public real debuffDmgReturn;
+	public real debuffShackles;
+	public real buffDamage;
+	public real buffMP;
+	public real antidote;
+	public real healOverTime;
+	public real heal;
+	public real shield;
+	public real shieldAbso;
+	public real shieldRel;
+	public real resBuff;
+	public real directDmg;
+	public real poison;
+	public real novaDamage;
+	public real vulneAbso;
+	public real vulneRel;
+	public real dmgReturn;
+	
+	private AbstractEntity _entity;
+	
+	private constructor() {}
+	constructor(AbstractEntity entity) {
+		this._entity = entity;
+		
+		if (this._entity instanceof Bulb) {
+			Bulb bulb = this._entity as Bulb;
+
+			if (bulb.isSupport())
+				this.entityType = 0.25;
+			else if (bulb.isDamage())
+				this.entityType = 0.5;
+		} else {
+			this.entityType = 1.0;
+		}
+	}
+	
+	public void update() {
+		Cell entityCell = this._entity.getCell()!;
+		EntityStats entityStats = this._entity.getStats();
+		EntityStats entityStatsIn1Turn = this._entity.getStatsInTurns(1);
+		integer entityMP = entityStatsIn1Turn.getMP();
+		Team entityTeam = this._entity.getTeam()!;
+		
+		if (!this._entity.isEntityAlive()) {
+			/* Resurection */
+			/* * */
+			return;
+		}
+		
+		/* Turn order */
+		// Si c'est un allié on préfère viser les entités qui jouent après
+		this.turnOrderNear = 1.1 - (0.2 * GAME.timeline.getTurnOrderAfterMe(this._entity) / setSize(GAME.getAllEntities()));
+		// Si c'est un enemy on préfère viser les entités qui jouent dans longtemps
+		this.turnOrderFar = 0.9 + (0.2 * GAME.timeline.getTurnOrderAfterMe(this._entity) / setSize(GAME.getAllEntities()));
+		/* * */
+		
+		/* Kill */
+		this.kill = 4000.0 * this.entityType * this.turnOrderNear;
+		/* * */
+		
+		integer aliveTeamsCount = 0;
+		for (Team team in Team.getTeams()) {
+			if (setSize(team.getAlive()) != 0)
+				aliveTeamsCount++;
+		}
+
+		
+		/* Isolation */
+		real isolatedFromAlliesScore = 1.0;
+		real inDangerScore = 1.0;
+		this.isolation = 1.0;
+		if (GAME.leeksPerTeamCount != 1 && this._entity.isEntityAlive()) {
+			integer alliesNearCount = 0;
+			integer ennemiesNearCount = 0;
+			for (Team team in Team.getTeams()) {
+				boolean isOnMyTeam = team == entityTeam;
+
+				for (AbstractEntity entity in team.getAliveLeeks()) {
+					if (entity == this._entity) continue;
+					
+					if (Cell.getDistance(entity.getCell()!, entityCell) < entityMP * 1.5) {
+						if (isOnMyTeam && entity != this._entity)
+							alliesNearCount++;
+						else
+							ennemiesNearCount++;
+					}
+				}
+			}
+			
+			
+			isolatedFromAlliesScore = 1.0 + (GAME.leeksPerTeamCount / (1 + alliesNearCount) - 1) / (8.0 * aliveTeamsCount / 2);
+			inDangerScore = 1.0 + (ennemiesNearCount / (1 + alliesNearCount) - 1) / (4.0 * aliveTeamsCount / 2);
+			this.isolation = isolatedFromAlliesScore * inDangerScore;
+		}
+		/* * */
+		
+		/* Debuff */
+		this.debuffOther = 0.2;
+		this.debuffBuffDamage = 0.7 * this.turnOrderNear;
+		this.debuffBuffMP = 0.3;
+		this.debuffBuffTP = 0.4;
+		this.debuffBuffOtherStats = 0.1;
+		this.debuffDmgReturn = 1.0;
+		this.debuffShackles = 1.0;
+		
+		Set<AbstractEntity> goodTargets = GAME.me.getTeam()!.getMapInfos().goodTargets;
+		boolean isGoodTarget = setContains(goodTargets, this._entity);
+				
+		real dmgPotentialWithDebuffs = 0.0;
+		real dmgPotential = 0.0;
+		if (setSize(goodTargets) == 0 || isGoodTarget) {
+			EntityStats debuffedStats = new EntityStats();
+			debuffedStats.copy(entityStats);
+			debuffedStats.debuff(60);
+			
+			EntityStats stats = new EntityStats();
+			stats.copy(entityStats);
+			
+			Array<AbstractEntity> entitiesPlayingAfterMe = GAME.timeline.getEntitiesPlayingAfter(GAME.me, true, true, true, true);
+			integer entitiesPlayingAfterMeCount = count(entitiesPlayingAfterMe)
+			integer i = entitiesPlayingAfterMeCount;
+			for (AbstractEntity otherEntity in entitiesPlayingAfterMe) {
+				if (!otherEntity.isEntityAlive()) continue;
+
+				EntityStats otherEntityStatsIn1Turn = otherEntity.getStatsInTurns(1);
+
+				if (otherEntity.getTeam() == entityTeam) {
+					integer otherEntityMP = otherEntityStatsIn1Turn.getMP();
+
+					// Si c'est une entité de mon équipe on ajout les shields disponibles
+					for (Item item in otherEntity.getOffCooldownsItemsInTurns(1)) {
+						// Si la distance entre les deux entité est < à la range d'application de l'effet + les mp du caster 
+						if (Cell.getDistance(otherEntity.getCell()!, entityCell) < otherEntityMP + item.getAreaSize() + item.getMaxRange()) {
+							for (Effect eff in item.getEffects()) {
+								integer effType = eff.getType();
+								if (setContains(Effect.shieldEffects, effType) && eff.canTarget(this._entity, otherEntity) && eff.canApplyTo(this._entity, otherEntity)) {
+									eff.applyTo(null, null, this._entity, otherEntity, debuffedStats, otherEntityStatsIn1Turn, 0);
+									eff.applyTo(null, null, this._entity, otherEntity, stats, otherEntityStatsIn1Turn, 0);
+								}
+							}
+						}
+					}
+
+				} else if (otherEntity.getTeam() == GAME.me.getTeam()) {
+
+					integer otherEntityMP = otherEntityStatsIn1Turn.getMP();
+					real bestDamageWithDebuffsPerTp = 0.0;
+					real bestDamagePerTp = 0.0;
+					for (Item item in otherEntity.getOffCooldownItems()) {
+						if (!item.hasEffectTypeIn(Effect.directDamageEffects) && !item.hasEffectType(EFFECT_DEBUFF)) continue;
+
+						if (Cell.getDistance(otherEntity.getCell()!, entityCell) < otherEntityMP / 2 + item.getAreaSize() + item.getMaxRange()) {
+							
+							if (item.hasEffectType(EFFECT_DEBUFF) && otherEntity != GAME.me) {
+								debuffedStats.debuff(60 * (i / entitiesPlayingAfterMeCount));
+							} else if (item.hasEffectTypeIn(Effect.directDamageEffects)) {
+								real dmgWithDebuffsPerTp = 0.0;
+								real dmgPerTp = 0.0;
+								for (Effect eff in item.getEffects()) {
+									integer effType = eff.getType();
+									if (setContains(Effect.directDamageEffects, effType) && eff.canTarget(this._entity, otherEntity) && eff.canApplyTo(this._entity, otherEntity)) {
+										dmgWithDebuffsPerTp += eff.getAppliedValue(null, null, this._entity, debuffedStats, otherEntityStatsIn1Turn, 0) / item.getCost();
+										
+										dmgPerTp += eff.getAppliedValue(null, null, this._entity, stats, otherEntityStatsIn1Turn, 0) / item.getCost();
+									}
+								}
+
+								if (dmgWithDebuffsPerTp > bestDamageWithDebuffsPerTp)
+									bestDamageWithDebuffsPerTp = dmgWithDebuffsPerTp;
+								
+								if (dmgPerTp > bestDamagePerTp)
+									bestDamagePerTp = dmgPerTp;
+							}
+						}
+					}
+					dmgPotentialWithDebuffs += bestDamageWithDebuffsPerTp * otherEntity.getStats().getTP();
+					dmgPotential += bestDamagePerTp * otherEntity.getStats().getTP()// * (i / entitiesPlayingAfterMeCount);
+				}
+				
+				i--;
+			}
+		}
+		this.debuffShield = dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 4 * this.isolation * this.turnOrderFar;
+		/* * */
+		
+		
+		/* Antidote */
+		integer otherAntidoteCount = 0;
+		for (AbstractEntity otherEntity in GAME.timeline.getEntitiesPlayingAfter(GAME.me, true, false, true, true)) {
+			if (!otherEntity.isEntityAlive()) continue;
+			if (otherEntity == this._entity) continue;
+			
+			integer otherEntityMP = otherEntity.getStats().getMP();
+			
+			for (Item item in otherEntity.getOffCooldownsItemsInTurns(1)) {
+				if (item.hasEffectType(EFFECT_ANTIDOTE) && Cell.getDistance(entityCell, otherEntity.getCell()!) < otherEntityMP *  1.3) {
+					otherAntidoteCount++;
+				}
+			}
+		}
+
+		this.antidote = 0.5 * this.isolation;
+		if (otherAntidoteCount == 0)
+			this.antidote *= 1.2 * (this.turnOrderNear * this.turnOrderNear);
+		else
+			this.antidote /= 2;
+		/* * */
+		
+		
+		/* Shield */
+		Set<AbstractEntity> possibleTargets = GAME.me.getTeam()!.getMapInfos().possibleTargets;
+
+		real directDamageDanger = 0.0;
+		real poisonDamageDanger = 0.0;
+		for (Team team in Team.getTeams()) {
+			if (team != entityTeam)
+				directDamageDanger += team.getScores().directDamageDanger;
+				poisonDamageDanger += team.getScores().poisonDamageDanger;
+			
+		}
+		this.shield = max(0.0, min(1.6, directDamageDanger)) * (isGoodTarget ? 1.2 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 6) * this.isolation * this.turnOrderNear;
+		// Si il n'y a personne à proximité, on a moins besoin de shield
+		if (setSize(possibleTargets) == 0)
+			this.shield /= 1.5;
+		
+		this.shieldAbso = this.shield;
+		integer entityAbso = this._entity.getStats().getAbso();
+		real totalDirectDmgFromAbsoVulne = 0.0;
+		if (entityAbso < 0) {
+			Array<AbstractEntity> enemiesPlayingAfterMe =  GAME.timeline.getEntitiesPlayingAfter(GAME.me, false, true, true, true);
+			integer enemiesPlayingAfterMeCount = count(enemiesPlayingAfterMe);
+			integer i = enemiesPlayingAfterMeCount;
+			for (AbstractEntity otherEntity in enemiesPlayingAfterMe) {
+				real maxDirectDmgEffectsCountPerTP = 0.0;
+				for (Item item in otherEntity.getOffCooldownsItemsInTurns(1)) {
+					integer directDmgEffectsCountPerTP = 0;
+					directDmgEffectsCountPerTP += setSize(item.getEffectsOfTypes(Effect.directDamageEffects));
+					if (directDmgEffectsCountPerTP / item.getCost() > maxDirectDmgEffectsCountPerTP) {
+						maxDirectDmgEffectsCountPerTP = directDmgEffectsCountPerTP / item.getCost();
+					}
+				}
+				
+				totalDirectDmgFromAbsoVulne += maxDirectDmgEffectsCountPerTP * otherEntity.getStats().getTP() * entityAbso * (i / enemiesPlayingAfterMeCount);
+				i--;
+			}
+			// On a multiplié par la vulné absolue donc il faut inverser le signe
+			this.shieldAbso = this.shield + -totalDirectDmgFromAbsoVulne / EntityStatsDiviser.maxLife;
+		}
+		/* * */
+		
+		
+		/* HealOverTime */
+		integer enemiesLeekCount = GAME.timeline.getEntitiesPlayingBetweenEntitiesCount(this._entity, this._entity, false, true);
+		this.healOverTime = 1 / (1 + 0.05 * enemiesLeekCount) * max(1.0, min(1.6, poisonDamageDanger));
+		/* * */
+		
+		
+		/* Res buff */
+		integer shieldItemsOffCooldownCount = 0;
+		for (Item item in this._entity.getItems()) {
+			if (this._entity.getItemCooldown(item) <= 1) {
+				if (item.hasEffectTypeIn(Effect.shieldEffects)) {
+					shieldItemsOffCooldownCount++;
+				}
+			}
+		}
+		this.resBuff = shieldItemsOffCooldownCount / 2.0 * max(0.0, min(1.6, directDamageDanger)) * this.turnOrderNear;
+		/* * */
+		
+		
+		/* Dmg return */
+		this.dmgReturn = max(0.0, min(1.6, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 9) * this.isolation;
+		/* * */
+		
+		
+		/* Heal */
+		AbstractEntity nextEnemy = GAME.timeline.getNextEntity(GAME.me, false, true)!;
+		real entityAfterPotentialNovaDmg = 0.0;
+		for (Item item in nextEnemy.getItems()) {
+			if (nextEnemy.getItemCooldown(item) <= 1) {
+				for (Effect eff in item.getEffectsOfTypes(Effect.novaDamageEffects)) {
+					entityAfterPotentialNovaDmg += eff.getAppliedValue(null, null, this._entity, entityStats, nextEnemy.getStatsInTurns(1), 0);
+				}
+			}
+		}
+		this.heal = min(1.3, 1.0 + 0.1 * entityAfterPotentialNovaDmg / (EntityStatsDiviser.maxLife / 10)) * (isGoodTarget ? 1.3 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 8) * this.isolation * this.turnOrderNear;
+		/* * */
+		
+		
+		/* Buffs */
+		this.buffDamage = 1.0 * this.turnOrderNear;
+		if (setSize(possibleTargets) == 0)
+			this.buffDamage /= 2;
+		
+		// S'il y a des possibleTarget on a pas forcément besoin de buff les mp
+		this.buffMP = (1.0 - (!setIsEmpty(possibleTargets) ? 0.5 : 0)) * this.turnOrderNear;
+		/* * */
+		
+		/* Damage */
+		this.directDmg = 1.0 * max(1.0, min(1.2, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 10) * this.isolation * this.turnOrderFar;
+		/* * */
+		
+		this.poison = 1.0 * this.isolation * this.turnOrderNear;
+		this.novaDamage = 1.0 * this.isolation * this.turnOrderFar;
+		
+		
+		this.vulneAbso = 1.3  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 8) * this.isolation * this.turnOrderFar * (1 + min(2.0, totalDirectDmgFromAbsoVulne / EntityStatsDiviser.maxLife) / 2);
+		this.vulneRel = 1.3  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 8) * this.isolation * this.turnOrderFar;
+	}
+}

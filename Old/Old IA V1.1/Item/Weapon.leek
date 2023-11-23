@@ -1,0 +1,43 @@
+include("../Debug");
+include("Item");
+include("../Effect/ItemEffect");
+
+class Weapon extends Item {
+	constructor(id, caster) {
+		Debug.debugCodePosition("Creating Weapon object for id : " + id, COLOR_GREEN);
+
+		super(id, caster);
+		initStats();
+	}
+
+	public initStats() {
+		this.name = getWeaponName(this.id);
+		this.areaType = getWeaponArea(this.id);
+		this.cost = getWeaponCost(this.id);
+		this.baseCooldown = 0;
+		this.cooldown = 0;
+		this.minRange = getWeaponMinRange(this.id);
+		this.maxRange = getWeaponMaxRange(this.id);
+		this.isInline = isInlineWeapon(this.id);
+		this.needLos = weaponNeedLos(this.id);
+		for (var effect in getWeaponEffects(this.id)) {
+			var eff = new ItemEffect(effect, caster, this);
+			push(this.effects, eff);
+			if(eff.type == EFFECT_DAMAGE or eff.type == EFFECT_POISON)
+				push(this.effectsDamage, eff);
+		}
+	}
+	
+	public use(cell) {
+		if (getWeapon() != this.id) {
+			setWeapon(this.id);
+			this.caster.tp -= 1;
+		}
+		var result = useWeaponOnCell(cell.id);
+		if(result == USE_SUCCESS or result == USE_CRITICAL) {
+			this.caster.tp -= this.cost;
+		}
+		
+		return result;
+	}
+}

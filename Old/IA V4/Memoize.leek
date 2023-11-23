@@ -1,0 +1,50 @@
+class Memoize2 {
+	private mem = [];
+	private f;
+	private paramF;
+	
+	constructor(funct, paramFunc) {
+		this.f = funct;
+		this.paramF = paramFunc;
+	}
+	
+	public apply(p1, p2) {
+		var key = paramF(p1, p2);
+		var ret = this.mem[key];
+		if (ret !== null) {
+			return ret;
+		} else {
+			return this.mem[key] = f(p1, p2);
+		}
+	}
+	
+	public reset() {
+		this.mem = [];	
+	}
+}
+
+class Memoize3 {
+	private mem = [];
+	private f;
+	private paramF;
+	
+	constructor(funct, paramFunc) {
+		this.f = funct;
+		this.paramF = paramFunc;
+	}
+	
+	public apply(p1, p2, p3) {
+		var key = paramF(p1, p2, p3);
+		var ret = this.mem[key];
+		if (ret !== null) {
+			return ret;
+		} else {
+			return this.mem[key] = f(p1, p2, p3);
+		}
+	}
+	
+	public reset() {
+		this.mem = [];	
+	}
+}
+

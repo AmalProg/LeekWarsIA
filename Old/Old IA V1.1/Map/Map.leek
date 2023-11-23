@@ -1,0 +1,1936 @@
+include("Cell");
+include("../Memoize");
+
+class Map {
+	public static xMin = -17;
+	public static yMin = -17;
+	public static xMax = 17;
+	public static yMax = 17;
+	public static cellIdMax = 612;
+	
+	/** cells pool **/
+	private cells = [];
+	private cellsXY = [];
+	public initCells() {
+		for(var id = 0; id <= Map.cellIdMax; id++) {
+			this.cells[id] = new Cell(id);
+			
+			if(!this.cellsXY[cells[id].x])
+				this.cellsXY[cells[id].x] = [];
+			this.cellsXY[this.cells[id].x][this.cells[id].y] = this.cells[id];
+		}
+	}
+	
+	public getCell(id) {
+		return this.cells[id];
+	} 
+	public getCellByXY(x, y) {
+		return this.cellsXY[x][y];
+	}
+	public getCells() {
+		return this.cells;
+	}
+	
+	public setObstacles(obstacles) {
+		for (var c in this.cells) {
+			if (inArray(obstacles, c.id))
+				c.hasObstacle = true;
+			else
+				c.hasObstacle = false;
+			c.walkable = !c.hasObstacle and !c.hasEntity;
+		}
+	}
+	public setLeeks(leeks) {
+		for (var c in this.cells) {
+			if (inArray(leeks, c.id))
+				c.hasEntity = true;
+			else
+				c.hasEntity = false;
+			c.walkable = !c.hasObstacle and !c.hasEntity;
+		}
+	}
+	
+	public initTypeOnCell() {
+		for(var id = 0; id <= Map.cellIdMax; id++) {
+			var c = this.cells[id];
+			c.hasEntity = getCellContent(id) == CELL_ENTITY;
+			c.entity = Entity.get(getEntityOnCell(id));
+			c.walkable = !c.hasObstacle and !c.hasEntity;
+			c.hasEntityNotMe = c.hasEntity;	
+		}
+	}
+	
+	/**
+	 * Récupère les cellules accessible
+	 * 
+	 * params
+	 * cell : la cellule initial
+	 * mp : le nombre de MP
+	 * 
+	 * return
+	 * cells : tableau des cellules 
+	 **/
+	public static getCellsAccessible(cells, cell, mp) {
+		if(cell == null) return cells;
+		
+		cells[cell.id] = cell;
+		// les nouvelles cells de chaque mp
+		var tmpCells = [];
+		tmpCells[cell.id] = cell;
+		for(var i = 0; i < mp; i++) {
+			var tempCellsIte = clone(tmpCells);
+			tmpCells = [];
+			for(var c in tempCellsIte) {
+				var n = c.N;
+				if(n != null && !cells[n.id] and n.walkable) {
+					cells[n.id] = n;
+					tmpCells[n.id] = n;
+				}
+
+				var e = c.E;
+				if(e != null && !cells[e.id] and e.walkable) {
+					cells[e.id] = e;
+					tmpCells[e.id] = e;
+				}
+
+				var s = c.S;
+				if(s != null && !cells[s.id] and s.walkable) {
+					cells[s.id] = s;
+					tmpCells[s.id] = s;
+				}
+
+				var w = c.W;
+				if(w != null && !cells[w.id] and w.walkable) {
+					cells[w.id] = w;
+					tmpCells[w.id] = w;
+				}
+			}
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Initialise chaque cell avec ces 4 cells voisines
+	 **/
+	public initNeighbors() {
+		for(var id = 0; id <= Map.cellIdMax; id++) {
+			var cell = this.cells[id];
+			var x = cell.x;
+			var y = cell.y;
+			
+			var n = getCellFromXY(x, y + 1);
+			if(n != null)
+				cell.N = this.cells[n];
+			var e = getCellFromXY(x - 1, y);
+			if(e != null)
+				cell.E = this.cells[e];
+			var s = getCellFromXY(x, y - 1);
+			if(s != null)
+				cell.S = this.cells[s];
+			var w = getCellFromXY(x + 1, y)
+			if(w != null)
+				cell.W = this.cells[w];
+		}
+	}
+	
+	/**
+	 * Récupère une ligne
+	 * 
+	 * params
+	 * cell : la cellule initial
+	 * distMin : distance minimale de la zone
+	 * distMax : distance maximale de la zone
+	 * direction : direction ["N", "E", "S", "W"]
+	 * 
+	 * return
+	 * cells : tableau des cellules 
+	 **/
+	public static getLine(cells, cell, distMin, distMax, direction) {		
+		var currentCell = cell;
+		for(var i = 0; i <= distMax and currentCell != null; i++) {
+			(!cells[currentCell.id] and i >= distMin and !currentCell.hasObstacle) 
+			and
+			(cells[currentCell.id] = currentCell);
+			
+			currentCell = currentCell[direction];
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone en forme de +
+	 * 
+	 * params
+	 * cell : la cellule initial
+	 * distMin : distance minimale de la zone
+	 * distMax : distance maximale de la zone
+	 * 
+	 * return
+	 * cells : tableau des cellules 
+	 **/
+	public static getPlusArea(cells, cell, distMin, distMax) {
+		Map.getLine(cells, cell, distMin, distMax, "N");
+		Map.getLine(cells, cell, distMin, distMax, "E");
+		Map.getLine(cells, cell, distMin, distMax, "S");
+		Map.getLine(cells, cell, distMin, distMax, "W");
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone circulaire
+	 * 
+	 * params
+	 * cell : la cellule initial
+	 * distMin : distance minimale de la zone
+	 * distMax : distance maximale de la zone
+	 * 
+	 * return
+	 * cells : tableau des cellules
+	 **/
+	public static getArea(cells, cell, distMin, distMax) {
+		if(cell == null) return;
+		
+		var currentCellE = cell;
+		var currentCellW = cell;
+
+		for (var i = 0; i <= distMax; i++) {
+			var minj = (distMin - i);
+			var maxj = (distMax - i);
+			
+			if (currentCellE != null) {
+				Map.getLine(cells, currentCellE, minj, maxj, "N");
+				Map.getLine(cells, currentCellE, minj, maxj, "S");
+				currentCellE = currentCellE.E;
+			}
+			
+			if (currentCellW != null) {
+				Map.getLine(cells, currentCellW, minj, maxj, "N");
+				Map.getLine(cells, currentCellW, minj, maxj, "S");
+				currentCellW = currentCellW.W;
+			}
+		}
+		
+		return cells;
+	}
+	
+	
+	/**
+	 * Récupère une ligne avec test de los
+	 * 
+	 * params
+	 * cell : la cellule initial
+	 * distMin : distance minimale de la zone
+	 * distMax : distance maximale de la zone
+	 * direction : direction ["N", "E", "S", "W"]
+	 * 
+	 * return
+	 * cells : tableau des cellules 
+	 **/
+	public static getLineLos(cells, cell, distMin, distMax, direction, initialCell) {
+		if(cell == null) return;		
+		
+		var currentCell = cell;			
+		for(var i = 0; i <= distMax and currentCell != null; i++) {
+			(!cells[currentCell.id] and i >= distMin and !currentCell.hasObstacle and lineOfSight(initialCell.id, currentCell.id))
+			and
+			(cells[currentCell.id] = currentCell);
+						
+			currentCell = currentCell[direction];
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone en forme de + avec test de los
+	 * 
+	 * params
+	 * cell : la cellule initial
+	 * distMin : distance minimale de la zone
+	 * distMax : distance maximale de la zone
+	 * 
+	 * return
+	 * cells : tableau des cellules 
+	 **/
+	public static getPlusAreaLos(cells, cell, distMin, distMax) {
+		Map.getLineLos(cells, cell, distMin, distMax, "N", cell);
+		Map.getLineLos(cells, cell, distMin, distMax, "E", cell);
+		Map.getLineLos(cells, cell, distMin, distMax, "S", cell);
+		Map.getLineLos(cells, cell, distMin, distMax, "W", cell);
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone circulaire avec test de los
+	 * 
+	 * params
+	 * cell : la cellule initial
+	 * distMin : distance minimale de la zone
+	 * distMax : distance maximale de la zone
+	 * 
+	 * return
+	 * cells : tableau des cellules
+	 **/
+	public static getAreaLos(cells, cell, distMin, distMax) {
+		if(cell == null) return;
+		var currentCellE = cell;
+		var currentCellW = cell;
+
+		for (var i = 0; i <= distMax; i++) {
+			var minj = (distMin - i);
+			var maxj = (distMax - i);
+			
+			if(currentCellE != null) {
+				Map.getLineLos(cells, currentCellE, minj, maxj, "N", cell);
+				Map.getLineLos(cells, currentCellE, minj, maxj, "S", cell);
+				currentCellE = currentCellE.E;
+			}
+			
+			if(currentCellW != null) {
+				Map.getLineLos(cells, currentCellW, minj, maxj, "N", cell);
+				Map.getLineLos(cells, currentCellW, minj, maxj, "S", cell);
+				currentCellW = currentCellW.W;
+			}
+		}
+		
+		return cells;
+	}
+	
+	
+	public static getLineForLaser(cells, target, distMin, distMax, direction) {
+		if(target == null) return;		
+		
+		var currentCell = target;
+		var distMinTmp = distMin;
+		for(var i = 0; i <= distMax and currentCell != null and !currentCell.hasObstacle; i++) {
+			if(!cells[currentCell.id] and i >= distMinTmp and currentCell.walkable) {
+				cells[currentCell.id] = currentCell;
+			} else if(currentCell.hasEntityNotMe) {
+				distMinTmp = i + distMin;
+			}
+			
+			currentCell = currentCell[direction];
+		}
+		
+		return cells;
+	}
+	
+	public static getCellsToUseLaserOnCell(cells, target, item) {
+		getLineForLaser(cells, target, item.minRange, item.maxRange, "N");
+		getLineForLaser(cells, target, item.minRange, item.maxRange, "E");
+		getLineForLaser(cells, target, item.minRange, item.maxRange, "S");
+		getLineForLaser(cells, target, item.minRange, item.maxRange, "W");
+		
+		return cells;
+	}
+	
+	public static getCellToHitLaser(item, cellTarget, cellFrom) {
+		var dx = cellTarget.x - cellFrom.x;
+		var dy = cellTarget.y - cellFrom.y;
+		var direction = (dx != 0) ? ((dx > 0) ? "W" : "E") : ((dy > 0) ? "N" : "S");
+		
+		return getFirstCellToHitLaser(item, cellFrom, direction);
+	}
+	
+	
+	/**
+	 * Récupère les cellules sur lesquelles on peut utiliser 'item' avec des déplacements
+	 * 
+	 * params
+	 * cellsCanGo : les cellules accessibles par la lanceur
+	 * item : l'item utilisé
+	 * target : la cellule cible
+	 * 
+	 * return
+	 * cells : tableau des cellules
+	 **/
+	public static getCellsCanUseItemFromCells(cells, cellsFrom, item) {
+		for(var c in cellsFrom) {
+			getCellsCanUseItem(cells, item, c)
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * params
+	 * cellsCanGo : les cellules accessibles par la lanceur
+	 * item : l'item utilisé
+	 * target : la cellule cible
+	 * 
+	 * return
+	 * cells : tableau des cellules
+	 **/
+	public static getCellsToUseItemOnCell(cellsCanGo, item, target) {
+		var cellCanUse = Map.getCellsCanUseItem([], item, target);
+		return Cell.intersection(cellCanUse, cellsCanGo);
+	}
+	
+	/**
+	 * Récupère les cellules sur lesquelles on peut utiliser 'item'
+	 * 
+	 * params
+	 * cell : la cellule du lanceur
+	 * item : l'item utilisé
+	 * 
+	 * return
+	 * cells : tableau des cellules
+	 **/
+	public static getCellsCanUseItem(cells, item, target) {
+		if(item.isInline) {
+			if(item.areaType == AREA_LASER_LINE) {
+				Map.getCellsToUseLaserOnCell(cells, target, item)
+			} else if(item.needLos)
+				Map.getPlusAreaLos(cells, target, item.minRange, item.maxRange);
+			else
+				Map.getPlusArea(cells, target, item.minRange, item.maxRange);
+		} else {
+			if(item.needLos)
+				Map.getAreaLos(cells, target, item.minRange, item.maxRange);
+			else
+				Map.getArea(cells, target, item.minRange, item.maxRange);
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère la première cellule permettant d'utilier l'item sur la cellule target
+	 * 
+	 * params
+	 * target : la cellule à viser
+	 * item : l'item utilisé
+	 * 
+	 * return
+	 *  : la cellule
+	 **/
+	public static getFirstCellToHitLaser(item, target, direction) {
+		var currentCell = target;
+		for(var i = 0; i <= item.maxRange and currentCell != null and !currentCell.hasObstacle; i++) {
+			if(i >= item.minRange)
+				return currentCell;
+			currentCell = currentCell[direction];
+		}
+		
+		return null;
+	}
+	
+	
+	public static getAreaLaserLine(cells, dist, cellTarget, cellFrom) {
+		if(cellTarget == null) return;
+		
+		var dx = cellTarget.x - cellFrom.x;
+		var dy = cellTarget.y - cellFrom.y;
+		var direction = (dx != 0) ? ((dx > 0) ? "W" : "E") : ((dy > 0) ? "N" : "S");
+		
+		var currentCell = cellTarget;
+		for(var i = 0; i <= dist and currentCell != null and !currentCell.hasObstacle; i++) {
+			cells[currentCell.id] = currentCell;
+			currentCell = currentCell[direction];
+		}
+		
+		return cells;
+	}
+	
+	public static getAreaFirstInLine(cells, dist, cellTarget, cellFrom) {
+		if(cellTarget == null) return;
+		
+		var dx = cellTarget.x - cellFrom.x;
+		var dy = cellTarget.y - cellFrom.y;
+		var direction = (dx != 0) ? ((dx > 0) ? "W" : "E") : ((dy > 0) ? "N" : "S");
+		
+		var currentCell = cellTarget;
+		for(var i = 0; i < dist and currentCell != null and currentCell.walkable; i++) {
+			currentCell = currentCell[direction];
+		}
+		(currentCell.hasEntityNotMe) and (cells[currentCell.id] = currentCell);
+		
+		return cells;
+	}
+	
+	public static getAreaSquare(cells, size, cellTarget) {
+		if(cellTarget == null) return;
+		
+		var currentCellE = cellTarget;
+		var currentCellW = cellTarget;
+		cells[cellTarget.id] = cellTarget;
+		Map.getLine(cells, currentCellE, 0, size, "N");
+		Map.getLine(cells, currentCellE, 0, size, "S");
+		for (var i = 0; i < size; i++) {
+			if(currentCellE != null) {
+				currentCellE = currentCellE.E;
+				Map.getLine(cells, currentCellE, 0, size, "N");
+				Map.getLine(cells, currentCellE, 0, size, "S");
+			}
+			
+			if(currentCellW != null) {
+				currentCellW = currentCellW.W;
+				Map.getLine(cells, currentCellW, 0, size, "N");
+				Map.getLine(cells, currentCellW, 0, size, "S");
+			}
+		}
+		
+		return cells;
+	}
+	public static getAreaSquare1(cells, cellTarget) {
+		if(cellTarget == null) return;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.E;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		} else if (cellTarget.E != null) {
+			cell = cellTarget.E.N;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		cell = cellTarget.E;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.S;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		} else if (cellTarget.S != null) {
+			cell = cellTarget.S.E;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		cell = cellTarget.S;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.W;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		} else if (cellTarget.W != null) {
+			cell = cellTarget.W.S;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		cell = cellTarget.W;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.N;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		} else if (cellTarget.N != null) {
+			cell = cellTarget.N.W;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		return cells;
+	}
+	public static getAreaSquare2(cells, cellTarget) {
+		if(cellTarget == null) return;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.E;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.E;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cellTarget.N != null) {
+					cell = cellTarget.N.N;
+					if (cell != null) {
+						(!cell.hasObstacle) and (cells[cell.id] = cell)
+						cell = cell.E;
+						(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						if (cell != null) {
+							cell = cell.E;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						}
+					} else {
+						if (cellTarget.E != null and cellTarget.E.N != null) {
+							cell = cellTarget.E.N.N;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+							if (cell != null) {
+								cell = cell.E;
+								(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+							}
+						}
+					}
+				}
+			}
+		} else {
+			if (cellTarget.E != null) {
+				cell = cellTarget.E.N;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell != null) {
+					cell = cell.E;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+					if (cell != null) {
+						cell = cell.N;
+						(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+					}
+				}
+			}
+		}
+		
+		cell = cellTarget.E;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.S;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.S;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cellTarget.E != null) {
+					cell = cellTarget.E.E;
+					if (cell != null) {
+						(!cell.hasObstacle) and (cells[cell.id] = cell)
+						cell = cell.S;
+						(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						if (cell != null) {
+							cell = cell.S;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						}
+					} else {
+						if (cellTarget.S != null and cellTarget.S.E != null) {
+							cell = cellTarget.S.E.E;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+							if (cell != null) {
+								cell = cell.S;
+								(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+							}
+						}
+					}
+				}
+			}
+		} else {
+			if (cellTarget.S != null) {
+				cell = cellTarget.S.E;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell != null) {
+					cell = cell.S;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+					if (cell != null) {
+						cell = cell.E;
+						(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+					}
+				}
+			}
+		}
+		
+		cell = cellTarget.S;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.W;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.W;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cellTarget.S != null) {
+					cell = cellTarget.S.S;
+					if (cell != null) {
+						(!cell.hasObstacle) and (cells[cell.id] = cell)
+						cell = cell.W;
+						(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						if (cell != null) {
+							cell = cell.W;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						}
+					} else {
+						if (cellTarget.W != null and cellTarget.W.S != null) {
+							cell = cellTarget.W.S.S;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+							if (cell != null) {
+								cell = cell.W;
+								(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+							}
+						}
+					}
+				}
+			}
+		} else {
+			if (cellTarget.W != null) {
+				cell = cellTarget.W.S;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell != null) {
+					cell = cell.W;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+					if (cell != null) {
+						cell = cell.S;
+						(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+					}
+				}
+			}
+		}
+		
+		cell = cellTarget.W;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.N;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.N;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cellTarget.W != null) {
+					cell = cellTarget.W.W;
+					if (cell != null) {
+						(!cell.hasObstacle) and (cells[cell.id] = cell)
+						cell = cell.N;
+						(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						if (cell != null) {
+							cell = cell.N;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						}
+					} else {
+						if (cellTarget.N != null and cellTarget.N.W != null) {
+							cell = cellTarget.N.W.W;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+							if (cell != null) {
+								cell = cell.N;
+								(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+							}
+						}
+					}
+				}
+			}
+		} else {
+			if (cellTarget.N != null) {
+				cell = cellTarget.N.W;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell != null) {
+					cell = cell.N;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+					if (cell != null) {
+						cell = cell.W;
+						(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+					}
+				}
+			}
+		}
+		
+		return cells;
+	}
+	
+	public static getAreaCross1(cells, cellTarget) {
+		if(cellTarget == null) return;
+		
+		cells[cellTarget.id] = cellTarget;
+		if (cellTarget.E != null) {
+			var cell = cellTarget.E.S;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cellTarget.E.N;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		if (cellTarget.W != null) {
+			var cell = cellTarget.W.S;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cellTarget.W.N;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		return cells;
+	}
+	public static getAreaCross2(cells, cellTarget) {
+		if(cellTarget == null) return;
+		
+		cells[cellTarget.id] = cellTarget;
+		if (cellTarget.E != null) {
+			var cell = cellTarget.E.S;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.E != null) {
+					cell = cell.E.S;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			}
+			cell = cellTarget.E.N;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.E != null) {
+					cell = cell.E.N;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			}
+		} else if (cellTarget.N != null) {
+			var cell = cellTarget.N.E;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.N != null) {
+					cell = cell.N.E;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			}
+		} else if (cellTarget.S != null) {
+			var cell = cellTarget.S.E;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.S != null) {
+					cell = cell.S.E;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			}
+		}
+			
+		if (cellTarget.W != null) {
+			var cell = cellTarget.W.S;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.W != null) {
+					cell = cell.W.S;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			}
+			cell = cellTarget.W.N;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.W != null) {
+					cell = cell.W.N;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			}
+		} else if (cellTarget.N != null) {
+			var cell = cellTarget.N.W;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.N != null) {
+					cell = cell.N.W;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			}
+		} else if (cellTarget.S != null) {
+			var cell = cellTarget.S.W;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.S != null) {
+					cell = cell.S.W;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			}
+		}
+		
+		return cells;
+	}
+	public static getAreaCross3(cells, cellTarget) {
+		if(cellTarget == null) return;
+		
+		cells[cellTarget.id] = cellTarget;
+		if (cellTarget.E != null) {
+			var cell = cellTarget.E.S;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.E != null) {
+					cell = cell.E.S;
+					if (cell != null) {
+						(!cell.hasObstacle) and (cells[cell.id] = cell)
+						if (cell.E != null) {
+							cell = cell.E.S;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						}
+					}
+				}
+			}
+			cell = cellTarget.E.N;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.E != null) {
+					cell = cell.E.N;
+					if (cell != null) {
+						(!cell.hasObstacle) and (cells[cell.id] = cell)
+						if (cell.E != null) {
+							cell = cell.E.N;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						}
+					}
+				}
+			}
+		}
+		
+		if (cellTarget.W != null) {
+			var cell = cellTarget.W.S;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.W != null) {
+					cell = cell.W.S;
+					if (cell != null) {
+						(!cell.hasObstacle) and (cells[cell.id] = cell)
+						if (cell.W != null) {
+							cell = cell.W.S;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						}
+					}
+				}
+			}
+			cell = cellTarget.W.N;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				if (cell.W != null) {
+					cell = cell.W.N;
+					if (cell != null) {
+						(!cell.hasObstacle) and (cells[cell.id] = cell)
+						if (cell.W != null) {
+							cell = cell.W.N;
+							(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+						}
+					}
+				}
+			}
+		}
+		
+		return cells;
+	}
+	
+	public static getAreaPlus1(cells, cellTarget) {
+		if(cellTarget == null) return;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.E;
+		(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.S;
+		(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.W;
+		(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	public static getAreaPlus2(cells, cellTarget) {
+		if(cellTarget == null) return;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.N;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		cell = cellTarget.E;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.E;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		cell = cellTarget.S;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.S;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		cell = cellTarget.W;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.W;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		return cells;
+	}
+	public static getAreaPlus3(cells, cellTarget) {
+		if(cellTarget == null) return;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.N;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.N;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		}
+		cell = cellTarget.E;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.E;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.E;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		}
+		cell = cellTarget.S;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.S;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.S;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		}
+		cell = cellTarget.W;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.W;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.W;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		}
+		
+		return cells;
+	}
+	
+	public static getAreaCircle1(cells, cellTarget) {
+		if(cellTarget == null) return;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.E;
+		(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.S;
+		(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.W;
+		(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	public static getAreaCircle2(cells, cellTarget) {
+		if(cellTarget == null) return;
+
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell);
+			cell = cell.N;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell);
+				cell = cell.S.E;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			} else {
+				cell = cellTarget.E.N;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		} else if (cellTarget.E != null) {
+			cell = cellTarget.E.N;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		cell = cellTarget.E;
+		if (cell != null) {
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell);
+			cell = cell.E;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell);
+				cell = cell.W.S;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			} else {
+				cell = cellTarget.S.E;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		} else if (cellTarget.S != null) {
+			cell = cellTarget.S.E;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		cell = cellTarget.S;
+		if (cell != null) {
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell);
+			cell = cell.S;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell);
+				cell = cell.N.W;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			} else {
+				cell = cellTarget.W.S;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		} else if (cellTarget.W != null) {
+			cell = cellTarget.W.S;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		cell = cellTarget.W;
+		if (cell != null) {
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell);
+			cell = cell.W;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell);
+				cell = cell.E.N;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			} else {
+				cell = cellTarget.N.W;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		} else if (cellTarget.N != null) {
+			cell = cellTarget.N.W;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		return cells;
+	}
+	public static getAreaCircle3(cells, cellTarget) {
+		if(cellTarget == null) return;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.E;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.E;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+			cell = cellTarget.N.N;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.E;
+				if (cell != null) {
+					(!cell.hasObstacle) and (cells[cell.id] = cell)
+					cell = cellTarget.N.N.N;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			} else if (cellTarget.E != null and cellTarget.E.N != null) {
+				cell = cellTarget.E.N.N;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		} else if (cellTarget.E != null) {
+			cell = cellTarget.E.N;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.E;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		cell = cellTarget.E;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.S;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.S;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+			cell = cellTarget.E.E;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.S;
+				if (cell != null) {
+					(!cell.hasObstacle) and (cells[cell.id] = cell)
+					cell = cellTarget.E.E.E;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			} else if (cellTarget.S != null and cellTarget.S.E != null) {
+				cell = cellTarget.S.E.E;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		} else if (cellTarget.S != null) {
+			cell = cellTarget.S.E;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.S;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		
+		cell = cellTarget.S;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.W;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.W;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+			cell = cellTarget.S.S;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.W;
+				if (cell != null) {
+					(!cell.hasObstacle) and (cells[cell.id] = cell)	
+					cell = cellTarget.S.S.S;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			} else if (cellTarget.W != null and cellTarget.W.S != null) {
+				cell = cellTarget.W.S.S;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		} else if (cellTarget.W != null) {
+			cell = cellTarget.W.S;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.W;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		cell = cellTarget.W;
+		if (cell != null) {
+			(!cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.N;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.N;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+			cell = cellTarget.W.W;
+			if (cell != null) {
+				(!cell.hasObstacle) and (cells[cell.id] = cell)
+				cell = cell.N;
+				if (cell != null) {
+					(!cell.hasObstacle) and (cells[cell.id] = cell)
+					cell = cellTarget.W.W.W;
+					(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+				}
+			} else if (cellTarget.N != null and cellTarget.N.W != null) {
+				cell = cellTarget.N.W.W;
+				(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			}
+		} else if (cellTarget.N != null) {
+			cell = cellTarget.N.W;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+			cell = cell.N;
+			(cell != null and !cell.hasObstacle) and (cells[cell.id] = cell)
+		}
+		
+		return cells;
+	}
+	
+	
+	public static getTargetsLaserLine(targets, dist, cellTarget, cellFrom) {
+		if(cellTarget == null) return;
+		
+		var dx = cellTarget.x - cellFrom.x;
+		var dy = cellTarget.y - cellFrom.y;
+		var direction = (dx != 0) ? ((dx > 0) ? "W" : "E") : ((dy > 0) ? "N" : "S");
+		
+		var currentCell = cellTarget;
+		for(var i = 0; i <= dist and currentCell != null and !currentCell.hasObstacle; i++) {
+			(currentCell.hasEntity) and (push(targets, currentCell.entity));
+			currentCell = currentCell[direction];
+		}
+		
+		return targets;
+	}
+	
+	public static getTargetsFirstInLine(targets, dist, cellTarget, cellFrom) {
+		if(cellTarget == null) return;
+		
+		var dx = cellTarget.x - cellFrom.x;
+		var dy = cellTarget.y - cellFrom.y;
+		var direction = (dx != 0) ? ((dx > 0) ? "W" : "E") : ((dy > 0) ? "N" : "S");
+		
+		var currentCell = cellTarget;
+		for(var i = 0; i < dist and currentCell != null and currentCell.walkable; i++) {
+			currentCell = currentCell[direction];
+		}
+		(currentCell != null and currentCell.hasEntity) and (push(targets, currentCell));
+		
+		return targets;
+	}
+	
+	public static getTargetsSquare1(targets, cellTarget) {
+		if(cellTarget == null) return;
+		
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.E;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		} else if (cellTarget.E != null) {
+			cell = cellTarget.E.N;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		cell = cellTarget.E;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.S;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		} else if (cellTarget.S != null) {
+			cell = cellTarget.S.E;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		cell = cellTarget.S;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.W;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		} else if (cellTarget.W != null) {
+			cell = cellTarget.W.S;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		cell = cellTarget.W;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.N;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		} else if (cellTarget.N != null) {
+			cell = cellTarget.N.W;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		return targets;
+	}
+	public static getTargetsSquare2(targets, cellTarget) {
+		if(cellTarget == null) return;
+		
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.E;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.E;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				if (cellTarget.N != null) {
+					cell = cellTarget.N.N;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						cell = cell.E;
+						if (cell != null) {
+							(cell.hasEntity) and (push(targets, cell.entity))
+							cell = cell.E;
+							(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+						}
+					} else {
+						if (cellTarget.E != null and cellTarget.E.N != null) {
+							cell = cellTarget.E.N.N;
+							if (cell != null) {
+								(cell.hasEntity) and (push(targets, cell.entity))
+								cell = cell.E;
+								(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+							}
+						}
+					}
+				}
+			}
+		} else {
+			if (cellTarget.E != null) {
+				cell = cellTarget.E.N;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				if (cell != null) {
+					cell = cell.E;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						cell = cell.N;
+						(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+					}
+				}
+			}
+		}
+		
+		cell = cellTarget.E;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.S;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.S;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				if (cellTarget.E != null) {
+					cell = cellTarget.E.E;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						cell = cell.S;
+						if (cell != null) {
+							(cell.hasEntity) and (push(targets, cell.entity))
+							cell = cell.S;
+							(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+						}
+					} else {
+						if (cellTarget.S != null and cellTarget.S.E != null) {
+							cell = cellTarget.S.E.E;
+							if (cell != null) {
+								(cell.hasEntity) and (push(targets, cell.entity))
+								cell = cell.S;
+								(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+							}
+						}
+					}
+				}
+			}
+		} else {
+			if (cellTarget.S != null) {
+				cell = cellTarget.S.E;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				if (cell != null) {
+					cell = cell.S;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						cell = cell.E;
+						(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+					}
+				}
+			}
+		}
+		
+		cell = cellTarget.S;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.W;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.W;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				if (cellTarget.S != null) {
+					cell = cellTarget.S.S;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						cell = cell.W;
+						if (cell != null) {
+							(cell.hasEntity) and (push(targets, cell.entity))
+							cell = cell.W;
+							(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+						}
+					} else {
+						if (cellTarget.W != null and cellTarget.W.S != null) {
+							cell = cellTarget.W.S.S;
+							if (cell != null) {
+								(cell.hasEntity) and (push(targets, cell.entity))
+								cell = cell.W;
+								(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+							}
+						}
+					}
+				}
+			}
+		} else {
+			if (cellTarget.W != null) {
+				cell = cellTarget.W.S;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				if (cell != null) {
+					cell = cell.W;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						cell = cell.S;
+						(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+					}
+				}
+			}
+		}
+		
+		cell = cellTarget.W;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.N;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.N;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				if (cellTarget.W != null) {
+					cell = cellTarget.W.W;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						cell = cell.N;
+						if (cell != null) {
+							(cell.hasEntity) and (push(targets, cell.entity))
+							cell = cell.N;
+							(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+						}
+					} else {
+						if (cellTarget.N != null and cellTarget.N.W != null) {
+							cell = cellTarget.N.W.W;
+							(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+							if (cell != null) {
+								cell = cell.N;
+								(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+							}
+						}
+					}
+				}
+			}
+		} else {
+			if (cellTarget.N != null) {
+				cell = cellTarget.N.W;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				if (cell != null) {
+					cell = cell.N;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						cell = cell.W;
+						(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+					}
+				}
+			}
+		}
+		
+		return targets;
+	}
+	
+	public static getTargetsCross1(targets, cellTarget) {
+		if(cellTarget == null) return;
+		
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		if (cellTarget.E != null) {
+			var cell = cellTarget.E.S;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			cell = cellTarget.E.N;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		if (cellTarget.W != null) {
+			var cell = cellTarget.W.S;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			cell = cellTarget.W.N;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		return targets;
+	}
+	public static getTargetsCross2(targets, cellTarget) {
+		if(cellTarget == null) return;
+		
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		if (cellTarget.E != null) {
+			var cell = cellTarget.E.S;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.E != null) {
+					cell = cell.E.S;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			}
+			cell = cellTarget.E.N;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.E != null) {
+					cell = cell.E.N;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			}
+		} else if (cellTarget.N != null) {
+			var cell = cellTarget.N.E;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.N != null) {
+					cell = cell.N.E;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			}
+		} else if (cellTarget.S != null) {
+			var cell = cellTarget.S.E;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.S != null) {
+					cell = cell.S.E;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			}
+		}
+			
+		if (cellTarget.W != null) {
+			var cell = cellTarget.W.S;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.W != null) {
+					cell = cell.W.S;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			}
+			cell = cellTarget.W.N;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.W != null) {
+					cell = cell.W.N;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			}
+		} else if (cellTarget.N != null) {
+			var cell = cellTarget.N.W;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.N != null) {
+					cell = cell.N.W;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			}
+		} else if (cellTarget.S != null) {
+			var cell = cellTarget.S.W;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.S != null) {
+					cell = cell.S.W;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			}
+		}
+		
+		return targets;
+	}
+	public static getTargetsCross3(targets, cellTarget) {
+		if(cellTarget == null) return;
+		
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		if (cellTarget.E != null) {
+			var cell = cellTarget.E.S;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.E != null) {
+					cell = cell.E.S;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						if (cell.E != null) {
+							cell = cell.E.S;
+							(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+						}
+					}
+				}
+			}
+			cell = cellTarget.E.N;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.E != null) {
+					cell = cell.E.N;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						if (cell.E != null) {
+							cell = cell.E.N;
+							(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+						}
+					}
+				}
+			}
+		}
+		
+		if (cellTarget.W != null) {
+			var cell = cellTarget.W.S;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.W != null) {
+					cell = cell.W.S;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						if (cell.W != null) {
+							cell = cell.W.S;
+							(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+						}
+					}
+				}
+			}
+			cell = cellTarget.W.N;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				if (cell.W != null) {
+					cell = cell.W.N;
+					if (cell != null) {
+						(cell.hasEntity) and (push(targets, cell.entity))
+						if (cell.W != null) {
+							cell = cell.W.N;
+							(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+						}
+					}
+				}
+			}
+		}
+		
+		return targets;
+	}
+	
+	public static getTargetsPlus1(targets, cellTarget) {
+		if(cellTarget == null) return;
+		
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		var cell = cellTarget.N;
+		(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		cell = cellTarget.E;
+		(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		cell = cellTarget.S;
+		(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		cell = cellTarget.W;
+		(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		
+		return targets;
+	}
+	public static getTargetsPlus2(targets, cellTarget) {
+		if(cellTarget == null) return;
+		
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.N;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		cell = cellTarget.E;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.E;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		cell = cellTarget.S;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.S;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		cell = cellTarget.W;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.W;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		return targets;
+	}
+	public static getTargetsPlus3(targets, cellTarget) {
+		if(cellTarget == null) return;
+		
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.N;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.N;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		}
+		cell = cellTarget.E;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.E;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.E;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		}
+		cell = cellTarget.S;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.S;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.S;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		}
+		cell = cellTarget.W;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.W;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.W;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		}
+		
+		return targets;
+	}
+	
+	public static getTargetsCircle1(targets, cellTarget) {
+		if(cellTarget == null) return;
+		
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		var cell = cellTarget.N;	
+		(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		cell = cellTarget.E;
+		(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		cell = cellTarget.S;
+		(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		cell = cellTarget.W;
+		(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		
+		return targets;
+	}
+	public static getTargetsCircle2(targets, cellTarget) {
+		if(cellTarget == null) return;
+
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity));
+			cell = cell.N;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity));
+				cell = cell.S.E;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			} else {
+				cell = cellTarget.E.N;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		} else if (cellTarget.E != null) {
+			cell = cellTarget.E.N;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		cell = cellTarget.E;
+		if (cell != null) {
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity));
+			cell = cell.E;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity));
+				cell = cell.W.S;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			} else {
+				cell = cellTarget.S.E;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		} else if (cellTarget.S != null) {
+			cell = cellTarget.S.E;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		cell = cellTarget.S;
+		if (cell != null) {
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity));
+			cell = cell.S;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity));
+				cell = cell.N.W;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			} else {
+				cell = cellTarget.W.S;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		} else if (cellTarget.W != null) {
+			cell = cellTarget.W.S;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		cell = cellTarget.W;
+		if (cell != null) {
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity));
+			cell = cell.W;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity));
+				cell = cell.E.N;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			} else {
+				cell = cellTarget.N.W;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		} else if (cellTarget.N != null) {
+			cell = cellTarget.N.W;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		return targets;
+	}
+	public static getTargetsCircle3(targets, cellTarget) {
+		if(cellTarget == null) return;
+		
+		(cellTarget.hasEntity) and (push(targets, cellTarget.entity))
+		var cell = cellTarget.N;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.E;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.E;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+			cell = cellTarget.N.N;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.E;
+				if (cell != null) {
+					(cell.hasEntity) and (push(targets, cell.entity))
+					cell = cellTarget.N.N.N;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			} else if (cellTarget.E != null and cellTarget.E.N != null) {
+				cell = cellTarget.E.N.N;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		} else if (cellTarget.E != null) {
+			cell = cellTarget.E.N;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.E;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		cell = cellTarget.E;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.S;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.S;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+			cell = cellTarget.E.E;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.S;
+				if (cell != null) {
+					(cell.hasEntity) and (push(targets, cell.entity))
+					cell = cellTarget.E.E.E;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			} else if (cellTarget.S != null and cellTarget.S.E != null) {
+				cell = cellTarget.S.E.E;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		} else if (cellTarget.S != null) {
+			cell = cellTarget.S.E;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.S;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		
+		cell = cellTarget.S;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.W;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.W;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+			cell = cellTarget.S.S;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.W;
+				if (cell != null) {
+					(cell.hasEntity) and (push(targets, cell.entity))	
+					cell = cellTarget.S.S.S;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			} else if (cellTarget.W != null and cellTarget.W.S != null) {
+				cell = cellTarget.W.S.S;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		} else if (cellTarget.W != null) {
+			cell = cellTarget.W.S;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.W;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		cell = cellTarget.W;
+		if (cell != null) {
+			(cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.N;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.N;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+			cell = cellTarget.W.W;
+			if (cell != null) {
+				(cell.hasEntity) and (push(targets, cell.entity))
+				cell = cell.N;
+				if (cell != null) {
+					(cell.hasEntity) and (push(targets, cell.entity))
+					cell = cellTarget.W.W.W;
+					(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+				}
+			} else if (cellTarget.N != null and cellTarget.N.W != null) {
+				cell = cellTarget.N.W.W;
+				(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			}
+		} else if (cellTarget.N != null) {
+			cell = cellTarget.N.W;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+			cell = cell.N;
+			(cell != null and cell.hasEntity) and (push(targets, cell.entity))
+		}
+		
+		return targets;
+	}
+	
+	public static getRandomCells(cells, percentage) {
+		for(var c in cells) {
+			
+		}
+	}
+	
+	protected constructor() {
+	}
+}

@@ -1,0 +1,17 @@
+include("Cell");
+
+class TargetCell {
+	public Cell cellTarget;
+	public Cell? cellFrom;
+	public Cell? cellFocused;
+	
+	public constructor(Cell target, Cell? from = null, Cell? focused = null) {
+		this.cellTarget = target;
+		this.cellFrom = from;
+		this.cellFocused = focused;
+	}
+	
+	public string string() {
+		return "{cellTarget : " + this.cellTarget + ", cellFrom : " + this.cellFrom + ", cellFocused : " + this.cellFocused + "}";
+	}
+}

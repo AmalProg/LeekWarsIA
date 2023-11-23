@@ -1,0 +1,24 @@
+include("Bulb");
+include("Leek");
+include("Turret");
+
+class EntitiesGroup {
+	private entities = [];
+	private leeks = [];
+	private bulbs = [];
+	private turret;
+
+	constructor(entities) {
+		for (var entity in entities) {
+			if (getType(entity) == ENTITY_BULB) {
+				push(this.bulbs, Bulb.get(entity));
+				push(this.entities, Bulb.get(entity));
+			} else if (getType(entity) == ENTITY_TURRET) {
+				this.turret = Turret.get(entity);
+			} else {
+				push(this.leeks, Leek.get(entity));
+				push(this.entities, Leek.get(entity));
+			}
+		}
+	}
+}

@@ -1,0 +1,32 @@
+include("../Debug");
+include("Entity");
+
+class Turret extends Entity {
+	/** Turrets pool **/
+	private static turrets = [];
+	public static initTurrets(entitiesId, map) {
+		for (var turretId in entitiesId) {
+			if (getType(turretId) == ENTITY_TURRET) {
+				turrets[turretId] = new Turret(turretId, map);
+				Entity.entities[turretId] = turrets[turretId];
+			}
+		}
+	}
+	public static get(id) {
+		return Turret.turrets[id];
+	}
+	/** fin turrets pool **/
+
+	constructor(id, map) {
+		super(id, map);
+	}
+	
+	public static updateTurretsStats() {
+		for (var turret in Turret.turrets) {
+			turret.updateStats();
+		}
+	}
+	public updateStats() {
+		super.updateStats();
+	}
+}

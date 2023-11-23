@@ -1,0 +1,14 @@
+include("Effect");
+
+class KillEffect extends Effect {
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
+		affectedEntity.kill(caster);
+		
+		if (caster instanceof Leek) {
+			PassiveEffect? eff = (caster as Leek).getPassiveItemEffects()[EFFECT_KILL_TO_TP];
+			if (eff != null) {
+				eff!.applyPassiveTo(caster, caster, 0, 1);
+			}
+		}
+	}
+}

@@ -1,0 +1,84 @@
+include("Map");
+include("../Effect/EffectScoreMultiplier");
+include("../Item/Chip");
+include("../Entity/Entity");
+
+class DangerMap extends Map {
+	private scores = [];
+	
+	public constructor() {
+		super();
+	}
+	
+	public resetScores() {
+		for (var c in this.cells) {
+			this.scores[c.id] = 0;
+		}
+	}
+	
+	public initDamageMap(game) {
+		resetScores();
+	
+		for(var e in game.enemies.leeks) {
+			// récupère les items faisant des dégâts pour cet ennemi
+			var itemsToTest = [];
+			var itemLiberation = null;
+			for(var item in e.items) {
+				if(item.effectsDamage != []) {
+					push(itemsToTest, item);
+				}
+				if(item.id == CHIP_LIBERATION and item.cooldown == 0) {
+					itemLiberation = item;
+				}
+			}
+			// tri les items par ordre de priorité
+			itemsToTest = arraySort(itemsToTest, function(item1, item2) {
+				if(Item.damageItemPriorityCheck[item1.id] <= Item.damageItemPriorityCheck[item2.id])
+					return -1;
+				return 1;
+			})
+			
+			var nbrItemToTest = 6 / count(game.enemies.leeks);
+			var cellsAccessible = Map.getCellsAccessible([], e.cell, e.mp);
+			
+			// damage items
+			var cellsEnemyCanHit = [];
+			var i = 0;
+			for(var item in itemsToTest) {
+				if(i > nbrItemToTest) break;
+				Map.getCellsCanUseItemFromCells(cellsEnemyCanHit, cellsAccessible, item);
+				i++;
+				
+				for(var id : var c in cellsEnemyCanHit) {
+					var scoreValue = 0;
+					
+					for(var eff in item.effects) {
+						var dmgValue = 0;
+						if (eff.type == EFFECT_DAMAGE) {
+							dmgValue = game.me.scores.damage * e.strengthMult * eff.meanValue * EffectScoreMultiplier.damage;
+						} else if(eff.type == EFFECT_POISON) {
+							dmgValue =  game.me.scores.poison * e.magicMult * eff.meanValue * (1 + eff.turns / 9) * EffectScoreMultiplier.poison;
+						}
+						scoreValue += (e.mp / item.cost) * dmgValue;
+					}
+					
+					if (scoreValue > this.scores[c.id]){
+						this.scores[c.id] = scoreValue;
+					}
+				}
+			}
+			
+			// libération
+			if (itemLiberation != null) {
+				cellsEnemyCanHit = [];
+				Map.getCellsCanUseItemFromCells(cellsEnemyCanHit, cellsAccessible, itemLiberation);
+				for(var id : var c in cellsEnemyCanHit) {
+					this.scores[c.id] += game.me.scores.debuff * EffectScoreMultiplier.debuff;
+				}
+			}
+		}
+		for(var e in game.enemies.bulbs) {
+			
+		}
+	}
+}

@@ -1,0 +1,31 @@
+include("../Debug");
+
+class ItemScore {
+	public item;
+	public cell;
+	public cellFrom;
+	public aoeDist;
+	public score;
+	
+	constructor(item, cell, cellFrom) {
+		this.item = item;
+		this.cell = cell;
+		this.cellFrom = cellFrom;
+		this.aoeDist = null;
+		this.score = 0;
+	}
+	
+	public string() {
+		if (this.cell != null) {
+		return "{ " + this.item.name +
+			" | " + this.cell.id +
+			" | " + this.aoeDist +
+			" | " + this.score + " }";
+		}
+		
+		return "{ " + this.item.name +
+			" | " + 'null' +
+			" | " + this.aoeDist +
+			" | " + this.score + " }";
+	}
+}

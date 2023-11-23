@@ -1,0 +1,7 @@
+function isItemInCombo(combo, item) {
+	for (var comboItem in combo.items) {
+		if (comboItem.id == item.id) 
+			return true;
+	}
+	return false;
+}

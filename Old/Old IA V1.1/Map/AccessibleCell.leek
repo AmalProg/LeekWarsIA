@@ -1,0 +1,12 @@
+
+class AccessibleCell {
+	private id;
+	private cell;
+	private mp;
+	
+	constructor(cell, mp) {
+		this.id = cell.id;
+		this.cell = cell;
+		this.mp = mp;
+	}
+}

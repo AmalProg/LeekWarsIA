@@ -1,0 +1,160 @@
+include("../Debug")
+include("../CellContent/Entity");
+
+class Cell { 
+	/** entities pool **/
+	public static cells = [];
+	public static cellsXY = [];
+	public static initCells() {
+		for (var x = -17; x <= 17; x++) {
+			Cell.cellsXY[x] = [];
+			var absX = abs(x);
+			for (var y = -17 + absX; y <= 17 - absX; y++) {
+				Cell.cellsXY[x][y] = new Cell(x, y);
+				Cell.cells[getCellFromXY(x, y)] = Cell.cellsXY[x][y];
+			}
+		}
+	}
+
+	public static get(id) {
+		return Cell.cells[id];
+	}
+	public static getByXY(x, y) {
+		return Cell.cellsXY[x][y];
+	}
+	public static getCells() {
+		return Cell.cells;
+	}
+	/** fin entities pool **/
+
+	public N = null;
+	public E = null;
+	public S = null;
+	public W = null;
+
+	public id;
+	public y; public Y() { return this.y; }
+	public x; public X() { return this.x; }
+	public content = null;
+	public type = CELL_EMPTY;
+	public walkable = true;
+	public hasObstacle = false;
+	public hasEntity = false;
+	public hasEntityNotPlayer = false;
+	
+	/**
+	 * @param cells : tableau de cellules
+	 * @param cells2 : tableau de cellules
+	 * 
+	 * @return tableau des cellules présentent dans les deux tableaux d'entrée
+	 **/
+	public static intersection(cells, cells2) {
+		var newCells = [];
+		for(var id : var c in cells) {
+			if(cells2[id] != null) {
+				newCells[id] = c;
+			}
+		}
+		
+		return newCells;
+	}
+	
+	/**
+	 * @params cells : tableau de cellules
+	 * @params cells2 : tableau des cellules à ajouter
+	 * 
+	 * @return tableau des cellules après ajout
+	 **/
+	public static add(cells, cells2) {
+		for(var id : var c in cells2) {
+			if(cells[id] == null) {
+				cells[id] = c;
+			}
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * @params cells : tableau de cellules
+	 * 
+	 * @return id de la cellule étant les barycentre de 'cells'
+	 **/
+	public static getBarycenter(cells) {
+		var nbrCells = count(cells);
+		if (nbrCells == 0) return null;
+		
+		var x = 0, y = 0;
+		for(var cell in cells){
+			x += cell.x;
+			y += cell.y;
+		}
+
+		return Cell.get(getCellFromXY(x / nbrCells, y / nbrCells));
+	}
+	
+	/**
+	 * @params c1 : cellule
+	 * @params c2 : cellule
+	 * 
+	 * @return true si les deux cellules sont sur la même ligne
+	 **/
+	public static sameLine(c1, c2) {
+		return c1.x === c2.x || c1.y === c2.y;
+	}
+	
+	/**
+	 * @params c1 : cellule
+	 * @params c2 : cellule
+	 * 
+	 * @return la distance entre les deux cellules à vole d'oiseau
+	 **/
+	public static getDistance(c1, c2) {
+		var distX = c1.x - c2.x;
+		var distY = c1.y - c2.y;
+		return (distX >= 0 ? distX : -distX) + (distY >= 0 ? distY : -distY);
+	}
+	
+	constructor(id) {
+		this.id = id;
+		this.x = getCellX(id);
+		this.y = getCellY(id);
+	}
+	constructor(x, y) {	
+		this.x = x;
+		this.y = y;
+		this.id = getCellFromXY(x, y);
+	}
+	
+	/**
+	 * @param content : le contenu à mettre sur la cell
+	 **/
+	public setContent(content) {
+		this.content = content;
+
+		if (content != null) {
+			this.type = content.contentType;
+			this.hasObstacle = this.type == CELL_OBSTACLE;
+			this.hasEntity = this.type == CELL_ENTITY || this.type == -1;
+			this.hasEntityNotPlayer = this.type == CELL_ENTITY;
+			this.walkable = this.type != CELL_OBSTACLE and this.type != CELL_ENTITY;
+		} else {
+			this.type = CELL_EMPTY;
+			this.hasObstacle = false;
+			this.hasEntity = false;
+			this.hasEntityNotPlayer = false;
+			this.walkable = true;
+		}
+	}
+	public getContent() {
+		return this.content;
+	}
+	public getContentType() {
+		return (this.content != null) ? this.content.contentType : CELL_EMPTY;
+	}
+	
+	
+	string() {
+		return "{ id :" + this.id + " }";
+	}
+}

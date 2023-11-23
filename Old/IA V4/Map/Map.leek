@@ -1,0 +1,1970 @@
+include("Cell");
+include("../CellContent/Obstacle");
+include("../Memoize");
+include("../Effect/EffectScoreMultiplier");
+include("../Game");
+
+global currentLoS = lineOfSight;
+ 
+class Map {
+	public static xMin = -17;
+	public static yMin = -17;
+	public static xMax = 17;
+	public static yMax = 17;
+	public static cellIdMax = 612;
+	
+	public static obstacles = [];
+	public static initObstacles() {		
+		for (var id in getObstacles()) {
+			Cell.get(id).setContent(new Obstacle());
+			obstacles[id] = Cell.get(id);
+		}
+	}
+	
+	public static inaccessibleCells = [];
+	public static initInaccessibleCells() {
+		var cellsAccessible = Map.getMyPathLength(Cell.get(getCell()), 60);
+		
+		for (var cell in Cell.getCells()) {
+			if (cellsAccessible[cell.id] == null and obstacles[cell.id] == null) {
+				inaccessibleCells[cell.id] = cell;	
+			}
+		}
+	}
+	
+	public static blockableCells = [];
+	public static initBlockableCells() {		
+		Map.blockableCells = Map.getBlockableCells([]);
+	}
+	
+	public static enclosedCells = [];
+	public static initEnclosedCells() {		
+		Map.enclosedCells = Map.getEnclosedCells([]);
+	}
+	
+ 
+	public dangerScores = [];
+	public dangerScoresPerEnemy = [];
+
+	public initMap() {
+	}
+
+	public setEntitiesPosition(entities) {
+		for (var entity in entities.anyEntity) {
+			if (entity.alive()) {
+				if (Cell.get(entity.cell.id) == null)
+					debug("cell non connue : " + entity)
+				Cell.get(entity.cell.id).setContent(entity);
+			}
+		}
+	}
+	public resetEntitiesPosition() {
+		for (var cell in Cell.getCells()) {
+			if (cell.getContentType() != CELL_OBSTACLE) {
+				cell.setContent(null);
+			}
+		}
+	}
+
+	public initDamageMap(game) {
+		this.resetDangerScoresPerEnemy();
+	
+		for (var team in game.otherTeams) {
+			for (var enemy in team.alive) {	
+				var hasJump = false;
+				var itemsToTest = Item.getPriorityDangerItem(enemy, game.me);
+				for (var item in enemy.items) {
+					if (item.id == CHIP_JUMP and enemy.cooldowns[item.id] == 0) {
+						hasJump = true;
+					} 
+				}
+
+				var nbrItemToTest = (enemy instanceof Bulb) ? 1 : 20 / count(team.alive);
+				if (getFightType() == FIGHT_TYPE_BATTLE_ROYALE) 
+					nbrItemToTest = 1;
+				nbrItemToTest -= max(0, enemy.stats.mp - EntityStatsDiviser.mp );
+
+				var cellsAccessible = null;
+				if (!hasJump)
+					cellsAccessible = Map.getCellsAccessible(enemy.cell, enemy.stats.mp);
+				else {
+					cellsAccessible = Map.getCellsAccessibleWithTeleportation(enemy.cell, enemy.stats.mp, Item.get(CHIP_JUMP));
+				}
+
+				if (this.dangerScoresPerEnemy[enemy.id] == null)
+					this.dangerScoresPerEnemy[enemy.id] = [];
+				var curDangerScores = this.dangerScoresPerEnemy[enemy.id];
+
+				var testedItemsCount = 0;
+				for(var itemPrioScore in itemsToTest) {
+					var item = itemPrioScore.item;
+					var prioScore = itemPrioScore.priorityScore;
+					if (testedItemsCount > nbrItemToTest) {
+						//Debug.logC("Item non testé pour la map de dégats : " + item.name  + " avec un score de " + prioScore, getColor(150, 0, 0))
+						continue;
+					}
+					if (enemy.cooldowns[item.id] != 0) continue;
+
+					//Debug.logC("Item testé pour la map de dégats : " + item.name + " avec un score de " + prioScore, getColor(200, 0, 200));
+					
+					var ignoredEntities = [enemy, game.me];
+
+					var cellsCanHitEdge = [];
+					if (item.getAreaSize() != 0)
+						cellsCanHitEdge = Map.getCellsMissingNeighborInArray(Map.getCellsCanUseItemFromCellsIgnore([], cellsAccessible, item, ignoredEntities));
+
+					for (var cAccessible in cellsAccessible) {
+						var cellsCanHit = Map.getCellsCanUseItemIgnore([], item, cAccessible.cell, ignoredEntities);
+
+						for(var c in cellsCanHit) {
+							if (curDangerScores[c.id] == null)
+								curDangerScores[c.id] = [];
+
+							if (curDangerScores[c.id][item.id] == null)
+								curDangerScores[c.id][item.id] = [];
+
+							curDangerScores[c.id][item.id] = {item: item, aoeDist: 0, mpUsedPercent: (enemy.stats.mp - cAccessible.mp) / enemy.stats.mp};
+
+							if (cellsCanHitEdge[c.id] != null) {
+								for (var cEffective in item.getEffectiveArea(c, cAccessible.cell)) {
+									var aoeDist = Cell.getDistance(c, cEffective);
+									if (curDangerScores[cEffective.id] == null) 
+										curDangerScores[cEffective.id] = [];
+									if (curDangerScores[cEffective.id][item.id] == null) {
+										curDangerScores[cEffective.id][item.id] = {item: item, aoeDist: aoeDist, mpUsedPercent: (enemy.stats.mp - cAccessible.mp) / enemy.stats.mp};
+									} else if (curDangerScores[cEffective.id][item.id].aoeDist > aoeDist) {
+										curDangerScores[c.id][item.id] = {item: item, aoeDist: aoeDist, mpUsedPercent: (enemy.stats.mp - cAccessible.mp) / enemy.stats.mp};
+									}
+								}
+							} else if (item.areaType == AREA_LASER_LINE && c.hasEntityNotPlayer) {
+								for (var cEffective in item.getEffectiveArea(c, cAccessible.cell)) {
+									if (curDangerScores[cEffective.id] == null) 
+										curDangerScores[cEffective.id] = [];
+									if (curDangerScores[cEffective.id][item.id] == null)
+										curDangerScores[cEffective.id][item.id] = {item: item, aoeDist: 0, mpUsedPercent: (enemy.stats.mp - cAccessible.mp) / enemy.stats.mp};
+								}
+							}
+						}
+					}
+
+					// on ne compte pas les items qui ne sont utilisé qu'au cac
+					if (item.minRange > 1 or item.maxRange > 1) {
+						testedItemsCount++;
+					}
+				}
+			}
+		}
+	}
+	public removeEnemyFromDangerScores(enemy) {
+		removeKey(this.dangerScoresPerEnemy, enemy.id);		
+	}
+	public calculateDangerScores(game) {
+		this.resetDangerScores();
+
+		var leeksCount = count(game.entities.leeks);
+		for (var eId : var cells in this.dangerScoresPerEnemy) {
+			var enemy = Entity.get(eId);
+			var turnOrderVal = enemy.turnOrder / leeksCount;
+			var turnOrderMult = 0.5 + 0.5 * (1 - turnOrderVal)*(1 - turnOrderVal);
+			var dangerScoreCache = [];
+			var maxScore = [];
+			for (var cId : var items in cells) {
+				for (var itemObj in items) {
+					var item = itemObj.item;
+					var aoeDist = itemObj.aoeDist;
+					var mpUsedPercent = itemObj.mpUsedPercent;
+  
+					var id = item.id << 10 + aoeDist << 5 + mpUsedPercent;
+					if (dangerScoreCache[id] == null)
+						dangerScoreCache[id] = item.getDangerScore(game.me, enemy, aoeDist, mpUsedPercent);
+					var score = dangerScoreCache[id];
+					if (score > maxScore[cId]) {
+						maxScore[cId] = score;
+					}
+				}
+			}
+			for (var cId : var items in cells) {
+				this.dangerScores[cId] += maxScore[cId] * turnOrderMult;
+			}
+		}
+	}
+	public resetDangerScores() {
+		for (var c in Cell.getCells()) {
+			this.dangerScores[c.id] = 0;
+		}
+	}
+	public getDangerScores() {
+		return this.dangerScores;
+	}
+	public resetDangerScoresPerEnemy() {
+		this.dangerScoresPerEnemy = [];
+	}
+	
+	/**
+	 * Retourne les cellules qui peuvent être bloquées par une seule entité
+	 **/
+	public static getEnclosedCells(cells) {		
+		for (var cell in Cell.cells) {
+			if (!cell.hasObstacle) {
+				var hasTwoNoObstacleNeighbor = false;
+				if (!cell.N.hasObstacle and !cell.E.hasObstacle and cell.N.E.hasObstacle)
+					hasTwoNoObstacleNeighbor = true;
+				else if (!cell.E.hasObstacle and !cell.S.hasObstacle and cell.E.S.hasObstacle)
+					hasTwoNoObstacleNeighbor = true;
+				else if (!cell.S.hasObstacle and !cell.W.hasObstacle and cell.S.W.hasObstacle)
+					hasTwoNoObstacleNeighbor = true;
+				else if (!cell.W.hasObstacle and !cell.N.hasObstacle and cell.W.N.hasObstacle)
+					hasTwoNoObstacleNeighbor = true;
+				else if (!cell.N.hasObstacle and !cell.S.hasObstacle and ((cell.W.hasObstacle or cell.W.N.hasObstacle or cell.W.S.hasObstacle) and (cell.E.hasObstacle or cell.E.S.hasObstacle or cell.E.N.hasObstacle)))
+					hasTwoNoObstacleNeighbor = true;
+				else if (!cell.E.hasObstacle and !cell.W.hasObstacle and ((cell.N.hasObstacle or cell.N.E.hasObstacle or cell.N.W.hasObstacle) and (cell.S.hasObstacle or cell.S.W.hasObstacle or cell.S.E.hasObstacle)))
+					hasTwoNoObstacleNeighbor = true;
+					
+
+				if ((cell.N.hasObstacle or cell.N.W.hasObstacle or cell.N.E.hasObstacle) and (cell.S.hasObstacle or cell.S.W.hasObstacle or cell.S.E.hasObstacle) and hasTwoNoObstacleNeighbor) {
+					cells[cell.id] = cell;
+				} else if ((cell.W.hasObstacle or cell.W.S.hasObstacle or cell.W.N.hasObstacle) and (cell.E.hasObstacle or cell.E.N.hasObstacle or cell.E.S.hasObstacle) and hasTwoNoObstacleNeighbor) {
+					cells[cell.id] = cell;
+				}
+			}
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Retourne les cellules qui peuvent être bloquées par une seule entité
+	 **/
+	public static getBlockableCells(cells) {	
+		for (var cell in Cell.cells) {
+			if (!cell.hasObstacle) {
+				var obstacleNeighborsCount = 0;
+				if (cell.N.hasObstacle)
+					obstacleNeighborsCount++;
+				if (cell.E.hasObstacle)
+					obstacleNeighborsCount++;
+				if (cell.S.hasObstacle)
+					obstacleNeighborsCount++;
+				if (cell.W.hasObstacle)
+					obstacleNeighborsCount++;
+				
+				if (obstacleNeighborsCount == 3)
+					cells[cell.id] = cell;
+			}
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Retourne les 8 cells autour
+	 * 
+	 * @params cells : cells to add to
+	 * @params cell : cell to get 8 neighbors
+	 **/
+	public static getHeightNeighborsCells(cells, cell) {
+		var c = cell.N;
+		cells[c.id] = c;
+		c = cell.N.E;
+		cells[c.id] = c;
+		c = cell.E;
+		cells[c.id] = c;
+		c = cell.E.S;
+		cells[c.id] = c;
+		c = cell.S;
+		cells[c.id] = c;
+		c = cell.S.W;
+		cells[c.id] = c;
+		c = cell.W;
+		cells[c.id] = c;
+		c = cell.W.N;
+		cells[c.id] = c;
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère les cellules ayant au moins une cellule voisine manquante dans le tableau
+	 * 
+	 * @params cells : le tableau de cellule
+	 * 
+	 * @return tableau des cellules
+	 **/
+	public static getCellsMissingNeighborInArray(cells) {
+		var resultCells = [];
+		for (var cell in cells) {
+			if (cells[cell.N.id] == null) {
+				resultCells[cell.id] = cell;
+			} else if (cells[cell.E.id] == null) {
+				resultCells[cell.id] = cell;
+			} else if (cells[cell.S.id] == null) {
+				resultCells[cell.id] = cell;
+			} else if (cells[cell.W.id] == null) {
+				resultCells[cell.id] = cell;
+			}
+		}
+		
+		return resultCells;
+	}
+	
+	/**
+	 * Récupère les cellules accessible depuis les cellules accessible données
+	 * 
+	 * @params cellsAccessible : cellules accessible données
+	 * @params mp : le nombre de mp avant tout déplacement
+	 * 
+	 * @return tableau des cellules accessibles
+	 **/
+	public static getCellsAccessibleWithTeleportationFromCellsAccessible(cellsAccessible, mp, item) {
+		var cells = [];
+		for (var cAcc in cellsAccessible) {
+			var cellsAccessibleFromThere = Map.getCellsAccessibleWithTeleportation(cAcc.cell, mp - cAcc.mp, item);
+			Cell.accessibleAdd(cells, cellsAccessibleFromThere);
+		}
+		return cells;
+	}
+	
+	/**
+	 * Récupère les cellules accessible avec une téléportation
+	 * 
+	 * @params cell : la cellule initial
+	 * @params mp : le nombre de mp
+	 * 
+	 * @return tableau des cellules accessibles
+	 **/
+	public static getCellsAccessibleWithTeleportation(cell, mp, item) {
+		return Map.cellsAccessibleWithTeleportationMemo.apply(cell, mp, item);
+	}
+	
+		/**
+	 * Récupère les cellules accessible avec une téléportation
+	 * 
+	 * @params cell : la cellule initial
+	 * @params mp : le nombre de mp
+	 * 
+	 * @return tableau des cellules accessibles
+	 **/
+	public static getCellsAccessibleWithInvertion(cell, mp, item) {
+		return Map.cellsAccessibleWithInvertionMemo.apply(cell, mp, item);
+	}
+	
+	/**
+	 * Récupère les cellules accessible depuis les cellules accessible données
+	 * 
+	 * @params cellsAccessible : cellules accessible données
+	 * @params mp : le nombre de mp avant tout déplacement
+	 * 
+	 * @return tableau des cellules accessibles
+	 **/
+	public static getCellsAccessibleFromCellsAccessible(cellsAccessible, mp) {
+		var cells = [];
+		for (var cAcc in cellsAccessible) {
+			var cellsAccessibleFromThere = Map.getCellsAccessible(cAcc.cell, mp - cAcc.mp);
+			Cell.accessibleAdd(cells, cellsAccessibleFromThere);
+		}
+		return cells;
+	}
+	
+	/**
+	 * Récupère les cellules accessible
+	 * 
+	 * @params cell : la cellule initial
+	 * @params mp : le nombre de mp
+	 * 
+	 * @return tableau des cellules accessibles
+	 **/
+	public static getCellsAccessible(cell, mp) {
+		return Map.cellsAccessibleMemo.apply(cell, mp);
+	}
+	
+	/**
+	 * Récupère les cellules accessible
+	 * 
+	 * @params cell : la cellule initial
+	 * @params mp : le nombre de mp
+	 * 
+	 * @return tableau des cellules accessibles
+	 **/
+	public static getMyPathLength(cell, mp) {
+		return Map.pathLegnthMemo.apply(cell, mp);
+	}
+
+	/**
+	 * Initialise chaque cell avec ces 4 cells voisines
+	 **/
+	public static initNeighbors() {		
+		//for(var id = 0; id <= Map.cellIdMax; id++) {
+		for (var x = -17; x <= 17; x++) {
+			for (var y = -17; y <= 17; y++) {
+				var id = getCellFromXY(x, y);
+				var cell;
+				if(id != null)
+					cell = Cell.get(id);
+				else {
+					cell = Cell.getFakeCell(x, y);
+				}
+
+				var n = getCellFromXY(x, y + 1);
+				if(n != null)
+					cell.N = Cell.get(n);
+				else {
+					cell.N = Cell.getFakeCell(x, y + 1);
+				}
+
+				var e = getCellFromXY(x - 1, y);
+				if(e != null)
+					cell.E = Cell.get(e);
+				else {
+					cell.E = Cell.getFakeCell(x - 1, y);
+				}
+
+				var s = getCellFromXY(x, y - 1);
+				if(s != null)
+					cell.S = Cell.get(s);
+				else {
+					cell.S = Cell.getFakeCell(x, y - 1);
+				}
+
+				var w = getCellFromXY(x + 1, y)
+				if(w != null)
+					cell.W = Cell.get(w);
+				else {
+					cell.W = Cell.getFakeCell(x + 1, y);
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Récupère une ligne
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * @params direction : direction ["N", "E", "S", "W"]
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getLine(cells, cell, distMin, distMax, direction) {		
+		var currentCell = cell;
+		for(var i = 0; i <= distMax; i++) {
+			(i >= distMin and !currentCell.hasObstacle) 
+			and
+			(cells[currentCell.id] = currentCell);
+			
+			currentCell = currentCell[direction];
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une ligne avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * @params direction : direction ["N", "E", "S", "W"]
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getLineLos(cells, cell, distMin, distMax, direction, initialCell) {
+		if(cell == null) return cells;		
+		
+		var currentCell = cell;			
+		for(var i = 0; i <= distMax; i++) {
+			(i >= distMin and !currentCell.hasObstacle and currentLoS(initialCell.id, currentCell.id))
+			and
+			(cells[currentCell.id] = currentCell)
+			
+			currentCell = currentCell[direction];
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une ligne
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * @params direction : direction ["N", "E", "S", "W"]
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getInvertLine(cells, cell, distMin, distMax, direction) {		
+		var currentCell = cell;
+		for(var i = 0; i <= distMax and currentCell.walkable; i++) {
+			(i >= distMin and currentCell.hasEntity) 
+			and
+			(cells[currentCell.id] = currentCell);
+			
+			currentCell = currentCell[direction];
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone en forme de +
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getPlusArea(cell, distMin, distMax) {
+		if (cell == null) return [];
+
+		var cells = Map.plusAreaMemo.apply(cell, distMin, distMax);
+		
+		return cells;
+	}
+	private static plusAreaMemo = new Memoize3(function(cell, distMin, distMax) {
+			var cells = [];
+			Map.getLine(cells, cell, distMin, distMax, "N");
+			Map.getLine(cells, cell, distMin, distMax, "E");
+			Map.getLine(cells, cell, distMin, distMax, "S");
+			Map.getLine(cells, cell, distMin, distMax, "W");
+		
+			return cells;
+		}, function(cell, distMin, distMax) {
+			return cell.id << 17 | distMin << 5 | distMax;
+		}
+	);
+	
+	/**
+	 * Récupère une zone en forme de + avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getPlusAreaLos(cell, distMin, distMax) {
+		if (cell == null) return [];
+		
+		var cells = [];
+		
+		for (var id : var c in getPlusArea(cell, distMin, distMax)) {
+			if (currentLoS(cell.id, id))
+				cells[id] = c;
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone en forme de + pour les inversion
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getInvertPlusArea(cell, distMin, distMax) {
+		var cells = [];
+		
+		for (var id : var c in getPlusArea(cell, distMin, distMax)) {
+			if (c.hasEntity)
+				cells[id] = c;
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone en forme de + pour les inversion
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getInvertPlusAreaLos(cell, distMin, distMax) {
+		var cells = [];
+		
+		for (var id : var c in getPlusArea(cell, distMin, distMax)) {
+			if (c.hasEntity and currentLoS(cell.id, id))
+				cells[id] = c;
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone circulaire
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getArea(cell, distMin, distMax) {
+		if(cell == null) return [];
+		
+		var cells = Map.areaMemo.apply(cell, distMin, distMax);		
+		return cells;
+	}
+	private static areaMemo = new Memoize3(function(cell, distMin, distMax) {
+			if (cell == null) return [];
+		
+			var cells = [];
+			for (var i = 0; i <= distMax; i++) {
+				if (i >= distMin) {
+					Cell.add(cells, Map.getCircle(cell, i));
+				}
+			}
+			return cells;
+		}, function(cell, distMin, distMax) {
+			return cell.id << 17 | distMin << 5 | distMax;
+		}
+	);
+	
+	public static getCircle(cell, size) {
+		return circleMemo.apply(cell, size);
+	}
+	
+	private static circleMemo = new Memoize2(function(cell, size) {
+			if (cell == null or size < 0) return [];
+			if (size == 0) return [cell.id: cell];
+		
+			var cells = [];
+			var precPrecCircleCells = Map.getCircle(cell, size - 2);
+			var precCircleCells = Map.getCircle(cell, size - 1);
+
+			for(var c in precCircleCells) {
+				var n = c.N;
+				(!precPrecCircleCells[n.id]) 
+				and
+					(cells[n.id] = n);
+
+				var e = c.E;
+				(!precPrecCircleCells[e.id])
+				and
+					(cells[e.id] = e);
+
+				var s = c.S;
+				(!precPrecCircleCells[s.id])
+				and
+					(cells[s.id] = s);
+
+				var w = c.W;
+				(!precPrecCircleCells[w.id])
+				and
+					(cells[w.id] = w);
+			}
+		
+			return cells;
+		}, function(cell, size) {
+			return cell.id << 12 | size;
+		}
+	);
+	
+	/**
+	 * Récupère une zone circulaire avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getAreaLos(cell, distMin, distMax) {
+		if(cell == null) return [];
+		
+		var cells = [];
+		
+		for (var id : var c in getArea(cell, distMin, distMax)) {
+			if (currentLoS(cell.id, id))
+				cells[id] = c;
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone circulaire avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getInvertArea(cell, distMin, distMax) {
+		if(cell == null) return [];
+		
+		var cells = [];
+		
+		for (var id : var c in getArea(cell, distMin, distMax)) {
+			if (c.hasEntity)
+				cells[id] = c;
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une zone circulaire avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getInvertAreaLos(cell, distMin, distMax) {
+		if(cell == null) return [];
+		
+		var cells = [];
+
+		for (var id : var c in getArea(cell, distMin, distMax)) {
+			if (c.hasEntity and currentLoS(cell.id, id))
+				cells[id] = c;
+		}
+		
+		return cells;
+	}
+
+	/**
+	 * Récupère une ligne
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * @params direction : direction ["N", "E", "S", "W"]
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getDiagonal(cells, cell, distMin, distMax, direction, direction2) {
+		var currentCell = cell;
+		for(var i = 0; i <= distMax; i+=2) {
+			(i >= distMin and !currentCell.hasObstacle) 
+			and
+			(cells[currentCell.id] = currentCell);
+			
+			currentCell = currentCell[direction][direction2];
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère une ligne avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * @params direction : direction ["N", "E", "S", "W"]
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getDiagonalLos(cells, cell, distMin, distMax, direction, direction2, initialCell) {
+		if(cell == null) return cells;		
+		
+		var currentCell = cell;
+		for(var i = 0; i <= distMax; i+=2) {
+			(i >= distMin and !currentCell.hasObstacle and currentLoS(initialCell.id, currentCell.id))
+			and
+			(cells[currentCell.id] = currentCell);
+			
+			if (currentCell[direction] != null)
+				currentCell = currentCell[direction][direction2];
+			else if (currentCell[direction2] != null)
+				currentCell = currentCell[direction2][direction];
+			else currentCell = null;
+		}
+		
+		return cells;
+	}
+
+	/**
+	 * Récupère une zone diagonale avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getDiagonalArea(cell, distMin, distMax) {
+		if(cell == null) return [];
+		
+		var cells = diagonalAreaMemo.apply(cell, distMin, distMax);
+						
+		return cells;
+	}
+	
+	private static diagonalAreaMemo = new Memoize3(function(cell, distMin, distMax) {
+			if (cell == null) return [];
+			var currentCell = cell;
+		
+			var cells = [];
+			Map.getDiagonal(cells, currentCell, distMin, distMax, "N", "E");
+			Map.getDiagonal(cells, currentCell, distMin, distMax, "E", "S");
+			Map.getDiagonal(cells, currentCell, distMin, distMax, "S", "W");
+			Map.getDiagonal(cells, currentCell, distMin, distMax, "W", "N");
+		
+			return cells;
+		}, function(cell, distMin, distMax) {
+			return cell.id << 17 | distMin << 5 | distMax;
+		}
+	);
+	
+	/**
+	 * Récupère une zone diagonale avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getDiagonalAreaLos(cell, distMin, distMax) {
+		if(cell == null) return [];
+		
+		var cells = [];
+				
+		for (var id : var c in getDiagonalArea(cell, distMin, distMax)) {
+			if (currentLoS(cell.id, id))
+				cells[id] = c;
+		}
+		
+		return cells;
+	}
+
+	/**
+	 * Récupère une zone star avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getStarArea(cell, distMin, distMax) {
+		if(cell == null) return [];
+		
+		var cells = Map.starAreaMemo.apply(cell, distMin, distMax);
+						
+		return cells;
+	}
+	
+	private static starAreaMemo = new Memoize3(function(cell, distMin, distMax) {
+			if (cell == null) return [];
+			var currentCell = cell;
+		
+			var cells = [];
+			cells = Map.getDiagonalArea(cell, distMin, distMax);
+			Cell.add(cells, Map.getPlusArea( cell, distMin, distMax));
+		
+			return cells;
+		}, function(cell, distMin, distMax) {
+			return cell.id << 17 | distMin << 5 | distMax;
+		}
+	);
+	
+	/**
+	 * Récupère une zone star avec test de los
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static getStarAreaLos(cell, distMin, distMax) {
+		if(cell == null) return [];
+		
+		var cells = [];
+		
+		for (var id : var c in getStarArea(cell, distMin, distMax)) {
+			if (currentLoS(cell.id, id))
+				cells[id] = c;
+		}
+						
+		return cells;
+	}
+	
+	public static getLineForLaser(cells, target, distMin, distMax, direction) {
+		if(target == null) return cells;		
+		
+		var currentCell = target;
+		var distMinTmp = distMin;
+		for(var i = 0; i <= distMax and !currentCell.hasObstacle; i++) {
+			if(i >= distMinTmp) {
+				cells[currentCell.id] = currentCell;
+			}
+			if(currentCell.hasEntityNotPlayer) {
+				distMinTmp = i + distMin;
+			}
+			
+			currentCell = currentCell[direction];
+		}
+		
+		return cells;
+	}
+	
+	public static getCellsToUseLaserOnCell(cells, target, item) {
+		getLineForLaser(cells, target, item.minRange, item.maxRange, "N");
+		getLineForLaser(cells, target, item.minRange, item.maxRange, "E");
+		getLineForLaser(cells, target, item.minRange, item.maxRange, "S");
+		getLineForLaser(cells, target, item.minRange, item.maxRange, "W");
+		
+		return cells;
+	}
+	
+	public static getCellToHitLaser(item, cellTarget, cellFrom) {
+		var dx = cellTarget.x - cellFrom.x;
+		var dy = cellTarget.y - cellFrom.y;
+		var direction = (dx != 0) ? ((dx > 0) ? "W" : "E") : ((dy > 0) ? "N" : "S");
+		
+		return getFirstCellToHitLaser(item, cellFrom, direction);
+	}
+	
+	
+	/**
+	 * Récupère les cellules sur lesquelles on peut utiliser 'item' avec des déplacements
+	 * 
+	 * params
+	 * cellsCanGo : les cellules accessibles par la lanceur
+	 * item : l'item utilisé
+	 * target : la cellule cible
+	 * 
+	 * return
+	 * cells : tableau des cellules
+	 **/
+	public static getCellsCanUseItemFromCells(cells, cellsFrom, item) {
+		
+		for(var cAcc in cellsFrom) {
+			Cell.add(cells, Map.getCellsCanUseItem(cells, item, cAcc.cell));
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * Récupère les cellules sur lesquelles on peut utiliser 'item' avec des déplacements
+	 * 
+	 * params
+	 * cellsCanGo : les cellules accessibles par la lanceur
+	 * item : l'item utilisé
+	 * target : la cellule cible
+	 * 
+	 * return
+	 * cells : tableau des cellules
+	 **/
+	public static getCellsCanUseItemFromCellsIgnore(cells, cellsFrom, item, ignoredEntities) {
+		
+		for(var cAcc in cellsFrom) {
+			Cell.add(cells, Map.getCellsCanUseItemIgnore(cells, item, cAcc.cell, ignoredEntities));
+		}
+		
+		return cells;
+	}
+	
+	/**
+	 * params
+	 * cellsCanGo : les cellules accessibles par la lanceur
+	 * item : l'item utilisé
+	 * target : la cellule cible
+	 * 
+	 * return
+	 * cells : tableau des cellules
+	 **/
+	public static getCellsToUseItemOnCell(cellsCanGo, item, target) {
+		var cellsCanUse = Map.getCellsCanUseItem([], item, target);
+		return Cell.intersection(cellsCanUse, cellsCanGo);
+	}
+	
+	/**
+	 * Récupère les cellules sur lesquelles on peut utiliser 'item'
+	 * 
+	 * params
+	 * target : la cellule visée
+	 * item : l'item utilisé
+	 * 
+	 * return
+	 * cells : tableau des cellules
+	 **/
+	public static getCellsCanUseItem(cells, item, target) {
+		cells = Map.cellsCanUseItemMemo.apply(item, target);
+		return cells;
+	}
+	
+	/**
+	 * Récupère les cellules sur lesquelles on peut utiliser 'item'
+	 * 
+	 * params
+	 * target : la cellule visée
+	 * item : l'item utilisé
+	 * ignoredEntities : tableau des entités ignorées
+	 * 
+	 * return
+	 * cells : tableau des cellules
+	 **/
+	public static getCellsCanUseItemIgnore(cells, item, target, ignoredEntities) {
+		cells = Map.cellsCanUseItemIgnoreMemo.apply(item, target, ignoredEntities);
+		return cells;
+	}
+	
+	/**
+	 * Récupère la première cellule permettant d'utilier l'item sur la cellule target
+	 * 
+	 * params
+	 * target : la cellule à viser
+	 * item : l'item utilisé
+	 * 
+	 * return
+	 *  : la cellule
+	 **/
+	public static getFirstCellToHitLaser(item, target, direction) {
+		var currentCell = target;
+		for (var i = 0; i <= item.maxRange and !currentCell.hasObstacle; i++) {
+			if (i >= item.minRange)
+				return currentCell;
+			currentCell = currentCell[direction];
+		}
+		
+		return null;
+	}
+	
+	
+	public static getAreaLaserLine(cells, distMin, distMax, cellTarget, cellFrom) {
+		if(cellTarget == null) return cells;
+		
+		var dx = cellTarget.x - cellFrom.x;
+		var dy = cellTarget.y - cellFrom.y;
+		var direction = (dx != 0) ? ((dx > 0) ? "W" : "E") : ((dy > 0) ? "N" : "S");
+		
+		var currentCell = cellFrom;
+		for(var i = 0; i <= distMax and !currentCell.hasObstacle; i++) {
+			if (i >= distMin)
+				cells[currentCell.id] = currentCell;
+			currentCell = currentCell[direction];
+		}
+		
+		return cells;
+	}
+	
+	public static getAreaFirstInLine(cells, dist, cellTarget, cellFrom) {
+		if(cellTarget == null) return cells;
+		
+		var dx = cellTarget.x - cellFrom.x;
+		var dy = cellTarget.y - cellFrom.y;
+		var direction = (dx != 0) ? ((dx > 0) ? "W" : "E") : ((dy > 0) ? "N" : "S");
+		
+		var currentCell = cellTarget;
+		for(var i = 0; i < dist and currentCell.walkable; i++) {
+			currentCell = currentCell[direction];
+		}
+		(currentCell.hasEntityNotPlayer) and (cells[currentCell.id] = currentCell);
+		
+		return cells;
+	}
+	
+	public static getAreaSquare(cells, size, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		var currentCellE = cellTarget;
+		var currentCellW = cellTarget;
+		cells[cellTarget.id] = cellTarget;
+		Map.getLine(cells, currentCellE, 0, size, "N");
+		Map.getLine(cells, currentCellE, 0, size, "S");
+		for (var i = 0; i < size; i++) {
+			currentCellE = currentCellE.E;
+			Map.getLine(cells, currentCellE, 0, size, "N");
+			Map.getLine(cells, currentCellE, 0, size, "S");
+
+			currentCellW = currentCellW.W;
+			Map.getLine(cells, currentCellW, 0, size, "N");
+			Map.getLine(cells, currentCellW, 0, size, "S");
+		}
+		
+		return cells;
+	}
+	public static getAreaSquare1(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+
+		
+		cell = cellTarget.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	public static getAreaSquare2(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.N.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+
+		
+		cell = cellTarget.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.E.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.S.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+
+		
+		cell = cellTarget.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.W.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+
+		
+		return cells;
+	}
+	
+	public static getAreaCross1(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.E.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.S.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.W.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	public static getAreaCross2(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.E.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+			
+		cell = cellTarget.S.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.W.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	public static getAreaCross3(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.E.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.S.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+
+		cell = cellTarget.W.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+
+		
+		return cells;
+	}
+	
+	public static getAreaPlus1(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	public static getAreaPlus2(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	public static getAreaPlus3(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	
+	public static getAreaCircle1(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	public static getAreaCircle2(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell);
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell);
+		cell = cell.S.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell);
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell);
+		cell = cell.W.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell);
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell);
+		cell = cell.N.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell);
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell);
+		cell = cell.E.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	public static getAreaCircle3(cells, cellTarget) {
+		if(cellTarget == null) return cells;
+		
+		cells[cellTarget.id] = cellTarget;
+		var cell = cellTarget.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.N.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.N.N.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.E.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.E.E.E;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		
+		cell = cellTarget.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.S.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)	
+		cell = cellTarget.S.S.S;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		cell = cellTarget.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.W.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cell.N;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		cell = cellTarget.W.W.W;
+		(!cell.hasObstacle) and (cells[cell.id] = cell)
+		
+		return cells;
+	}
+	
+	public static markCells(cells, color) {
+		var cellsId = [];
+		for(var c in cells) {
+			push(cellsId, c.id);
+		} 
+		mark(cellsId, color, 1);
+	}
+	public static markAccessibleCells(cells, color) {
+		var cellsId = [];
+		for(var cAcc in cells) {
+			push(cellsId, cAcc.cell.id);
+		} 
+		mark(cellsId, color, 1);
+	}
+	
+	public static getRandomCells(cells, percentage) {
+		for(var c in cells) {
+			
+		}
+	}
+	
+	public constructor() {
+	}
+	
+	private static cellsCanUseItemMemo = new Memoize2(function(item, target) {
+			var cells = [];
+			
+			if(item.launchType == LAUNCH_TYPE_LINE) {
+				if (item.hasEffectType(EFFECT_INVERT)) {
+					if (item.needLos) {
+						cells = Map.getInvertPlusAreaLos(target, item.minRange, item.maxRange);
+					} else {
+						cells = Map.getInvertPlusArea(target, item.minRange, item.maxRange);
+					}
+				} else if (item.areaType == AREA_LASER_LINE) {
+					cells = Map.getCellsToUseLaserOnCell(cells, target, item)
+				} else if(item.needLos)
+					cells = Map.getPlusAreaLos(target, item.minRange, item.maxRange);
+				else
+					cells = Map.getPlusArea(target, item.minRange, item.maxRange);
+			} else if(item.launchType == LAUNCH_TYPE_CIRCLE) {
+				if (item.hasEffectType(EFFECT_INVERT)) {
+					if (item.needLos) {
+						cells = Map.getInvertAreaLos(target, item.minRange, item.maxRange);
+					} else {
+						cells = Map.getInvertArea(target, item.minRange, item.maxRange);
+					}
+				} else if(item.needLos)
+					cells = Map.getAreaLos(target, item.minRange, item.maxRange);
+				else 
+					cells = Map.getArea(target, item.minRange, item.maxRange);
+			} else if(item.launchType == LAUNCH_TYPE_DIAGONAL) {
+				if(item.needLos)
+					cells = Map.getDiagonalAreaLos(target, item.minRange, item.maxRange);
+				else
+					cells = Map.getDiagonalArea(target, item.minRange, item.maxRange);
+			} else if(item.launchType == LAUNCH_TYPE_STAR) {
+				if(item.needLos)
+					cells = Map.getStarAreaLos(target, item.minRange, item.maxRange);
+				else
+					cells = Map.getStarArea(target, item.minRange, item.maxRange);
+			}
+
+			return cells;
+		}, function(item, target) {
+			return target.id << 10 | item.id;
+		}
+	);
+	public static resetCellsCanUseItemMemo() {
+		Map.cellsCanUseItemMemo.reset();
+	}
+	private static cellsCanUseItemIgnoreMemo = new Memoize3(function(item, target, ignoredEntities) {
+			var cells = [];
+			
+			var ignoredEntitiesId = [];
+			for (var entity in ignoredEntities) {
+				entity.cell.setContent(null);
+				push(ignoredEntitiesId, entity.id);
+			}
+			currentLoS = function(start, end) {
+				return lineOfSight(start, end, ignoredEntitiesId);
+			}
+
+			if(item.launchType == LAUNCH_TYPE_LINE) {
+				if (item.hasEffectType(EFFECT_INVERT)) {
+					Map.getInvertPlusArea(target, item.minRange, item.maxRange);
+				} else if (item.areaType == AREA_LASER_LINE) {
+					Map.getCellsToUseLaserOnCell(cells, target, item)
+				} else if(item.needLos)
+					Map.getPlusAreaLos(target, item.minRange, item.maxRange);
+				else
+					Map.getPlusArea(target, item.minRange, item.maxRange);
+			} else if(item.launchType == LAUNCH_TYPE_CIRCLE) {
+				if (item.hasEffectType(EFFECT_INVERT)) {
+					Map.getInvertArea(target, item.minRange, item.maxRange);
+				} else if(item.needLos)
+					Map.getAreaLos(target, item.minRange, item.maxRange);
+				else
+					Map.getArea(target, item.minRange, item.maxRange);
+			} else if(item.launchType == LAUNCH_TYPE_DIAGONAL) {
+				if(item.needLos)
+					Map.getDiagonalAreaLos(target, item.minRange, item.maxRange);
+				else
+					Map.getDiagonalArea(target, item.minRange, item.maxRange);
+			} else if(item.launchType == LAUNCH_TYPE_STAR) {
+				if(item.needLos)
+					Map.getStarAreaLos(target, item.minRange, item.maxRange);
+				else
+					Map.getStarArea(target, item.minRange, item.maxRange);
+			}
+
+			currentLoS = lineOfSight;
+
+			for (var entity in ignoredEntities) {
+				entity.cell.setContent(entity);
+			}
+
+			return cells;
+		}, function(item, target, ignoredEntities) {
+			var ignoredEntitiesValue = 0;
+			ignoredEntitiesValue += (count(ignoredEntities) + ignoredEntities[0].id) * 10;
+			for (var entity in ignoredEntities) {
+				ignoredEntitiesValue += entity.id;
+			}
+			return target.id << 20 | item.id << 10 | ignoredEntitiesValue;
+		}
+	);
+	public static resetCellsCanUseItemIgnoreMemo() {
+		Map.cellsCanUseItemMemo.reset();
+	}
+	
+	private static cellsAccessibleWithTeleportationMemo = new Memoize3(function(cell, mp, item) {	
+			var cellsAccessible = Map.getCellsAccessible(cell, mp);
+		
+			var cellsTeleportation = [];
+			cellsTeleportation[cell.id] = {cell: cell, mp: 0, cellTeleportFrom: cell, cellTeleportTo: cell};
+			for (var cAcc in cellsAccessible) {
+				var cellsCanUse = Map.getCellsCanUseItem([], item, cAcc.cell);
+
+				for(var cCanUseId : var cCanUse in cellsCanUse) {
+					// si pas encore visitée ou que ça coûte moins de mp
+					if ((cellsTeleportation[cCanUseId] == null or cAcc.mp < cellsTeleportation[cCanUseId].mp) and cCanUse.walkable) {
+						cellsTeleportation[cCanUseId] = {cell: cCanUse, mp: cAcc.mp, cellTeleportFrom: cAcc.cell, cellTeleportTo: cCanUse}
+					}
+				}
+			}
+		
+			cellsTeleportation = arraySort(cellsTeleportation, function(cObj1, cObj2) {
+				return cObj1.mp - cObj2.mp;
+			})
+		
+			var cellsToExpand = [];
+			for (var cellObj in cellsTeleportation) {
+				var c = cellObj.cell;
+				var currentMP = cellObj.mp+1;
+				
+				if (currentMP > mp) continue;
+				
+				var n = c.N;
+				if(n != null) { 
+					if (cellsTeleportation[n.id] == null and n.walkable) {
+						cellsTeleportation[n.id] = {cell: n, mp: currentMP, cellTeleportFrom: cellObj.cellTeleportFrom, cellTeleportTo: cellObj.cellTeleportTo}
+						cellsToExpand[n.id] = n;
+					}
+					else if (cellsTeleportation[n.id] != null and currentMP < cellsTeleportation[n.id].mp) {
+						cellsTeleportation[n.id].mp = currentMP;
+						cellsTeleportation[n.id].cellTeleportFrom = cellObj.cellTeleportFrom;
+						cellsTeleportation[n.id].cellTeleportTo = cellObj.cellTeleportTo;
+					}
+				}
+
+				var e = c.E;
+				if(e != null) { 
+					if (cellsTeleportation[e.id] == null and e.walkable) {
+						cellsTeleportation[e.id] = {cell: e, mp: currentMP, cellTeleportFrom: cellObj.cellTeleportFrom, cellTeleportTo: cellObj.cellTeleportTo}
+						cellsToExpand[e.id] = e;
+					}
+					else if (cellsTeleportation[e.id] != null and currentMP < cellsTeleportation[e.id].mp) {
+						cellsTeleportation[e.id].mp = currentMP;
+						cellsTeleportation[e.id].cellTeleportFrom = cellObj.cellTeleportFrom;
+						cellsTeleportation[e.id].cellTeleportTo = cellObj.cellTeleportTo;
+					}
+				}
+
+				var s = c.S;
+				if(s != null) { 
+					if (cellsTeleportation[s.id] == null and s.walkable) {
+						cellsTeleportation[s.id] = {cell: s, mp: currentMP, cellTeleportFrom: cellObj.cellTeleportFrom, cellTeleportTo: cellObj.cellTeleportTo}
+						cellsToExpand[s.id] = s;
+					}
+					else if (cellsTeleportation[s.id] != null and currentMP < cellsTeleportation[s.id].mp) {
+						cellsTeleportation[s.id].mp = currentMP;
+						cellsTeleportation[s.id].cellTeleportFrom = cellObj.cellTeleportFrom;
+						cellsTeleportation[s.id].cellTeleportTo = cellObj.cellTeleportTo;
+					}
+				}
+
+				var w = c.W;
+				if(w != null) { 
+					if (cellsTeleportation[w.id] == null and w.walkable) {
+						cellsTeleportation[w.id] = {cell: w, mp: currentMP, cellTeleportFrom: cellObj.cellTeleportFrom, cellTeleportTo: cellObj.cellTeleportTo}
+						cellsToExpand[w.id] = w;
+					}
+					else if (cellsTeleportation[w.id] != null and currentMP < cellsTeleportation[w.id].mp) {
+						cellsTeleportation[w.id].mp = currentMP;
+						cellsTeleportation[w.id].cellTeleportFrom = cellObj.cellTeleportFrom;
+						cellsTeleportation[w.id].cellTeleportTo = cellObj.cellTeleportTo;
+					}
+				}
+			}
+		
+			while (count(cellsToExpand) != 0) {
+				var clonedCellsToExpand = clone(cellsToExpand);
+				cellsToExpand = [];
+				for (var c in clonedCellsToExpand) {
+					var currentMP = cellsTeleportation[c.id].mp + 1;
+					
+					if (currentMP > mp) continue;
+					
+					var n = c.N;
+					if(n != null) { 
+						if (cellsTeleportation[n.id] == null and n.walkable) {
+							cellsTeleportation[n.id] = {cell: n, mp: currentMP, cellTeleportFrom: cellsTeleportation[c.id].cellTeleportFrom, cellTeleportTo: cellsTeleportation[c.id].cellTeleportTo}
+							cellsToExpand[n.id] = n;
+						}
+						else if (cellsTeleportation[n.id] != null and currentMP < cellsTeleportation[n.id].mp) {
+							cellsTeleportation[n.id].mp = currentMP;
+							cellsTeleportation[n.id].cellTeleportFrom = cellsTeleportation[c.id].cellTeleportFrom;
+							cellsTeleportation[n.id].cellTeleportTo = cellsTeleportation[c.id].cellTeleportTo;
+						}
+					}
+
+					var e = c.E;
+					if(e != null) { 
+						if (cellsTeleportation[e.id] == null and e.walkable) {
+							cellsTeleportation[e.id] = {cell: e, mp: currentMP, cellTeleportFrom: cellsTeleportation[c.id].cellTeleportFrom, cellTeleportTo: cellsTeleportation[c.id].cellTeleportTo}
+							cellsToExpand[e.id] = e;
+						}
+						else if (cellsTeleportation[e.id] != null and currentMP < cellsTeleportation[e.id].mp) {
+							cellsTeleportation[e.id].mp = currentMP;
+							cellsTeleportation[e.id].cellTeleportFrom = cellsTeleportation[c.id].cellTeleportFrom;
+							cellsTeleportation[e.id].cellTeleportTo = cellsTeleportation[c.id].cellTeleportTo;
+						}
+					}
+
+					var s = c.S;
+					if(s != null) { 
+						if (cellsTeleportation[s.id] == null and s.walkable) {
+							cellsTeleportation[s.id] = {cell: s, mp: currentMP, cellTeleportFrom: cellsTeleportation[c.id].cellTeleportFrom, cellTeleportTo: cellsTeleportation[c.id].cellTeleportTo}
+							cellsToExpand[s.id] = s;
+						}
+						else if (cellsTeleportation[s.id] != null and currentMP < cellsTeleportation[s.id].mp) {
+							cellsTeleportation[s.id].mp = currentMP;
+							cellsTeleportation[s.id].cellTeleportFrom = cellsTeleportation[c.id].cellTeleportFrom;
+							cellsTeleportation[s.id].cellTeleportTo = cellsTeleportation[c.id].cellTeleportTo;
+						}
+					}
+
+					var w = c.W;
+					if(w != null) { 
+						if (cellsTeleportation[w.id] == null and w.walkable) {
+							cellsTeleportation[w.id] = {cell: w, mp: currentMP, cellTeleportFrom: cellsTeleportation[c.id].cellTeleportFrom, cellTeleportTo: cellsTeleportation[c.id].cellTeleportTo}
+							cellsToExpand[w.id] = w;
+						}
+						else if (cellsTeleportation[w.id] != null and currentMP < cellsTeleportation[w.id].mp) {
+							cellsTeleportation[w.id].mp = currentMP;
+							cellsTeleportation[w.id].cellTeleportFrom = cellsTeleportation[c.id].cellTeleportFrom;
+							cellsTeleportation[w.id].cellTeleportTo = cellsTeleportation[c.id].cellTeleportTo;
+						}
+					}
+				}
+			}
+		
+			return cellsTeleportation;
+		}, function(cell, mp, item) {
+			return cell.id << 16 | mp << 10 | item.id;
+		}
+	);
+	
+	private static cellsAccessibleWithInvertionMemo = new Memoize3(function(cell, mp, item) {	
+			var cellsAccessible = Map.getCellsAccessible(cell, mp);
+		
+			var cellsInvertion = [];
+			cellsInvertion[cell.id] = {cell: cell, mp: 0, cellTeleportFrom: cell};
+			for (var cAcc in cellsAccessible) {
+				var cellsCanUse = Map.getCellsCanUseItem([], item, cAcc.cell);
+
+				for(var cCanUse in cellsCanUse) {
+					// si pas encore visitée ou que ça coûte moins de mp
+					if ((cellsInvertion[cCanUse.id] == null or cAcc.mp < cellsInvertion[cCanUse.id].mp) and cCanUse.walkable) {
+						cellsInvertion[cCanUse.id] = {cell: cCanUse, mp: cAcc.mp, cellTeleportFrom: cAcc.cell}
+					}
+				}
+			}
+		
+			cellsInvertion = arraySort(cellsInvertion, function(cObj1, cObj2) {
+				return 	cObj1.mp - cObj2.mp;
+			})
+		
+			var cellsToExpand = [];
+			for (var cellObj in cellsInvertion) {
+				var c = cellObj.cell;
+				var currentMP = cellObj.mp+1;
+				
+				if (currentMP > mp) continue;
+				
+				var n = c.N;
+				if(n != null) { 
+					if (cellsInvertion[n.id] == null and n.walkable) {
+						cellsInvertion[n.id] = {cell: n, mp: currentMP, cellTeleportFrom: cellsInvertion[c.id].cellTeleportFrom}
+						cellsToExpand[n.id] = n;
+					}
+					else if (cellsInvertion[n.id] != null and currentMP < cellsInvertion[n.id].mp) {
+						cellsInvertion[n.id].mp = currentMP;
+						cellsInvertion[n.id].cellTeleportFrom = cellsInvertion[c.id].cellTeleportFrom;
+					}
+				}
+
+				var e = c.E;
+				if(e != null) { 
+					if (cellsInvertion[e.id] == null and e.walkable) {
+						cellsInvertion[e.id] = {cell: e, mp: currentMP, cellTeleportFrom: cellsInvertion[c.id].cellTeleportFrom}
+						cellsToExpand[e.id] = e;
+					}
+					else if (cellsInvertion[e.id] != null and currentMP < cellsInvertion[e.id].mp) {
+						cellsInvertion[e.id].mp = currentMP;
+						cellsInvertion[e.id].cellTeleportFrom = cellsInvertion[c.id].cellTeleportFrom;
+					}
+				}
+
+				var s = c.S;
+				if(s != null) { 
+					if (cellsInvertion[s.id] == null and s.walkable) {
+						cellsInvertion[s.id] = {cell: s, mp: currentMP, cellTeleportFrom: cellsInvertion[c.id].cellTeleportFrom}
+						cellsToExpand[s.id] = s;
+					}
+					else if (cellsInvertion[s.id] != null and currentMP < cellsInvertion[s.id].mp) {
+						cellsInvertion[s.id].mp = currentMP;
+						cellsInvertion[s.id].cellTeleportFrom = cellsInvertion[c.id].cellTeleportFrom;
+					}
+				}
+
+				var w = c.W;
+				if(w != null) { 
+					if (cellsInvertion[w.id] == null and w.walkable) {
+						cellsInvertion[w.id] = {cell: w, mp: currentMP, cellTeleportFrom: cellsInvertion[c.id].cellTeleportFrom}
+						cellsToExpand[w.id] = w;
+					}
+					else if (cellsInvertion[w.id] != null and currentMP < cellsInvertion[w.id].mp) {
+						cellsInvertion[w.id].mp = currentMP;
+						cellsInvertion[w.id].cellTeleportFrom = cellsInvertion[c.id].cellTeleportFrom;
+					}
+				}
+			}
+		
+			while (count(cellsToExpand) != 0) {
+				var clonedCellsToExpand = clone(cellsToExpand);
+				cellsToExpand = [];
+				for (var c in clonedCellsToExpand) {
+					var currentMP = cellsInvertion[c.id].mp + 1;
+					
+					if (currentMP > mp) continue;
+					
+					var n = c.N;
+					if(n != null) { 
+						if (cellsInvertion[n.id] == null and n.walkable) {
+							cellsInvertion[n.id] = {cell: n, mp: currentMP, cellTeleportFrom: cellsInvertion[c.id].cellTeleportFrom}
+							cellsToExpand[n.id] = n;
+						}
+						else if (cellsInvertion[n.id] != null and currentMP < cellsInvertion[n.id].mp) {
+							cellsInvertion[n.id].mp = currentMP;
+							cellsInvertion[n.id].cellTeleportFrom = cellsInvertion[c.id].cellTeleportFrom;
+						}
+					}
+
+					var e = c.E;
+					if(e != null) { 
+						if (cellsInvertion[e.id] == null and e.walkable) {
+							cellsInvertion[e.id] = {cell: e, mp: currentMP, cellTeleportFrom: cellsInvertion[c.id].cellTeleportFrom}
+							cellsToExpand[e.id] = e;
+						}
+						else if (cellsInvertion[e.id] != null and currentMP < cellsInvertion[e.id].mp) {
+							cellsInvertion[e.id].mp = currentMP;
+							cellsInvertion[e.id].cellTeleportFrom = cellsInvertion[c.id].cellTeleportFrom;
+						}
+					}
+
+					var s = c.S;
+					if(s != null) { 
+						if (cellsInvertion[s.id] == null and s.walkable) {
+							cellsInvertion[s.id] = {cell: s, mp: currentMP, cellTeleportFrom: cellsInvertion[c.id].cellTeleportFrom}
+							cellsToExpand[s.id] = s;
+						}
+						else if (cellsInvertion[s.id] != null and currentMP < cellsInvertion[s.id].mp) {
+							cellsInvertion[s.id].mp = currentMP;
+							cellsInvertion[s.id].cellTeleportFrom = cellsInvertion[c.id].cellTeleportFrom;
+						}
+					}
+
+					var w = c.W;
+					if(w != null) { 
+						if (cellsInvertion[w.id] == null and w.walkable) {
+							cellsInvertion[w.id] = {cell: w, mp: currentMP, cellTeleportFrom: cellsInvertion[c.id].cellTeleportFrom}
+							cellsToExpand[w.id] = w;
+						}
+						else if (cellsInvertion[w.id] != null and currentMP < cellsInvertion[w.id].mp) {
+							cellsInvertion[w.id].mp = currentMP;
+							cellsInvertion[w.id].cellTeleportFrom = cellsInvertion[c.id].cellTeleportFrom;
+						}
+					}
+				}
+			}
+		
+			return cellsInvertion;
+		}, function(cell, mp, item) {
+			return cell.id << 16 | mp << 10 | item.id;
+		}
+	);
+	
+	private static cellsAccessibleMemo = new Memoize2(function(cell, mp) {
+			if(cell == null) return [];
+		
+			var cells = [];
+			cells[cell.id] = {cell: cell, mp: 0};
+			// les nouvelles cells de chaque mp
+			var tmpCells = [];
+			tmpCells[0] = [];
+			tmpCells[0][cell.id] = cell;
+			for(var i = 0; i < mp; i++) {
+				if (tmpCells[i] == []) break;
+				
+				var iPlus = i+1;
+				tmpCells[iPlus] = [];
+				for(var c in tmpCells[i]) {
+					var n = c.N;
+					var nId = n.id;
+					if(!cells[nId] and n.walkable) {
+						cells[nId] = {cell: n, mp: iPlus};
+						tmpCells[iPlus][nId] = n;
+					}
+
+					var e = c.E;
+					var eId = e.id;
+					if(!cells[eId] and e.walkable) {
+						cells[eId] = {cell: e, mp: iPlus};
+						tmpCells[iPlus][eId] = e;
+					}
+
+					var s = c.S;
+					var sId = s.id;
+					if(!cells[sId] and s.walkable) {
+						cells[sId] = {cell: s, mp: iPlus};
+						tmpCells[iPlus][sId] = s;
+					}
+
+					var w = c.W;
+					var wId = w.id;
+					if(!cells[w.id] and w.walkable) {						
+						cells[wId] = {cell: w, mp: iPlus};
+						tmpCells[iPlus][wId] = w;
+					}
+				}
+			}
+
+			return cells;
+		}, function(cell, mp) {
+			return cell.id << 6 | mp;
+		}
+	);
+	
+	private static pathLegnthMemo = new Memoize2(function(cell, mp) {
+			if(cell == null) return [];
+		
+			var cells = [];
+			cells[cell.id] = {cell: cell, mp: 0};
+			// les nouvelles cells de chaque mp
+			var tmpCells = [];
+			tmpCells[0] = [];
+			tmpCells[0][cell.id] = cell;
+			for(var i = 0; i < mp; i++) {
+				if (tmpCells[i] == []) break;
+				
+				var iPlus = i+1;
+				tmpCells[iPlus] = [];
+				for(var c in tmpCells[i]) {
+					var n = c.N;
+					var nId = n.id;
+					if(!cells[nId] && !n.hasObstacle) {
+						cells[nId] = {cell: n, mp: iPlus};
+						tmpCells[iPlus][nId] = n;
+					}
+
+					var e = c.E;
+					var eId = e.id;
+					if(!cells[eId] && !e.hasObstacle) {
+						cells[eId] = {cell: e, mp: iPlus};
+						tmpCells[iPlus][eId] = e;
+					}
+
+					var s = c.S;
+					var sId = s.id;
+					if(!cells[sId] && !s.hasObstacle) {
+						cells[sId] = {cell: s, mp: iPlus};
+						tmpCells[iPlus][sId] = s;
+					}
+
+					var w = c.W;
+					var wId = w.id;
+					if(!cells[wId] && !w.hasObstacle) {
+						cells[wId] = {cell: w, mp: iPlus};
+						tmpCells[iPlus][wId] = w;
+					}
+				}
+			}
+
+			return cells;
+		}, function(cell, mp) {
+			return cell.id << 12 | mp;
+		}
+	);
+	
+	
+	public static resetCellsAccessibleMemo() {
+		Map.cellsAccessibleMemo.reset();
+		Map.cellsAccessibleWithTeleportationMemo.reset();
+	}
+}

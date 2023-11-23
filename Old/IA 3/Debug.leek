@@ -1,0 +1,51 @@
+class Debug {
+	public static enabledLog = false;
+	public static enabledLogC = true;
+	public static enabledWarning = false;
+	public static enabledInfo = false;
+	public static enabledError = false;
+	public static enabledOp = false;
+	private static op;
+
+	private constructor() {}
+
+	public static log(object) {
+		if (enabledLog) {
+			debug(object);
+		}
+	}
+	
+	public static logC(object, color) {
+		if (enabledLogC) {
+			debugC(object, color);
+		}
+	}
+
+	public static error(object) {
+		if (enabledError) {
+			debugE(object);
+		}
+	}
+	
+	public static info(object) {
+		if (enabledInfo) {
+			debugC(object, COLOR_BLUE);
+		}
+	}
+
+	public static warning(object) {
+		if (enabledWarning) {
+			debugW(object);
+		}
+	}
+	
+	public static startOpCount() {
+		op = getOperations();
+	}
+	
+	public static stopOpCount(preText) {
+		if (enabledOp) {
+			debugC(preText + (getOperations() - op), getColor(235, 65, 25));
+		}
+	}
+}

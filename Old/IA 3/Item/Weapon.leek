@@ -1,0 +1,50 @@
+include("../Debug");
+include("Item");
+include("ItemEffect");
+
+class Weapon extends Item {
+	/** weapon pool **/
+	private static weapons = [];
+	public static get(id) {
+		if (Weapon.weapons[id] != null)
+			return Weapon.weapons[id];
+		var weapon = new Weapon(id);
+		Weapon.weapons[id] = weapon;
+		Item.items[id] = weapon;
+		return Weapon.weapons[id];
+	}
+	/** fin weapon pool **/
+	
+	constructor(id) {
+		super(id);
+		initStats();
+	}
+
+	public initStats() {
+		this.name = getWeaponName(this.id);
+		this.areaType = getWeaponArea(this.id);
+		this.cost = getWeaponCost(this.id);
+		this.baseCooldown = 0;
+		this.minRange = getWeaponMinRange(this.id);
+		this.maxRange = getWeaponMaxRange(this.id);
+		this.launchType = getWeaponLaunchType(this.id);
+		this.needLos = weaponNeedLos(this.id);
+		for (var effect in getWeaponEffects(this.id)) {
+			var eff = new ItemEffect(effect, this);
+			push(this.effects, eff);
+			if(ItemEffect.damageEffects[eff.type])
+				push(this.effectsDamage, eff);
+			
+			this.effectsTypeList[eff.type] = true;
+		}
+	}
+	
+	public use(cell) {
+		if (getWeapon() != this.id) {
+			setWeapon(this.id);
+		}
+		var result = useWeaponOnCell(cell.id);
+		
+		return result;
+	}
+}

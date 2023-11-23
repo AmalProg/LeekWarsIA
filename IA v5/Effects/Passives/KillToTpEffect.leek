@@ -1,0 +1,14 @@
+include("PassiveEffect");
+
+class KillToTpEffect extends PassiveEffect {
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, boolean isSelfCast, Cell cellTarget) {
+		affectedEntityStats.addEffect(EntityStats.addTPStatic, EFFECT_RAW_BUFF_TP, round(value), caster, this._turns, false, this._item.getId(), affectedEntity, this._modifiers);	
+	}
+	
+		protected real getEffectScore(real value, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
+		EntityScores targetScores = target.getScores();
+				
+		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
+		return targetScores.getTPScore(round(value), targetStats.getAbso()) * targetAllyMult;
+	}
+}

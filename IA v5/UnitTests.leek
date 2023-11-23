@@ -1,0 +1,110 @@
+
+//Debug.startOpCount()
+//Set<Cell> cells = <>;
+//for (integer cellId in getWeaponEffectiveArea(180, 306)) {
+	//setPut(cells, cellMap.getCell(cellId));
+//}
+//debug(cells);
+//Debug.stopOpCount("getWeaponEffectiveArea : ")
+//Debug.startOpCount()
+//debug(Area.getAreaCross1(<>, cellMap.getCell(306)));
+//Debug.stopOpCount("getAreaCross1 : ")
+
+//Debug.startOpCount();
+//Set<Cell> cells = <>;
+//cells = Area.getArea(cellMap.getCell(306), 0, 12);
+//CellMap.markCells(cells);
+//Debug.stopOpCount("getArea : ");
+
+//Cell c1 = cellMap.getCell(306);
+//Cell c2 = cellMap.getCell(306);
+
+//Debug.startOpCount();
+//Map<integer, Cell> cells = new Map();
+//Map<integer, CellMP> cellsAccessible = cellMap.getAccessibleCells(c1, 30);
+//Debug.stopOpCount("cellsAccessible : ");
+//CellMap.markAccessibleCells(cellsAccessible);
+
+//mapPut(cells, 306, c1);
+//Debug.startOpCount();
+//Debug.stopOpCount("nothing : ");
+//// 5
+//Debug.startOpCount();
+//mapContainsKey(cells, 306);
+//Debug.stopOpCount("1 : ");
+//// 7
+//Debug.startOpCount();
+//cells[306] != null;
+//Debug.stopOpCount("2 : ");
+//// 8
+//Debug.startOpCount();
+//c1 == c2;
+//Debug.stopOpCount("1 : ");
+//// 6
+//Debug.startOpCount();
+//cells[306];
+//Debug.stopOpCount("2 : ");
+//// 5
+//function a(Cell b){}
+//Debug.startOpCount();
+//a(cells[306]);
+//Debug.stopOpCount("2 : ");
+//// 8
+
+/**** AREA ****/
+//Debug.startOpCount();
+//global Array<string> directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+//string direction = arrayRandom(directions, 1)[0];
+//integer cellId = randInt(0, 613);
+//integer distMin = randInt(0, 4);
+//integer distMax = randInt(distMin, 12);
+//debug("cellId : " + cellId + ", distMin : " + distMin + ", distMax : " + distMax + ", direction : " + direction)
+//debug(cellMap.getCell(cellId + 17*6))
+//mark([cellId], COLOR_RED);
+//cells = Area.getArea(cells, cellMap.getCell(cellId), distMin, distMax, "N");
+//CellMap.markCells(cells);
+//pause();
+//Debug.stopOpCount("CellMap getLine : ");
+
+/**** AREA ****/
+//Debug.startOpCount();
+
+//Map<integer, Cell> cells = new Map();
+//Area.getAreaCircle3(cells, cellMap.getCell(306));
+//CellMap.markCells(cells);
+
+//cells = new Map();
+//Area.getAreaCircle3(cells, cellMap.getCell(0));
+//CellMap.markCells(cells);
+
+//cells = new Map();
+//Area.getAreaCircle3(cells, cellMap.getCell(612));
+//CellMap.markCells(cells);
+
+//cells = new Map();
+//Area.getAreaCircle3(cells, cellMap.getCell(595));
+//CellMap.markCells(cells);
+
+//cells = new Map();
+//Area.getAreaCircle3(cells, cellMap.getCell(17));
+//CellMap.markCells(cells);
+
+
+//cells = new Map();
+//Area.getAreaCircle3(cells, cellMap.getCell(8));
+//CellMap.markCells(cells);
+
+//cells = new Map();
+//Area.getAreaCircle3(cells, cellMap.getCell(350));
+//CellMap.markCells(cells);
+
+//cells = new Map();
+//Area.getAreaCircle3(cells, cellMap.getCell(604));
+//CellMap.markCells(cells);
+
+//cells = new Map();
+//Area.getAreaCircle3(cells, cellMap.getCell(332));
+//CellMap.markCells(cells);
+
+//Debug.stopOpCount("AreaSquare construction : ");
+//pause();

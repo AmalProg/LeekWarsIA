@@ -1,0 +1,63 @@
+class EffectScoreMultiplier {
+	// 1 = 500 Damage
+	public static damage = 1.8; // 263
+	public static poison = 1.2; // 285
+	public static lifeDamage = 1.8; // 263
+	public static novaDamage = 3.5; // 222
+	public static heal = 2; // 285
+	public static novaVitality = 2; // 200
+	public static boostMaxLife = 2; // 200
+	public static buffAgility = 1.6; // 250
+	public static buffResistance = 2; // 200
+	public static buffWisdom = 2; // 200
+	public static buffMp = 80; // 6
+	public static buffTp = 80; // 6
+	public static buffStrength = 1.8; // 250
+	public static rawBuffAgility = 1.6; // 250
+	public static rawBuffResistance = 2; // 200
+	public static rawBuffWisdom = 2; // 200
+	public static rawBuffMp = 80; // 6
+	public static rawBuffTp = 80; // 6
+	public static rawBuffStrength = 2.3; // 200
+	public static rawBuffMagic = 1.8; // 165
+	public static shackleAgility = 1.6; // 300
+	public static shackleWisdom = 2; // 400
+	public static shackleMp = 150; // 4
+	public static shackleTp = 90; // 4
+	public static shackleStrength = 2.8; // 150
+	public static shackleMagic = 2.3; // 166
+	public static removeShackles = 1;
+	public static abso = 6; // 200
+	public static rel = 11; // 55
+	public static absoVulnerability = 10; // 100
+	public static relVulnerability = 22; // 50
+	public static stealAbso = 5; // 200
+	public static damageReturn = 2.5; // 40
+	public static afterEffect = 1.5; // 500
+	public static antidote = 450;
+	public static debuff = 350;
+	public static teleport = 1000;
+	public static teleportAggro = 1;
+	public static invert = 1;
+	public static ressurect = 300; // 1.66
+	public static _summon = 5;
+	public static kill = 4000; // 0.5
+	public static attract = 1;
+	public static _push = 1;
+	public static damageToAbso = 4;
+	public static damageToStrength = 2;
+	public static poisonToScience = 2;
+	public static novaDamageToMagic = 2;
+	public static propagation = 1;
+	public static movedToMp = 80;
+	public static summonPuny = 500;
+	public static summonHeal = 800;
+	public static summonRes = 850;
+	public static summonDamage = 750;
+	public static summonPoison = 750;
+	public static summonMove = 900;
+	public static summonNova = 900;
+	
+	public static modifyEffectsScore() {
+	}
+}

@@ -1,0 +1,494 @@
+include("../Utils/Debug");
+include("../Map/Cell");
+include("../Map/CellMap");
+include("../Items/Chip");
+include("EntityEffect");
+include("Scoring/EntityStatsDiviser");
+include("Scoring/EntityScores");
+include("EntityStats");
+include("SimulationEntity");
+include("Bulb");
+include("Teams/Team");
+include("../Effects/Effect");
+include("../Game");
+
+class AbstractEntity {
+	public static final integer ACCESSIBLE_CELLS_SIZE = 40; 
+	
+	/** entities pool **/
+	protected static final Map<integer, AbstractEntity> entities = [:];
+	public static AbstractEntity? get(integer id) {
+		return AbstractEntity.entities[id];
+	}
+	/** fin entities pool **/
+	
+	protected final integer _id; public integer getId() { return this._id; }
+	protected final string _farmerName; public string getFarmerName() { return this._farmerName; }
+	protected final string _name; public string getName() { return this._name; }
+	protected final integer _level; public integer getLevel() { return this._level; }
+	protected Team _team;
+	public Team? getTeam() { return this._team; }
+	public void setTeam(Team team) { this._team = team; }
+	protected final boolean _isAlly; public boolean isAnAlly() { return this._isAlly; }
+	protected final boolean _isSummon; public boolean isSummon() { return this._isSummon; }
+	protected final boolean _isStatic; public boolean isStatic() { return this._isStatic; }
+	protected integer _powerOnDeath; public integer getPowerOnDeath() { return this._powerOnDeath; }
+	protected boolean _isAlive; public boolean isEntityAlive() { return this._isAlive; }
+
+	protected Cell? _cell;
+	public Cell? getCell() { return this._cell; }
+	protected integer _turnOrder; public integer getTurnOrder() { return this._turnOrder; }
+	protected Set<Item> _items; public Set<Item> getItems() { return this._items; }
+	protected Array<Item> _movementItems; public Array<Item> getMovementItems() { return this._movementItems; }
+	protected Map<Item, integer> _cooldowns; public Map<Item, integer> getCooldowns() { return this._cooldowns; }
+
+	protected SimulationEntity _simulationEntity;  public SimulationEntity getSimulationEntity() { return this._simulationEntity; }
+	protected AccessibleCells _pathLengthCells; public AccessibleCells getPathLengthCells() { return this._pathLengthCells; }
+	protected AccessibleCells _initialAccessibleCells; public AccessibleCells getInitialAccessibleCells() { return this._initialAccessibleCells; }
+	protected Map<integer, AccessibleCells> _accessibleCellsWithItem;
+	protected EntityStats _baseStats; public EntityStats getBaseStats() { return this._baseStats; }
+	protected EntityStats _stats; public EntityStats getStats() { return this._stats; }
+	protected EntityScores _scores;	public EntityScores getScores() { return this._scores; }
+	
+	protected Array<EntityEffect> _launchedEffects;
+	protected Array<Bulb> _summons;
+ 
+	private constructor() {}
+	constructor(integer id) {
+		this._id = id;
+		this._items = <>;
+		this._movementItems = [];
+		this._cooldowns = [:];
+		this._launchedEffects = [];
+		this._summons = [];
+		
+		this._farmerName = getFarmerName(this._id)!;
+		this._name = getName(this._id)!;
+		this._level = getLevel(this._id)!;
+		this._isAlly = isAlly(this._id);
+		this._isSummon = isSummon(this._id)!;
+		this._isStatic = isStatic(this._id);
+		
+		this._accessibleCellsWithItem = [:];
+		
+		this.initStats();
+		this._simulationEntity = new SimulationEntity(this);
+	}
+	
+	private void initStats() {
+		this._powerOnDeath = 0;
+			
+		this._isAlive = isAlive(this._id);
+
+		if (this._isAlive) {
+			this._cell = CellMap.getCell(getCell(this._id)!);
+			this._turnOrder = getEntityTurnOrder(this._id) - getEntityTurnOrder();
+		} else {
+			this._cell = null;
+			this._turnOrder = -99;
+		}
+
+		for(var chipId in getChips(this._id)!) {
+			var item = Chip.get(chipId);
+			setPut(this._items, item);
+			this._cooldowns[item] = getCooldown(chipId, this._id);
+			
+			if (item.hasEffectTypeIn(Effect.teleportEffects)) {
+				push(this._movementItems, item);
+			}
+			
+			// Ordonne les item de téléport du plus petit coût au plus grand
+			this._movementItems = arraySort(this._movementItems, function(Item i1, Item i2) => integer {
+				return i1.getCost() - i2.getCost();
+			}) as Array<Item>;
+		}
+
+
+		this._baseStats = new EntityStats(this);	
+		// les poireaux n'ont pas d'effet de base
+		this._baseStats.removeEffects(this._baseStats.getEffects());
+		this._scores = new EntityScores(this);
+	}
+
+	public void updateStats() {
+		this._isAlive = isAlive(this._id);
+		
+		if (this._isAlive) {
+			// Change the cell to it's new location and update the CellMap
+			this.setCell(CellMap.getCell(getCell(this._id)!))
+		} else {
+			// L'entité est morte donc elle n'est plus sur la map
+			this.setCell(null);
+		}
+
+		this._launchedEffects = [];
+		for (Array<boolean|integer> effect in getLaunchedEffects(this._id)!) {
+			push(this._launchedEffects, new EntityEffect(effect));
+		}
+		
+		this._summons = [];
+		for (integer summonId in getSummons(this._id)) {
+			push(this._summons, AbstractEntity.get(summonId));
+		}
+		
+		if (this._isAlive) {
+			this._turnOrder = getEntityTurnOrder(this._id)! - getEntityTurnOrder();
+		} else {
+			this._turnOrder = -99;
+		}
+		
+		for (Item item in this._items) {
+			this._cooldowns[item] = getCooldown(item.getId(), this._id);
+		}
+		
+		this._stats = new EntityStats(this);
+	}
+
+	public static updateEntitiesScores() {
+		for (AbstractEntity entity in AbstractEntity.entities) {
+			entity.updateScores();
+		}
+	}
+	public void updateScores() {
+		this._scores.updateScoreAdjuster();
+	}
+
+	public static updateSimulationStats() {
+		for (AbstractEntity entity in AbstractEntity.entities) {
+			entity.getSimulationEntity().updateStats();
+		}
+	}
+
+	public static updatePositions() {
+		for (AbstractEntity entity in AbstractEntity.entities) {
+			entity.updatePosition();
+		}
+	}
+	public void updatePosition() {
+		integer? cellId = getCell(this._id);
+		if (cellId != null)
+			this.setCell(CellMap.getCell(cellId!));
+		else
+			this.setCell(null);
+	}
+
+	public static updateEntitiesPathLength() {
+		for (AbstractEntity entity in AbstractEntity.entities) {
+			entity.updatePathLength();
+		}
+	}
+	public void updatePathLength() {
+		if (this._isAlive) {
+			this._initialAccessibleCells = CellMap.getAccessibleCells(this._simulationEntity.getCell()!, this._stats.getMP());
+			this._pathLengthCells = CellMap.getAccessibleCells(this._simulationEntity.getCell()!, AbstractEntity.ACCESSIBLE_CELLS_SIZE);
+			
+			//if (this._id == getEntity()) {
+				//clearMarks()
+				//CellMap.markAccessibleCells(CellMap.getAccessibleCellsWithTeleport(this._simulationEntity.getCell()!, this._stats.getMP(), Item.get(CHIP_JUMP)!));
+				//pause();
+			//}
+		}
+	}
+	private AccessibleCells? createAccessibleCellsWithItem(Item item, integer dist) {
+		AccessibleCells? accCells = null;
+		if (item.hasEffectType(EFFECT_TELEPORT)) {
+			accCells = CellMap.getAccessibleCellsWithTeleport(this._simulationEntity.getCell()!, this._simulationEntity.getMP(), item);
+			
+		} else if (item.hasEffectTypeIn(<EFFECT_RAW_BUFF_MP, EFFECT_BUFF_MP>)) {
+			integer mp = this._simulationEntity.getMP();
+			for (Effect eff in item.getEffectsOfTypes(<EFFECT_RAW_BUFF_MP, EFFECT_BUFF_MP>))
+				mp += eff.getAppliedValue(null, null, this, this._stats, this._stats, dist, true);
+			accCells = CellMap.getAccessibleCells(this._simulationEntity.getCell()!, mp);
+	
+		}
+		return accCells;
+	}
+	public AccessibleCells? getAccessibleCellsWithItem(Item item, integer dist = 0) {
+		integer key = item.getId() << 10 | this._simulationEntity.getMP();
+		
+		if (!mapContainsKey(this._accessibleCellsWithItem, key)) 
+			this._accessibleCellsWithItem[key] = this.createAccessibleCellsWithItem(item, dist);
+
+		return this._accessibleCellsWithItem[key];
+	}
+	public void clearAccessibleCellsWithItem() {
+		mapClear(this._accessibleCellsWithItem);
+	}
+ 	public AccessibleCells getPathCalcAccessibleCells() {
+		return CellMap.getAccessibleCells(this._simulationEntity.getCell()!, this._simulationEntity.getMP());
+	}
+	
+	public void updateAliveState(AbstractEntity caster) {
+		if (this._stats.getLife() <= 0) {
+			if (this._isAlive) 
+				this.kill(caster);
+		}
+	}
+
+	public Array<Item> getOrderedAndFilteredDangerItemsInTurns(integer turns, AbstractEntity target) {
+		EntityStats entityStats = this.getStatsInTurns(turns);
+		Set<Item> items = this.getOffCooldownsItemsInTurns(turns);
+		
+		Map<Item, real> dangerScorePerItem = [:];
+		for (Item item in items) {
+			real score = 0.0;
+
+			for (Effect eff in item.getEffects()) {
+				if (setContains(Effect.dangerEffects, eff.getType())) {
+					if (eff.getType() == EFFECT_INVERT || eff.getType() == EFFECT_ATTRACT || eff.getType() == EFFECT_PUSH) {
+
+					} else {
+						if (item.getId() == 143) continue;
+						// TODO : gérer plasma
+						
+						score += eff.getScore(null, null, target, this, target.getStats(), entityStats, 0);
+					}
+				}
+			}
+			
+			dangerScorePerItem[item] = item.scaleScoreOnCost(score);
+		}
+		
+		Array<Item> orderedItems = setToArray(items) as Array<Item>;
+		orderedItems = arrayFilter(orderedItems, function(Item i1) => boolean {
+			return dangerScorePerItem[i1] != 0;
+		}) as Array<Item>;
+		orderedItems = arraySort(orderedItems, function(Item i1, Item i2) => real {
+			return dangerScorePerItem[i1]! - dangerScorePerItem[i2]!;
+		}) as Array<Item>;
+
+		return orderedItems;
+	}
+
+	public integer getItemCooldown(Item item) {
+		return mapGet(this._cooldowns, item, -1) as integer;
+	}
+
+	public Array<Item> getOffCooldownMovementItemsOrderedByCost() {
+		Array<Item> offCooldownItems = [];
+		for (Item item in this._movementItems) {
+			if (this._cooldowns[item] == 0)
+				push(offCooldownItems, item);
+		}
+		return offCooldownItems;
+	}
+
+	public Set<Item> getOffCooldownItems() {
+		Set<Item> offCooldownItems = <>;
+		for (Item item in this._items) {
+			if (this._cooldowns[item] == 0)
+				setPut(offCooldownItems, item);
+		}
+		return offCooldownItems;
+	}
+
+	public Set<Item> getOffCooldownsItemsInTurns(integer turns) {
+		Set<Item> offCooldownItems = <>;
+		for (Item item in this._items) {
+			if (this._cooldowns[item] <= turns)
+				setPut(offCooldownItems, item);
+		}
+		return offCooldownItems;
+	}
+
+	public EntityStats getStatsInTurns(integer turns) {
+		EntityStats statsInTurns = new EntityStats();
+
+		statsInTurns.copy(this._stats);
+		statsInTurns.clearEffects();
+		statsInTurns.addEffects(this._stats.getEffectsInTurns(turns));
+		
+		return statsInTurns;
+	}
+
+	public void simulateItemUse(Item item) {			
+		this.useTP(item.getCost());
+		this._cooldowns[item] = item.getBaseCooldown();
+	}
+
+	public void unsimulateItemUse(Item item) {			
+		this.useTP(-item.getCost());
+		this._cooldowns[item] = 0;
+	}	
+	
+	public void kill(AbstractEntity caster) {
+		if (!this._isAlive) return;
+		
+		this._isAlive = false;
+		this.setCell(null);
+		
+		if (caster instanceof Leek) {
+			PassiveEffect? eff = (caster as Leek).getPassiveItemEffects()[EFFECT_KILL_TO_TP];
+			if (eff != null) {
+				eff!.applyPassiveTo(caster, caster, 0, 1);
+			}
+		}
+
+		for (EntityEffect eff in this._stats.getEffects()) {
+			eff.getCaster().removeLaunchedEffect(eff);
+		}
+		this._stats.copy(this._baseStats);
+		for (EntityEffect eff in this._launchedEffects) {
+			eff.getTarget()!.getStats().removeEffect(eff);
+		}
+		this._launchedEffects = [];
+		for (AbstractEntity summon in this._summons) {
+			summon.kill(this);
+		}
+		this._summons = [];
+		this._turnOrder = -1;
+		
+		this._team.update();
+		GAME.triggerEntityDiedEvent();
+	}
+	
+	public void resurrection(Cell cell) {
+		this._stats.setMaxLife(max(10, round(this._stats.getMaxLife() * 0.5)));
+		this._stats.setLife(this._stats.getMaxLife());
+		this._isAlive = true;
+		this.setCell(cell);
+		
+		GAME.triggerEntityDisplacedEvent();
+	}
+	
+	public void removeLaunchedEffect(EntityEffect effect) {
+		removeElement(this._launchedEffects, effect);
+	}
+
+	private void setCell(Cell? cell) {
+		if(getTurn() >= 11) {
+			debug(this + " " + this._cell + " "	+ cell);
+		}
+		// On vérifie que c'est bien nous sur la cellule et qu'il n'y a pas eu l'update d'une autre entité avant
+		if (this._cell != null && this._cell!.getCellEntity() == this)
+			this._cell!.setType(CELL_EMPTY);
+
+		if (cell == null) {
+			this._cell = null;
+		} else {
+			this._cell = cell;
+			this._cell!.setType(CELL_ENTITY, this);
+		}
+	}
+	
+	/**
+	 * Simule l'inversion de 2 entités
+	 * 
+	 * @param otherEntity : entité
+	 **/
+	public void invert(AbstractEntity otherEntity, Cell cellFrom) {
+		var tmpE1Cell = cellFrom;
+		this.setCell(otherEntity.getCell());
+		otherEntity.setCell(tmpE1Cell);
+		
+		if (this._id != getEntity())
+			this.updatePathLength();
+		
+		GAME.triggerEntityDisplacedEvent();
+	}
+	
+	/**
+	 * Simule le déplacement
+	 * 
+	 * @param cell : cellule d'arrivée
+	 * @param mp  : mp utilisés 
+	 **/
+	public void move(Cell cell, integer mp) {
+		this.setCell(cell);
+		this.useMP(mp);
+	}
+	
+	/**
+	 * Simule la téléportation
+	 * 
+	 * @param cell : cellule d'arrivée
+	 **/
+	public teleport(Cell? cell) {
+		if (cell == null) {
+			Debug.error("Teleportation vers une cell null impossible");
+			return;
+		}
+
+		this.setCell(cell);
+
+		if (this._id != getEntity())
+			this.updatePathLength();
+	}
+	
+	/**
+	 * Simule l'attraction
+	 * 
+	 * @param cell : cellule d'arrivée
+	 **/
+	public void attract(Cell cell) {
+		this.setCell(cell);
+		
+		if (this._id != getEntity())
+			this.updatePathLength();
+		
+		GAME.triggerEntityDisplacedEvent();
+	}
+	
+	/**
+	 * Simule la poussée
+	 * 
+	 * @param cell : cellule d'arrivée
+	 **/
+	public void pushTo(Cell cell) {			
+		this.setCell(cell);
+		
+		if (this._id != getEntity())
+			this.updatePathLength();
+		
+		GAME.triggerEntityDisplacedEvent();
+	}
+
+	public void useTP(integer tp) {
+		this._stats.useTP(tp);
+	}
+
+	public void useMP(integer mp) {
+		this._stats.useMP(mp);
+	}
+
+	public static string getTargetsHash(Set<AbstractEntity> targets, Cell cellTarget, boolean isAreaLaserLine = false) {
+		Array<AbstractEntity> orderedTargets = setToArray(targets) as Array<AbstractEntity>;
+		orderedTargets = arraySort(orderedTargets, function(AbstractEntity a1, AbstractEntity a2) => integer {
+			return a1.getId() - a2.getId();
+		}) as Array<AbstractEntity>;
+
+		string targetsHash = "";
+		for (AbstractEntity entity in orderedTargets) {
+			integer dist = 0;
+			if (!isAreaLaserLine) {
+				dist = Cell.getDistance(cellTarget, entity.getCell()!);
+			}
+			targetsHash += entity.getId() + "|" + dist + ",";		
+		}
+
+		return targetsHash;
+	}
+	
+	public printDebug() {
+		return "{name: " + this._name +
+			"\n id: " + this._id +
+			"\n isAlly: " + this._isAlly +
+			"\n isSummon: " + this._isSummon +
+			"\n isStatic: " + this._isStatic +
+			"\n isAlive: " + this._isAlive +
+			"\n items: " + this._items +
+			"\n movementItems: " + this._movementItems +
+			"\n cooldowns: " + this._cooldowns +
+			"\n baseStats: " + this._baseStats +
+			"\n stats: " + this._stats +
+			"\n launchedEffects: " + this._launchedEffects +
+			"\n summons: " + this._summons +
+			"\n cell: " + this._cell + "}\n";
+	}
+
+	public string() {
+		return "{name: " + this._name +
+			", cell: " + this._cell +
+			", isAlly: " + this._isAlly + "}\n";
+	}
+}

@@ -1,0 +1,78 @@
+class Memoize1 {
+	private Map<any, any> mem;
+	private Function<any => any> f;
+	private Function<any => any> paramF;
+	
+	constructor(Function<any => any> funct, Function<any => any> paramFunc) {
+		this.mem = new Map();
+		this.f = funct;
+		this.paramF = paramFunc;
+	}
+	
+	public any apply(any p1) {
+		any key = paramF(p1);
+		any ret = this.mem[key];
+		if (ret != null) {
+			return ret;
+		} else {
+			return this.mem[key] = f(p1);
+		}
+	}
+	
+	public void reset() {
+		this.mem = new Map();	
+	}
+}
+
+class Memoize2 {
+	private Map<any, any> mem;
+	private Function<any, any => any> f;
+	private Function<any, any => any> paramF;
+	
+	constructor(Function<any, any => any> funct, Function<any, any => any> paramFunc) {
+		this.mem = new Map();
+		this.f = funct;
+		this.paramF = paramFunc;
+	}
+	
+	public any apply(any p1, any p2) {
+		any key = paramF(p1, p2);
+		any ret = this.mem[key];
+		if (ret != null) {
+			return ret;
+		} else {
+			return this.mem[key] = f(p1, p2);
+		}
+	}
+	
+	public void reset() {
+		this.mem = new Map();	
+	}
+}
+
+class Memoize3 {
+	private Map<any, any> mem;
+	private Function<any, any, any => any> f;
+	private Function<any, any, any => any> paramF;
+	
+	constructor(Function<any, any, any => any> funct, Function<any, any, any => any> paramFunc) {
+		this.mem = new Map();	
+		this.f = funct;
+		this.paramF = paramFunc;
+	}
+	
+	public any apply(any p1, any p2, any p3) {
+		any key = paramF(p1, p2, p3);
+		any ret = this.mem[key];
+		if (ret != null) {
+			return ret;
+		} else {
+			return this.mem[key] = f(p1, p2, p3);
+		}
+	}
+	
+	public void reset() {
+		this.mem = new Map();	
+	}
+}
+

@@ -1,0 +1,3 @@
+debug(getName(0));
+for(var chipId in getChips(0))
+	debug(chipId + " : "+ getChipName(chipId));

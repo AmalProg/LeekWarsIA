@@ -1,0 +1,61 @@
+include("Outils");
+include("Terrain");
+include("Item");
+
+global _BulbsNameChip = ["puny_bulb" : CHIP_PUNY_BULB, "rocky_bulb" : CHIP_ROCKY_BULB, 
+						"iced_bulb" : CHIP_ICED_BULB, "healer_bulb" : CHIP_HEALER_BULB, 
+						"metallic_bulb" : CHIP_METALLIC_BULB, "fire_bulb" : CHIP_FIRE_BULB, 
+						"lightning_bulb" : CHIP_LIGHTNING_BULB];
+
+
+function hasBulbAlive(type, @entities)
+{
+	for(var e in entities)
+	{
+		if(isSummon(e) and _BulbsNameChip[getName(e)] == type)
+			return true;
+	}
+	return false;
+}
+
+function getNbrBulbAlive(@type, @entities) {
+	var nbr = 0;
+	for(var e in entities)
+	{
+		if(isSummon(e) && (_BulbsNameChip[getName(e)] == type || type == -1))
+			nbr++;
+	}
+	return nbr;
+}
+
+function summonBulbToDef(@item, @leekC, @cellsFeared, ia){
+	return summon(item, getCellToSummonBulbToDef(leekC, item, getBarycentre(cellsFeared)), ia);
+}
+
+function summonBulbToFight(@item, @leekC, @cellsFocus, ia) {
+	return summon(item, getCellToSummonBulbToFight(leekC, item, getBarycentre(cellsFocus)), ia);
+}
+
+function getCellToSummonBulbToDef(@leekC, @chip, @cellFeared)
+{
+	var bestCellsToSummon = [];
+	var aoe = _ItemsInfos[chip]["scopeMax"];
+	for(var cell : var z in getCellsCanFocusWithItem(chip, leekC, 0, []))
+	{
+		if(!_Obstacles[cell] && !_CellsTaken[cell] && !_InacessibleCells[cell])
+			bestCellsToSummon[cell] = getCellDistance(cell, cellFeared);
+	}
+	return getFirstKeyOrderDesc(bestCellsToSummon);
+}
+
+function getCellToSummonBulbToFight(@leekC, @chip, @cellToFocus)
+{
+	var bestCellsToSummon = [];
+	var aoe = _ItemsInfos[chip]["scopeMax"];
+	for(var cell : var z in getCellsCanFocusWithItem(chip, leekC, 0, []))
+	{
+		if(!_Obstacles[cell] && !_CellsTaken[cell] && !_InacessibleCells[cell])
+			bestCellsToSummon[cell] = getCellDistance(cell, cellToFocus);
+	}
+	return getFirstKeyOrderAsc(bestCellsToSummon);
+}

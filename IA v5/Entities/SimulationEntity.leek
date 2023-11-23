@@ -1,0 +1,70 @@
+include("Entity");
+
+class SimulationEntity {
+	private AbstractEntity _entity;
+	private Cell? _initialCell; public Cell? getInitialCell() { return this._initialCell; }
+	private Cell? _cell; public Cell? getCell() { return this._cell; }
+	private integer _initialMp; public integer getInitialMP() { return this._initialMp; }
+	private integer _mp; public integer getMP() { return this._mp; }
+	private integer _initialTp; public integer getInitialTP() { return this._initialTp; }
+	private integer _tp; public integer getTP() { return this._tp; }
+	private integer? _initialEquippedWeaponId; public integer? getInitialEquippedWeaponId() { return this._initialEquippedWeaponId; }
+	private integer? _equippedWeaponId; 
+	public integer? getEquippedWeaponId() { return this._equippedWeaponId; }
+	public void setEquippedWeaponId(integer weaponId) { this._equippedWeaponId = weaponId; }
+	public void resetEquippedWeaponId() { this._equippedWeaponId = this._initialEquippedWeaponId; }
+	
+	constructor(AbstractEntity entity) {
+		this._entity = entity;
+	}
+	
+	public void updateStats() {
+		this._initialCell = this._entity.getCell();
+		this._cell = this._initialCell;
+		this._initialMp = this._entity.getStats().getMP();
+		this._mp = this._initialMp;
+		this._initialTp = this._entity.getStats().getTP();
+		this._tp = this._initialTp;
+		if (this._entity instanceof Leek) {
+			this._initialEquippedWeaponId = (this._entity as Leek).getEquippedWeaponId();
+			this._equippedWeaponId = this._initialEquippedWeaponId;
+		}
+	}
+	public void resetStats() {
+		if (this._cell != null)
+			this._cell!.setType(CELL_EMPTY);
+		if (this._entity.getCell() != null)
+			this._entity.getCell()!.setType(CELL_EMPTY);
+		
+		this._cell = this._initialCell;
+		if (this._cell != null)
+			this._cell!.setType(CELL_ENTITY, this._entity);
+		this._mp = this._initialMp;
+		this._tp = this._initialTp;
+		this._equippedWeaponId = this._initialEquippedWeaponId;
+	}
+	
+	public void simulateAction(Action action) {
+		Item item = action.getItem();
+		integer dist = action.getHitCasterDist();
+		for (Effect eff in item.getEffectsOfTypes(<EFFECT_RAW_BUFF_MP, EFFECT_BUFF_MP>)) {
+			this._mp = this._mp + eff.getAppliedValue(null, null, this._entity, this._entity.getStats(), this._entity.getStats(), dist, true);
+		}
+		for (Effect eff in item.getEffectsOfTypes(<EFFECT_RAW_BUFF_TP, EFFECT_BUFF_TP>)) {
+			this._tp = this._tp + eff.getAppliedValue(null, null, this._entity, this._entity.getStats(), this._entity.getStats(), dist, true);
+		}
+		for (Effect eff in item.getEffectsOfType(EFFECT_INVERT)) {
+			// On ne peut viser qu'une entité avec inversion, et on inverse forcément avec nous même
+			AbstractEntity target = setGetOne(action.getTargets()) as AbstractEntity;
+			MoveCell moveCell = setGetOne(action.getCellsFrom()) as MoveCell;
+
+			SimulationEntity simulationTarget = target.getSimulationEntity();
+			Cell tmpCell = simulationTarget.getCell()!;
+			simulationTarget._cell = moveCell.cell;
+			this._cell = tmpCell;
+			
+			tmpCell.setType(CELL_EMPTY);
+			moveCell.cell.setType(CELL_ENTITY, target);
+		}
+	}
+}

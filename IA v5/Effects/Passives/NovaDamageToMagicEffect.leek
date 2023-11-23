@@ -1,0 +1,16 @@
+include("PassiveEffect");
+
+class NovaDamageToMagicEffect extends PassiveEffect {
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, boolean isSelfCast, Cell cellTarget) {
+		integer finalValue = round(value * this._triggerValue / 100);
+		affectedEntityStats.addEffect(EntityStats.addMagicStatic, EFFECT_RAW_BUFF_MAGIC, finalValue, caster, this._turns, false, this._item.getId(), affectedEntity, this._modifiers);
+	}
+	
+		protected real getEffectScore(real value, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
+		EntityScores targetScores = target.getScores();
+				
+		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
+		integer finalValue = round(value * this._triggerValue / 100);
+		return targetScores.getMagicScore(finalValue, targetStats.getAbso()) * targetAllyMult;			
+	}
+}

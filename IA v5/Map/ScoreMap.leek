@@ -1,0 +1,95 @@
+include("CellMap");
+
+class ScoreMap {
+	private final Map<Cell, real> _scoreCells; public Map<Cell, real> getScoreCells() { return this._scoreCells; }
+	private final real _baseValue;
+	
+	private constructor() {}
+	constructor(Set<Cell> cells, real baseValue) {
+		this._scoreCells = [:];
+		this._baseValue = baseValue;
+		
+		for (Cell cell in cells) {
+			this._scoreCells[cell] = this._baseValue;
+		}
+	}
+	
+	public real getMaxScore() {
+		return mapMax(this._scoreCells) as real;
+	}
+	public real getMinScore() {
+		return mapMin(this._scoreCells) as real;
+	}
+	
+	public real getScore(Cell cell) {
+		return mapGet(this._scoreCells, cell, this._baseValue) as real;
+	}
+	
+	public void resetScore() {
+		for (Cell cell : real score in this._scoreCells) {
+			this._scoreCells[cell] = this._baseValue;
+		}
+	}
+	
+	public void setScores(Set<Cell> cells, real score) {
+		for (Cell cell in cells) {
+			this._scoreCells[cell] = score;
+		}
+	}
+	public void setScore(Cell cell, real score) {
+		this._scoreCells[cell] = score;
+	}
+	
+	public void setHighestScores(Set<Cell> cells, real score) {
+		for (Cell cell in cells) {
+			if (!mapContainsKey(this._scoreCells, cell) || score > this._scoreCells[cell])
+				this._scoreCells[cell] = score;
+		}
+	}
+	public void setHighestScore(Cell cell, real score) {
+		if (!mapContainsKey(this._scoreCells, cell) || score > this._scoreCells[cell])
+			this._scoreCells[cell] = score;
+	}
+	
+	public void setLowestScores(Set<Cell> cells, real score) {
+		for (Cell cell in cells) {
+			if (!mapContainsKey(this._scoreCells, cell) || score < this._scoreCells[cell])
+				this._scoreCells[cell] = score;
+		}
+	}
+	public void setLowestScore(Cell cell, real score) {
+		if (!mapContainsKey(this._scoreCells, cell) || score < this._scoreCells[cell])
+			this._scoreCells[cell] = score;
+	}
+	
+	public void addScores(Set<Cell> cells, real score) {
+		for (Cell cell in cells) {
+			if (!mapContainsKey(this._scoreCells, cell))
+				this._scoreCells[cell] = score;
+			else
+				this._scoreCells[cell] += score;
+		}
+	}
+	public void addScore(Cell cell, real score) {
+		if (!mapContainsKey(this._scoreCells, cell))
+			this._scoreCells[cell] = score;
+		else
+			this._scoreCells[cell] += score;
+	}
+	
+	public void removeScores(Set<Cell> cells, real score) {
+		this.addScores(cells, -score);
+	}
+	public void removeScore(Cell cell, real score) {
+		this.addScore(cell, -score);
+	}
+	
+	public void debugMap() {
+		for (Cell cell : real score in this._scoreCells) {
+			if (score == this._baseValue)
+				markText([cell.id], "-", COLOR_RED);
+			else
+				markText([cell.id], round(score), COLOR_RED);
+		}
+	}
+}

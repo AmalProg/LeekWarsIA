@@ -1,0 +1,849 @@
+include("../Debug");
+include("CellContent");
+include("../CellContent/EntityEffect");
+include("../Map/Cell");
+include("../Item/Chip");
+include("../CellContent/EntityScoreDiviser");
+include("../CellContent/EntityScore");
+include("EntityStats");
+
+class Entity extends CellContent {
+	/** entities pool **/
+	public static entities = [];
+	public static get(id) {
+		return Entity.entities[id];
+	}
+	/** fin entities pool **/
+	
+	public id;
+	public type;
+	public farmerName;
+	public name;
+	public level;
+	public isAnAlly;
+	public isASummon;
+	public isAStatic;
+	public alive; public alive() { return this.alive;}
+	public items = [];
+	public movementItems = [];
+	public cooldowns = [];
+
+	public baseStats; public getBaseStats() { return this.baseStats; }
+	public stats; public getStats() { return this.stats; }
+	public scores;	public getScores() { return this.scores; }
+	
+	public cell;
+	public launchedEffects = [];
+	public summons = [];
+	public leekTurnOrder;
+	public allTurnOrder;
+
+	constructor(id) {
+		this.id = id;
+		this.contentType = CELL_ENTITY;
+		
+		initStats();
+	}
+	
+	public calculateScore(game) {
+		// entrée entre 0 et 2
+		var relVal = this.stats.getRel() / EntityScoreDiviser.rel;
+		var absoVal = this.stats.getAbso() / EntityScoreDiviser.abso;
+		var lifeVal = this.stats.life / EntityScoreDiviser.maxLife;
+		var maxLifeVal = this.stats.maxLife / EntityScoreDiviser.maxLife;
+		var strVal = this.stats.getStrength() / EntityScoreDiviser.strength;
+		var magicVal = this.stats.getMagic() / EntityScoreDiviser.magic;
+		var wisdomVal = this.stats.getWisdom() / EntityScoreDiviser.wisdom;
+		var resistanceVal = this.stats.getResistance() / EntityScoreDiviser.resistance;
+		var agilityVal = this.stats.getAgility() / EntityScoreDiviser.agility;
+		var dmgReturnVal =  this.stats.getDmgReturn() / EntityScoreDiviser.dmgReturn;
+		var mpVal = this.stats.getMP() / EntityScoreDiviser.mp;
+		var tpVal = this.stats.getTP() / EntityScoreDiviser.tp;
+		var lifePercentage = this.stats.life / this.stats.maxLife;
+		var turnOrderVal = this.leekTurnOrder / EntityScoreDiviser.turnOrder;
+		var maxTurnOrderVal = count(game.getEntitiesGroup().leeks) / EntityScoreDiviser.turnOrder;
+		if (this.isASummon) {
+			turnOrderVal = 0;
+			maxTurnOrderVal = 0;
+		}
+				
+		this.scores = new EntityScore();
+
+		if (this.alive) {
+			var wisdomItemsCount = 0;
+			var resistanceItemsCount = 0;
+			var agilityItemsCount = 0;
+			var damageItemCount = 0;
+			var poisonItemCount = 0;
+			for (var item in this.items) {
+				var hasDamageEffect = false;
+				var hasPoisonEffect = false;
+				for (var eff in item.effects) {
+					if (eff.type == EFFECT_DAMAGE) {
+						hasDamageEffect = true;
+					}
+					if (eff.type == EFFECT_POISON) {
+						hasPoisonEffect = true;
+					}
+					
+					if(item.cooldown == 0) {
+						if (eff.type == EFFECT_HEAL or eff.type == EFFECT_BOOST_MAX_LIFE) {
+							if (eff.turns == -1) wisdomItemsCount += 2;
+							wisdomItemsCount++;
+							break;
+						} else if (eff.type == EFFECT_RELATIVE_SHIELD or eff.type == EFFECT_ABSOLUTE_SHIELD) {
+							if (eff.turns == -1) resistanceItemsCount += 2;
+							resistanceItemsCount++;
+							break;
+						} else if (eff.type == EFFECT_DAMAGE_RETURN) {
+							if (eff.turns == -1) agilityItemsCount += 2;
+							agilityItemsCount++;
+							break;
+						}
+					}
+				}
+				
+				if (hasDamageEffect) {
+					damageItemCount++;
+				}
+				if (hasPoisonEffect) {
+					poisonItemCount++;
+				}
+				
+			}
+			var wisdomItemsVal = wisdomItemsCount / 3;
+			var resistanceItemsVal = resistanceItemsCount / 3;
+			var agilityItemsVal = agilityItemsCount / 2;
+			
+			var healingT1 = 0;
+			var healingT2 = 0;
+			var poisonDmgT1 = 0;
+			var poisonDmgT2 = 0;
+			var hasPropagatingPoison = false;
+			var strBuffVal = 0;
+			var agilityBuffVal = 0;
+			var tpBuffVal = 0;
+			var mpBuffVal = 0;
+			var tpShackleVal = 0;
+			var mpShackleVal = 0;
+			var strengthShackleVal = 0;
+			for (var effect in this.stats.effects) {
+				if (effect.type == EFFECT_POISON) {
+					if (effect.turns >= 1)
+						poisonDmgT1 += effect.value;
+					if (effect.turns >= 2)
+						poisonDmgT2 += effect.value;
+				}
+				if (effect.type == EFFECT_PROPAGATION) {
+					hasPropagatingPoison = true;	
+				}
+				
+				
+				
+				if (effect.type == EFFECT_HEAL) {
+					if (effect.turns >= 1)
+						healingT1 += effect.value;
+					if (effect.turns >= 2)
+						healingT2 += effect.value;
+				}
+				
+				if (ItemEffect.buffEffects[effect.type] or ItemEffect.rawBuffEffects[effect.type]) {
+					if (effect.type == EFFECT_BUFF_STRENGTH or effect.type == EFFECT_RAW_BUFF_STRENGTH) {
+						strBuffVal += effect.value / EntityScoreDiviser.strength;
+					} else if (effect.type == EFFECT_BUFF_AGILITY or effect.type == EFFECT_RAW_BUFF_AGILITY) {
+						agilityBuffVal += effect.value / EntityScoreDiviser.agility;
+					} else if (effect.type == EFFECT_BUFF_TP or effect.type == EFFECT_RAW_BUFF_TP) {
+						tpBuffVal += effect.value / EntityScoreDiviser.tp;
+					} else if (effect.type == EFFECT_BUFF_MP or effect.type == EFFECT_RAW_BUFF_MP) {
+						mpBuffVal += effect.value / EntityScoreDiviser.mp;
+					}
+				} 
+				
+				if (effect.type == EFFECT_SHACKLE_MP) {
+					mpShackleVal += effect.value / EntityScoreDiviser.mp;
+				} else if (effect.type == EFFECT_SHACKLE_TP) {
+					tpShackleVal += effect.value / EntityScoreDiviser.tp;
+				} else if (effect.type == EFFECT_SHACKLE_TP) {
+					strengthShackleVal += effect.value / EntityScoreDiviser.strength;
+				}
+			}
+			
+			for (var effect in this.launchedEffects) {
+				
+			}
+			
+			var nextTurnEffects = this.stats.getEffectsInTurns(1, this);
+			// this next turn
+			var thisNextStats = new EntityStats();
+			thisNextStats.copy(this.stats);
+			thisNextStats.removeEffects(this.stats.effects);
+			thisNextStats.addEffects(nextTurnEffects);
+			var nextRelVal = thisNextStats.getRel() / EntityScoreDiviser.rel;
+			var nextAbsoVal = thisNextStats.getAbso() / EntityScoreDiviser.abso;
+			var nextStrVal = thisNextStats.getStrength() / EntityScoreDiviser.strength;
+			var nextMagicVal = thisNextStats.getMagic() / EntityScoreDiviser.magic;
+			var nextDmgReturnVal =  thisNextStats.getDmgReturn() / EntityScoreDiviser.dmgReturn;
+
+			var nextStrBuffVal = 0;
+			var nextAgilityBuffVal = 0;
+			var nextTpBuffVal = 0;
+			var nextMpBuffVal = 0;
+			
+			for (var effect in nextTurnEffects) {
+				if (ItemEffect.buffEffects[effect.type] or ItemEffect.rawBuffEffects[effect.type]) {
+					if (effect.type == EFFECT_BUFF_STRENGTH or effect.type == EFFECT_RAW_BUFF_STRENGTH) {
+						nextStrBuffVal += effect.value / EntityScoreDiviser.strength;
+					} else if (effect.type == EFFECT_BUFF_AGILITY or effect.type == EFFECT_RAW_BUFF_AGILITY) {
+						nextAgilityBuffVal += effect.value / EntityScoreDiviser.agility;
+					} else if (effect.type == EFFECT_BUFF_TP or effect.type == EFFECT_RAW_BUFF_TP) {
+						nextTpBuffVal += effect.value / EntityScoreDiviser.tp;
+					} else if (effect.type == EFFECT_BUFF_MP or effect.type == EFFECT_RAW_BUFF_MP) {
+						nextMpBuffVal += effect.value / EntityScoreDiviser.mp;
+					}
+				}
+			}
+			
+			var enemiesGroup = this.isAnAlly ? game.getEnemiesGroup() : game.getAlliesGroup();
+			var alliesGroup = this.isAnAlly ? game.getAlliesGroup() : game.getEnemiesGroup();
+
+			var meanEnemyStrength = 0;
+			var maxEnemyStrength = 0;
+			var totalEnemiesLife = 0;
+
+			for (var enemy in enemiesGroup.alive) {
+				meanEnemyStrength += enemy.stats.getStrength();
+				if (maxEnemyStrength < enemy.stats.getStrength())
+					maxEnemyStrength = enemy.stats.getStrength();
+				
+				if (!enemy.isASummon) {
+					totalEnemiesLife += enemy.stats.life;
+				}
+			}
+			var aliveEnemiesCount = count(enemiesGroup.alive);
+			var meanEnemyStrengthVal = meanEnemyStrength / aliveEnemiesCount / EntityScoreDiviser.strength;
+			var maxEnemyStrengthVal = maxEnemyStrength / EntityScoreDiviser.strength;
+			
+			var myPathLength = Map.getMyPathLength(this.cell, 60);
+			var totalAntidoteCount = 0;
+			var antidoteBeforeTurnCount = 0;
+			var totalRemoveShacklesCount = 0;
+			var removeShacklesBeforeTurnCount = 0;
+			var totalAlliesLife = 0;
+
+			for (var ally in alliesGroup.alive) {
+				if (ally.items[CHIP_ANTIDOTE] and ally.cooldowns[CHIP_ANTIDOTE] == 0) {
+					totalAntidoteCount++;
+					
+					// si cet allié joue avant moi
+					if (ally.leekTurnOrder < this.leekTurnOrder and myPathLength[ally.cell.id] < 12) {
+						antidoteBeforeTurnCount++;
+					}
+				}
+				if (ally.items[CHIP_MANUMISSION] and ally.cooldowns[CHIP_MANUMISSION] == 0) {
+					totalRemoveShacklesCount++;
+					
+					// si cet allié joue avant moi
+					if (ally.leekTurnOrder < this.leekTurnOrder and myPathLength[ally.cell.id] < 12) {
+						removeShacklesBeforeTurnCount++;
+					}
+				}
+				
+				if (!ally.isASummon) {
+					totalAlliesLife += ally.stats.life;
+				}
+			}
+			
+			var advantageMult = max(1, (totalEnemiesLife - totalAlliesLife) / EntityScoreDiviser.maxLife / 2);
+			
+			// le next ally de l'entité jouant actuellement
+			var alliesLeeksOrder = this.isAnAlly ? game.alliesLeeksOrder : game.enemiesLeeksOrder;
+			var currentNextAlly = null;
+			var currentNextAllyTurnOrder = 99;
+			for (var leekId : var turnOrder in alliesLeeksOrder) {
+				currentNextAlly = Entity.get(leekId);
+				currentNextAllyTurnOrder = currentNextAlly.leekTurnOrder;
+				if (currentNextAllyTurnOrder != 0) {
+					break;
+				}
+			}
+			var enemiesLeeksOrder = this.isAnAlly ? game.enemiesLeeksOrder : game.alliesLeeksOrder;
+			var currentNextEnemy = null;
+			var currentNextEnemyTurnOrder = 99;
+			var nextEnemyStrVal = 0;
+			var nextEnemyMagicVal = 0;
+			for (var leekId : var turnOrder in enemiesLeeksOrder) {
+				currentNextEnemy = Entity.get(leekId);
+				currentNextEnemyTurnOrder = currentNextEnemy.leekTurnOrder - (this.isAnAlly ? 0 : 1);
+				if (currentNextEnemyTurnOrder != 0) {
+					nextEnemyStrVal = currentNextEnemy.stats.strength / EntityScoreDiviser.strength
+					nextEnemyMagicVal = currentNextEnemy.stats.magic / EntityScoreDiviser.strength;
+					break;
+				}
+			}
+			
+			var willDieNextTurn = poisonDmgT1 > this.stats.life + healingT1 && (this.isAnAlly ? game.getAlliesLeeksOrder()[this.id] == 1 : game.getEnemiesLeeksOrder()[this.id] == 0);
+			
+			var aliveLeeksCount = count(game.leeksOrder);
+
+			var nearAlliesLeeksCount = 0;
+			var nextAlly = null;
+			var totalEnemiesCount = count(enemiesGroup.leeks);
+			var enemiesPathLength = [];
+			var pathLength = Map.getMyPathLength(this.cell, 60);
+			for (var entity in game.getEntitiesGroup().aliveLeeks) {
+				if (entity.isAnAlly == this.isAnAlly and entity.id != this.id) {
+					if (pathLength[entity.cell.id] != null and pathLength[entity.cell.id].mp < 10)
+						nearAlliesLeeksCount++;
+					
+					var turnOrderForMe = entity.leekTurnOrder - this.leekTurnOrder;
+					if (turnOrderForMe < 0)
+						turnOrderForMe = aliveLeeksCount + turnOrderForMe;
+					if (nextAlly == null or turnOrderForMe < nextAlly.turnOrderForMe)
+						nextAlly = {ally: entity, turnOrderForMe: turnOrderForMe};
+				}
+			}
+			
+			var strEnemiesPlayingBeforeMe = 0;
+			var leeksPlayingBeforeAlly = 0;
+			var allyPlayed = false;
+			for (var turnOrder : var entity in game.turnOrder) {
+				if (entity.id == this.id)
+					break;
+				if (entity.isAnAlly and this.isAnAlly or (!entity.isAnAlly and !this.isAnAlly))
+					allyPlayed = true;
+				
+				if (!entity.isASummon)
+					leeksPlayingBeforeAlly++;
+				
+				strEnemiesPlayingBeforeMe += entity.stats.strength / EntityScoreDiviser.strength;
+			}
+			var leeksPlayingBeforeAllyMult =  1 + ((leeksPlayingBeforeAlly - 1)/3);
+
+			
+			this.scores.isolated = 1;
+			if (nearAlliesLeeksCount <= totalEnemiesCount / 2) {
+				this.scores.isolated = 1.5 + turnOrderVal*2 - nearAlliesLeeksCount/totalEnemiesCount;
+			}
+			
+			var nearEnemiesLeeksCount = 0;
+			var nextEnemy = null;
+			for (var entity in game.getEntitiesGroup().aliveLeeks) {
+				if (entity.isAnAlly != this.isAnAlly) {
+					if (pathLength[entity.cell.id] != null and pathLength[entity.cell.id].mp < 10)
+						nearEnemiesLeeksCount++;
+					
+					if (entity.id != this.id) {
+						var turnOrderForMe = entity.leekTurnOrder - this.leekTurnOrder;
+						if (turnOrderForMe < 0)
+							turnOrderForMe = aliveLeeksCount + turnOrderForMe;
+						if (nextEnemy == null or turnOrderForMe < nextEnemy.turnOrderForMe)
+							nextEnemy = {enemy: entity, turnOrderForMe: turnOrderForMe};;
+					}
+				}
+			}
+			
+			this.scores.nearEnemies = 1;
+			if (nearEnemiesLeeksCount >= totalEnemiesCount / 2) {
+				this.scores.nearEnemies = 1 + turnOrderVal*2 + 0.5*nearEnemiesLeeksCount/totalEnemiesCount;
+			}
+			
+			this.scores.desperated = 0;
+			if (count(alliesGroup.aliveLeeks) == 1 and count(enemiesGroup.aliveLeeks) > 1 and Map.inaccessibleCells[this.cell.id] == null)
+				this.scores.desperated = 1;
+			
+			if (!this.isASummon)
+				this.scores.inDanger = ((3.5 - lifeVal) * ((1.75*nextEnemyStrVal) - (absoVal/2 + relVal))) * (0.66 / currentNextEnemyTurnOrder);
+			else
+				this.scores.inDanger = 1;
+			if (this.scores.inDanger < 1)
+				this.scores.inDanger = 1;
+			
+			var enemiesPlayingBeforeNextAllyCount = (!this.isASummon and nextAlly != null) ? nextAlly.turnOrderForMe - 1 : 0;
+			var enemiesPlayingBeforeNextAllyMult = 1;
+			if (enemiesPlayingBeforeNextAllyCount > 0)
+				enemiesPlayingBeforeNextAllyMult = 1 + ((enemiesPlayingBeforeNextAllyCount-1)/3);
+			
+			// si joue prochain tour et meurt du poison, ça ne sert à rien de faire des dégâts
+			var damageScore = 0;
+			if (!willDieNextTurn) {
+				// nbrEnemiesEffects / nbrAlliesEffect
+				damageScore = 2 - (lifeVal / (0.5 + 0.7*lifeVal));
+				damageScore *= 1 + maxTurnOrderVal - turnOrderVal;
+				damageScore *= enemiesPlayingBeforeNextAllyMult;
+				damageScore *= leeksPlayingBeforeAllyMult;
+				damageScore *= advantageMult;
+				this.scores.damage = damageScore;
+				this.scores.damage *= this.scores.isolated * this.scores.nearEnemies;
+				this.scores.afterEffect = damageScore;
+				this.scores.afterEffect *= this.scores.isolated * this.scores.nearEnemies;
+				if (poisonDmgT1 > this.stats.life / 5 and antidoteBeforeTurnCount >= 1) {
+					this.scores.poison = damageScore * (1 - poisonDmgT1 / this.stats.life);
+				} else if (totalAntidoteCount == 0) {
+					this.scores.poison = damageScore * 1.5;
+				} else {
+					this.scores.poison = damageScore;
+				}
+				this.scores.poison *= this.scores.isolated * this.scores.nearEnemies * 0.5;
+				this.scores.lifeDamage = damageScore;
+				this.scores.lifeDamage *= this.scores.isolated * this.scores.nearEnemies;
+				
+				this.scores.novaDamage = maxLifeVal / (0.5 + 0.5*maxLifeVal);
+			}
+			
+
+			this.scores.heal = (2 - (2*lifePercentage*lifePercentage)) * 0.8 + 2 - (2*lifeVal / (2 + 0.9*lifeVal)) * 1.2;
+			this.scores.heal /= 2;
+			this.scores.heal *= 1 + maxTurnOrderVal - turnOrderVal;
+			this.scores.heal *= this.scores.isolated * this.scores.nearEnemies;
+			this.scores.heal *= this.scores.inDanger;
+
+			var maxLifeScore = 1 + sin(0.4 * (4 - maxLifeVal));
+			if (maxLifeVal > 8)
+				maxLifeScore = 0;
+			this.scores.novaVitality = maxLifeScore;
+			this.scores.boostMaxLife = maxLifeScore;
+			
+			if (damageItemCount > poisonItemCount / 3) {
+				if (strVal > 2 or strVal < 0)
+					this.scores.buffStrength = 0;
+				else 
+					this.scores.buffStrength = 1 + sin(4.6 - 3*strVal);
+				
+				this.scores.buffStrength *= 1 + maxTurnOrderVal - turnOrderVal;
+				this.scores.rawBuffStrength = this.scores.buffStrength;
+			}
+
+			if (poisonItemCount > damageItemCount / 3) {
+				if (magicVal > 2 or magicVal < 0)
+					this.scores.rawBuffMagic = 0;
+				else 
+					this.scores.rawBuffMagic = 1 + sin(4.6 - 3*magicVal);
+				this.scores.rawBuffMagic *= 1 + maxTurnOrderVal - turnOrderVal;
+			}
+
+			//a = agilityNbrItems;
+			if (agilityVal < 0 or agilityVal > 2)
+				this.scores.buffWisdom = 0;
+			else 
+				this.scores.buffAgility = this.scores.buffStrength * 0.5 + this.scores.rawBuffMagic * 0.5 + max(0, 1.8 - (-1.25 + 1.3*agilityVal)*(-1.25 + 1.3*agilityVal));
+			this.scores.buffAgility /= 2;
+			this.scores.buffAgility *= 1 + maxTurnOrderVal - turnOrderVal;
+			this.scores.rawBuffAgility = this.scores.buffAgility;
+
+			if (wisdomVal < 0 or wisdomVal > 2)
+				this.scores.buffWisdom = 0;
+			else 
+				this.scores.buffWisdom = wisdomItemsVal + max(0, 1.8 - (-1.25 + 1.3*wisdomVal)*(-1.25 + 1.3*wisdomVal));
+			this.scores.buffWisdom /= 2;
+			this.scores.buffWisdom *= 1 + maxTurnOrderVal - turnOrderVal;
+			this.scores.rawBuffWisdom = this.scores.buffWisdom;
+
+			if (!this.isAStatic) {
+				if (mpVal < 0 or mpVal > 2)
+					this.scores.buffMp = 0;
+				else
+					this.scores.buffMp = max(0, 1.8 - (-1.25 + 1.3*mpVal)*(-1.25 + 1.3*mpVal));
+				this.scores.buffMp *= 1 + maxTurnOrderVal - turnOrderVal;
+				this.scores.rawBuffMp = this.scores.buffMp;
+			}
+			if (tpVal < 0 or tpVal > 2)
+				this.scores.buffMp = 0;
+			else
+				this.scores.buffTp = max(0, 1.8 - (-1.25 + 1.3*tpVal)*(-1.25 + 1.3*tpVal));
+			this.scores.buffTp *= 1 + maxTurnOrderVal - turnOrderVal;
+			this.scores.rawBuffTp = this.scores.buffTp;
+			
+			var shackleMult = 1;
+			if (tpShackleVal >= 0.2 or mpShackleVal >= 0.2 or strengthShackleVal >= 0.2 and antidoteBeforeTurnCount >= 1) {
+				shackleMult = (1 - (tpShackleVal + mpShackleVal + strengthShackleVal));
+			} else if (totalRemoveShacklesCount == 0) {
+				shackleMult = 1.5;
+			}
+			
+			if (!willDieNextTurn) {
+				//a = agilityNbrItems;
+				this.scores.shackleAgility = 2*agilityVal;
+				this.scores.shackleAgility *= 1 + 3*(maxTurnOrderVal - turnOrderVal);
+				this.scores.shackleAgility *= enemiesPlayingBeforeNextAllyMult;
+				this.scores.shackleAgility *= leeksPlayingBeforeAllyMult;
+				this.scores.shackleAgility *= shackleMult;
+				
+				this.scores.shackleWisdom = 2*wisdomVal;
+				this.scores.shackleWisdom *= 1 + 3*(maxTurnOrderVal - turnOrderVal);
+				this.scores.shackleWisdom *= enemiesPlayingBeforeNextAllyMult;
+				this.scores.shackleWisdom *= leeksPlayingBeforeAllyMult;
+				this.scores.shackleWisdom *= shackleMult;
+
+				if (!this.isAStatic) {
+					if (mpVal < 0)
+						this.scores.shackleMp = 0;
+					else
+						this.scores.shackleMp = 2 - 0.5*mpVal;
+					this.scores.shackleMp *= 1 + 3*(maxTurnOrderVal - turnOrderVal);
+					this.scores.shackleMp *= enemiesPlayingBeforeNextAllyMult;
+					this.scores.shackleMp *= leeksPlayingBeforeAllyMult;
+					this.scores.shackleMp *= shackleMult;
+				}
+				
+				if (tpVal < 0)
+					this.scores.shackleTp = 0;
+				else
+					this.scores.shackleTp = 2 - 0.5*tpVal;
+				this.scores.shackleTp *= 1 + 3*(maxTurnOrderVal - turnOrderVal);
+				this.scores.shackleTp *= enemiesPlayingBeforeNextAllyMult;
+				this.scores.shackleTp *= leeksPlayingBeforeAllyMult;
+				this.scores.shackleTp *= shackleMult;
+
+				if (damageItemCount > poisonItemCount / 3) {
+					this.scores.shackleStrength = 2*strVal;
+					this.scores.shackleStrength *= 1 + 3*(maxTurnOrderVal - turnOrderVal);
+					this.scores.shackleStrength *= enemiesPlayingBeforeNextAllyMult;
+					this.scores.shackleStrength *= leeksPlayingBeforeAllyMult;
+					this.scores.shackleStrength *= shackleMult;
+				}
+
+				if (poisonItemCount > damageItemCount / 3) {
+					this.scores.shackleMagic = 2*magicVal;
+					this.scores.shackleMagic *= 1 + 3*(maxTurnOrderVal - turnOrderVal);
+					this.scores.shackleMagic *= enemiesPlayingBeforeNextAllyMult;
+					this.scores.shackleMagic *= leeksPlayingBeforeAllyMult;
+					this.scores.shackleMagic *= shackleMult;
+				}
+			}
+
+			
+			if (meanEnemyStrengthVal >= 0.8 / (aliveEnemiesCount + 1) or absoVal < 0 or relVal < 0) {
+				if (absoVal < -0.2)
+					this.scores.abso = 2.1;
+				else
+					this.scores.abso = max(0, (1 - (1.5*(absoVal - 1.1)) / (abs(absoVal - 1) + 0.5)));
+				this.scores.abso += max(0, (2 - 1.7*relVal)) + maxEnemyStrengthVal * 0.2;
+				this.scores.abso /= 2.2; 
+				this.scores.abso *= 1 + maxTurnOrderVal - turnOrderVal;
+				this.scores.abso *= this.scores.isolated * this.scores.nearEnemies;
+				this.scores.abso *= this.scores.inDanger;
+				this.scores.abso *= enemiesPlayingBeforeNextAllyMult;
+				this.scores.abso *= leeksPlayingBeforeAllyMult;
+			
+				if (meanEnemyStrengthVal >= 0.8 / (aliveEnemiesCount + 1)) {
+					this.scores.rel = (2 - 1.7*absoVal) * 0.6 + (1 - (1.5*(relVal - 1.1)) / (abs(relVal - 1) + 0.5)) * 1.4 * 1.3 + maxEnemyStrengthVal * 0.2;
+					this.scores.rel /= 2.2;
+					this.scores.rel *= 1 + maxTurnOrderVal - turnOrderVal;
+					this.scores.rel *= this.scores.isolated * this.scores.nearEnemies;
+					this.scores.rel *= this.scores.inDanger;
+					this.scores.rel *= enemiesPlayingBeforeNextAllyMult;
+					this.scores.rel *= leeksPlayingBeforeAllyMult;
+				}
+
+				this.scores.damageReturn = (this.scores.abso + this.scores.rel) / 4;
+				this.scores.damageReturn *= 1 + turnOrderVal;
+				this.scores.damageReturn *= enemiesPlayingBeforeNextAllyMult;
+				this.scores.damageReturn *= leeksPlayingBeforeAllyMult;
+				
+				this.scores.buffResistance = resistanceItemsVal + max(0, (1.8 - (-1.25 + 1.3*resistanceVal)*(-1.25 + 1.3*resistanceVal)));
+				this.scores.buffResistance /= 2;
+				this.scores.buffResistance *= 1 + maxTurnOrderVal - turnOrderVal;
+				this.scores.rawBuffResistance = this.scores.buffResistance;
+			}
+
+			if (absoVal < 0) 
+				this.scores.absoVulnerability = 3 - 0.4*absoVal;
+			else 
+				this.scores.absoVulnerability = max(0, (1 - (1.5*(absoVal - 1.1)) / (abs(absoVal - 1) + 0.5)));
+
+			this.scores.absoVulnerability *= 1 + maxTurnOrderVal - turnOrderVal;
+			this.scores.absoVulnerability *= this.scores.isolated * this.scores.nearEnemies;
+			this.scores.absoVulnerability *= this.scores.inDanger;
+			this.scores.absoVulnerability *= meanEnemyStrengthVal;
+			this.scores.absoVulnerability *= enemiesPlayingBeforeNextAllyMult;
+			this.scores.absoVulnerability *= leeksPlayingBeforeAllyMult;
+			this.scores.absoVulnerability *= advantageMult;
+
+			if (relVal < 0.2 and this.isAnAlly)
+				this.scores.relVulnerability = 3 - 0.7*relVal;
+			else 
+				this.scores.relVulnerability = (1 - (1.5*(relVal - 1.1)) / (abs(relVal - 1) + 0.5));
+			this.scores.relVulnerability *= 1 + maxTurnOrderVal - turnOrderVal;
+			this.scores.relVulnerability *= this.scores.isolated * this.scores.nearEnemies;
+			this.scores.relVulnerability *= this.scores.inDanger;
+			this.scores.relVulnerability *= meanEnemyStrengthVal;
+			this.scores.relVulnerability *= enemiesPlayingBeforeNextAllyMult;
+			this.scores.relVulnerability *= leeksPlayingBeforeAllyMult;
+			this.scores.relVulnerability *= advantageMult;
+
+			this.scores.stealAbso = this.scores.abso;
+
+			this.scores.antidote = 4 * poisonDmgT1 / this.stats.life + 5 * poisonDmgT2 / this.stats.life;
+			this.scores.antidote *= 1 + maxTurnOrderVal - turnOrderVal;
+			this.scores.antidote *= (hasPropagatingPoison ? 3 : 1);
+			this.scores.antidote *= this.scores.isolated * this.scores.nearEnemies;
+			
+			// regarder tous les buffs présent
+			// regarder les poisons pour les dissiper ou ne pas les dissiper sur les enemies
+			// ça ne sert à rien de debuff protect alors qu'on joue poison
+			this.scores.debuffProtect = strEnemiesPlayingBeforeMe * damageScore / 2 * ((absoVal + relVal + dmgReturnVal)*0.7 + (nextAbsoVal + nextRelVal + nextDmgReturnVal)*1.3) / 2;
+			var tooManyShieldsVal = this.stats.abso * 0.4 / (EntityScoreDiviser.abso / 2) + this.stats.rel * 0.4 / (EntityScoreDiviser.rel / 2.5);
+			this.scores.debuffProtect *= tooManyShieldsVal / 10;
+			this.scores.debuffDanger = nextStrBuffVal*3 + nextAgilityBuffVal + nextTpBuffVal*4 + nextMpBuffVal*1.5;
+			this.scores.debuff = this.scores.debuffProtect + this.scores.debuffDanger;
+			this.scores.debuff -= (3 * poisonDmgT1 / this.stats.life + 4 * poisonDmgT2 / this.stats.life);
+			this.scores.debuff -= mpShackleVal / 3 + tpShackleVal / 4 + strengthShackleVal /2;
+			this.scores.debuff -= (absoVal < 0) ? (-absoVal * 3) : 0;
+			this.scores.debuff -= (relVal < 0) ? (-relVal * 4) : 0;
+			this.scores.debuff *= 1 + maxTurnOrderVal - turnOrderVal;
+			this.scores.debuff *= this.scores.isolated * this.scores.nearEnemies;
+			this.scores.debuff *= advantageMult;
+			if (absoVal < 0)
+				debug(this.name + " / " + this.scores.debuff)
+			if (relVal < 0)
+				debug(this.name + " / " + this.scores.debuff)
+			
+			this.scores.removeShackles = 1;
+			this.scores.removeShackles *= this.scores.isolated * this.scores.nearEnemies;
+
+			this.scores.teleport = -3 + 2.5*this.scores.isolated + -2 + 1.7*this.scores.nearEnemies;
+			this.scores.teleport *= 10 * this.scores.desperated;
+			
+			this.scores.teleportAggro = 1;
+			this.scores.teleportAggro *= 1 + maxTurnOrderVal - turnOrderVal;
+			this.scores.teleportAggro *= advantageMult;
+			
+			this.scores.invert = 1;
+			this.scores.invert *= this.scores.isolated * this.scores.nearEnemies;
+			this.scores.invert *= 1 + turnOrderVal;
+			this.scores.invert *= enemiesPlayingBeforeNextAllyMult;
+			this.scores.invert *= leeksPlayingBeforeAllyMult;
+			this.scores.invert *= advantageMult;
+			
+			// TODO est vraiment utile à l'ennemi ?
+			// si joue prochain tour et meurt du poison, on ne veux pas tuer
+			if (!willDieNextTurn) {
+				this.scores.kill = 1;
+				this.scores.kill *= 1 + maxTurnOrderVal - turnOrderVal;
+			}
+			
+			
+			/**********************************************************
+			 * 							SUMMONS
+			 **********************************************************/
+			var nbSummonPuny = 0;
+			var nbSummonHeal = 0;
+			var nbSummonRes = 0;
+			var nbSummonDamage = 0;
+			var nbSummonPoison = 0;
+			var nbSummonMove = 0;
+			var nbSummonNova = 0;
+			for(var bulb in alliesGroup.bulbs) {
+				var bulbChipName = Bulb.bulbsNameChip[bulb.name];
+				if (bulbChipName == CHIP_PUNY_BULB)
+					nbSummonPuny++;
+				else if (bulbChipName == CHIP_HEALER_BULB)
+					nbSummonHeal++;
+				else if (bulbChipName == CHIP_METALLIC_BULB)
+					nbSummonRes++;
+				else if (bulbChipName == CHIP_LIGHTNING_BULB or bulbChipName == CHIP_FIRE_BULB or bulbChipName == CHIP_ICED_BULB
+ or bulbChipName == CHIP_ROCKY_BULB)
+					nbSummonDamage++;
+				else if (bulbChipName == CHIP_WIZARD_BULB)
+					nbSummonPoison++;
+				else if (bulbChipName == CHIP_TACTICIAN_BULB)
+					nbSummonMove++;
+				else if (bulbChipName == CHIP_SAVANT_BULB)
+					nbSummonNova++;
+			}
+			
+			this.scores.summonPuny = (5 - nbSummonPuny) / 5;
+			
+			this.scores.summonHeal = this.scores.heal / 1.5 + (5 - nbSummonHeal) / 5;
+			
+			this.scores.summonRes = (this.scores.abso + this.scores.rel) / 3 + (5 - nbSummonRes) / 5;
+			
+			this.scores.summonDamage = (5 - nbSummonDamage) / 5;
+			
+			this.scores.summonPoison = (5 - nbSummonPoison) / 5;
+			
+			this.scores.summonMove = (5 - nbSummonMove) / 5;
+			
+			this.scores.summonNova = (5 - nbSummonNova) / 5;
+			
+			/**********************************************************
+			 * 
+			 **********************************************************/
+			
+			
+			this.scores.willGetHit = 1 * this.scores.nearEnemies;
+		} else {
+			this.scores.ressurect = 1;
+		}
+	}
+	
+	/**
+	 * Applique les effets de l'item sur l'entité
+	 **/
+	public applyItem(item, caster, cellTarget, dist) {
+		for (var eff in item.effects) {
+			eff.applyTo(this, caster, cellTarget, dist);
+		}
+		
+		this.stats.updateMults();
+	}
+	
+	public initStats() {
+		this.type = getType(this.id);
+		this.farmerName = getFarmerName(this.id);
+		this.name = getName(this.id);
+		this.level = getLevel(this.id);
+		this.cell = Cell.get(getCell(this.id));
+		this.isAnAlly = isAlly(this.id);
+		this.isASummon = isSummon(this.id);
+		this.isAStatic = isStatic(this.id);
+		if (this.isASummon) {
+			this.leekTurnOrder = 0;
+		} else {
+			this.leekTurnOrder = getEntityTurnOrder(this.id) - getEntityTurnOrder();
+		}
+		for(var chipId in getChips(this.id)) {
+			var item = Chip.get(chipId);
+			this.items[chipId] = item;
+			this.cooldowns[chipId] = getCooldown(chipId, this.id);
+			
+			for (var effect in item.effects) {
+				if (ItemEffect.movementEffects[effect.type]) {
+					push(this.movementItems, item);	
+					break;
+				}
+			}
+		}
+
+
+		this.baseStats = new EntityStats(this);	
+		// les poireaux n'ont pas d'effet de base
+		this.baseStats.removeEffects(this.baseStats.effects);
+		this.scores = new EntityScore();
+	}
+
+	public updateStats() {
+		this.alive = isAlive(this.id);
+		this.cell = Cell.get(getCell(this.id));
+
+		this.launchedEffects = [];
+		for (var effect in getLaunchedEffects(this.id)) {
+			push(this.launchedEffects, new EntityEffect(effect));
+		}
+		this.summons = [];
+		for (var summonId in getSummons(this.id)) {
+			push(this.summons, Entity.get(summonId));
+		}
+		if (!this.isASummon) {
+			this.leekTurnOrder = getEntityTurnOrder(this.id) - getEntityTurnOrder();
+		}
+		for (var item in this.items) {
+			this.cooldowns[item.id] = getCooldown(item.id, this.id);
+		}
+		
+		this.stats = new EntityStats(this);						
+		this.scores = new EntityScore();
+	}
+	
+	public updateAliveState() {
+		if (this.stats.life <= 0) {
+			if (this.alive) 
+				this.kill();
+		}
+	}
+	
+	public applyItem(item) {
+		this.useTP(item.cost);
+		this.cooldowns[item.id] = item.baseCooldown;
+	}
+	
+	public kill() {
+		debug("simulated kill : " + this.name);
+		
+		this.alive = false;
+		this.cell.setContent(null);
+		this.cell = null;
+
+		for (var eff in this.stats.effects) {
+			eff.caster.removeLaunchedEffect(eff);
+		}
+		this.stats.copy(this.baseStats);
+		for (var eff in this.launchedEffects) {
+			eff.target.stats.removeEffect(eff);
+		}
+		this.launchedEffects = [];
+		for (var summon in this.summons) {
+			summon.kill();
+		}
+		this.summons = [];
+		this.leekTurnOrder = null;
+	}
+	
+	public resurrection(cell) {
+		this.stats.maxLife = max(10, round(this.stats.maxLife * 0.5));
+		this.stats.life = this.stats.maxLife;
+		this.alive = true;
+		cell.entityOn(this);
+		this.cell = cell;
+	}
+	
+	public removeLaunchedEffect(effect) {
+		removeElement(this.launchedEffects, effect);
+	}
+	
+	/**
+	 * Simule l'inversion de 2 entités
+	 * 
+	 * @param e1 : entité
+	 * @param e2 : entité
+	 **/
+	public static invert(e1, e2) {
+		var tmpE1Cell = e1.cell;
+		e1.cell = e2.cell;
+		e1.cell.setContent(e1);
+		e2.cell = tmpE1Cell;
+		e2.cell.setContent(e2);
+	}
+	
+	/**
+	 * Simule le déplacement
+	 * 
+	 * @param cell : cellule d'arrivée
+	 * @param mp  : mp utilisés 
+	 **/
+	public move(cell, mp) {
+		this.cell.setContent(null);
+		
+		this.cell = cell;
+		this.cell.setContent(this);
+		this.useMP(mp)
+	}
+	
+	/**
+	 * Simule la téléportation
+	 * 
+	 * @param cell : cellule d'arrivée
+	 **/
+	public teleport(cell) {
+		this.cell.setContent(null);
+		
+		this.cell = cell;
+		this.cell.setContent(this);
+	}
+
+	public useTP(tp) {
+		this.stats.useTP(tp);
+	}
+
+	public useMP(mp) {
+		this.stats.useMP(mp);
+	}
+	
+	public string() {
+		return "{ name : " + this.name +
+			"\n turnOrder : " + this.leekTurnOrder +
+			"\n stats : \t" + this.stats +
+			"\n cell : " + this.cell +
+			"\n scores : " + this.scores + " }\n";
+	}
+}

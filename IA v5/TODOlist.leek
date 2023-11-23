@@ -1,0 +1,7 @@
+// Entity : removeLaunchedEffects
+// Gérer les accessibleCells en ignorant les entités qui vont bouger entre temps
+// Gérer la map de danger en ignorant les entités qui vont bouger entre temps
+// Gérer les puces de buff MP pour faire un gros score
+
+// gérer les items avec multiple effet (devil strike) qui tue une entité avec un seul effet (le score devient donc beacuoup trop haut)
+// Gérer la los apprès une inversion / déplacement
