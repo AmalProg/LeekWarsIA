@@ -601,9 +601,9 @@ class AI {
 	 **/
 	private boolean isActionWorthTeleporting(Action action, Item moveItem) {
 		Item item = action.getItem();
-		real costMult = (moveItem.getCost() / 2 - 3) / 20;
-		real cdMult = (moveItem.getBaseCooldown() / 2.5 - 3) / 8;
-		real scoreMult = costMult + cdMult;
+		real costMult = (moveItem.getCost() - 5) / 10;
+		real cdMult = (moveItem.getBaseCooldown() - 7) / 10;
+		real scoreMult = costMult * cdMult;
 		
 		// Si le score est < à la moyenne des très haute moyenne de chaque item, alors la tp ne vaut pas le coup
 		if (action.getScore() < this._highHighMeanScore * (1 + scoreMult)) return false;
@@ -615,9 +615,9 @@ class AI {
 		
 			if (itemScoreStatsObj.hasProp("meanHigh")) {
 				integer meanHighHigh = itemScoreStatsObj.getProp("meanHighHigh") as integer;
-				// Ecrat entre la moyenne et la moyenne haute
+				// Ecart entre la moyenne et la moyenne haute
 				integer diff = (meanHighHigh - itemScoreStatsObj.getProp("meanHigh")) as integer;
-				real scoreNeeded = meanHighHigh - 2 * diff * costMult;
+				real scoreNeeded = meanHighHigh + diff / 2 - diff * (scoreMult - 0.5);
 
 				// Si le score est > à la moyenne haute des scores de l'item, alors le téléport vaut le coup
 				if (action.getScore() > scoreNeeded)

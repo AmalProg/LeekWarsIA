@@ -1,20 +1,20 @@
- class EntityScoresAdjuster {
-	public static real maxLife = 0.66;
-	public static real dmg = 1.1;
+class EntityScoresAdjuster {
+	public static real maxLife = 1.2;
+	public static real dmg = 0.8;
 	public static real heal = 1.2;
-	public static real abso = 1.8;
-	public static real rel = 1.4;
+	public static real abso = 1.7;
+	public static real rel = 1.3;
 	public static real dmgReturn = 1.0;
-	public static real strength = 1.9;
+	public static real strength = 1.6;
 	public static real power = 1.0;
-	public static real magic = 1.6;
+	public static real magic = 1.0;
 	public static real wisdom = 1.0;
-	public static real resistance = 0.9;
+	public static real resistance = 0.5;
 	public static real agility = 1.2;
 	public static real science = 1.0;
-	public static real poison = 1.5;
-	public static real mp = 1.0;
-	public static real tp = 1.2;
+	public static real poison = 1.0;
+	public static real mp = 1.2;
+	public static real tp = 1.4;
 	
 	public real kill;
 	public real entityType;
@@ -30,13 +30,10 @@
 	public real debuffDmgReturn;
 	public real debuffShackles;
 	public real buffDamage;
-	public real buffMP;
 	public real antidote;
 	public real healOverTime;
 	public real heal;
 	public real shield;
-	public real shieldAbso;
-	public real shieldRel;
 	public real resBuff;
 	public real directDmg;
 	public real poison;
@@ -55,7 +52,7 @@
 			Bulb bulb = this._entity as Bulb;
 
 			if (bulb.isSupport())
-				this.entityType = 0.25;
+				this.entityType = 0.15;
 			else if (bulb.isDamage())
 				this.entityType = 0.5;
 		} else {
@@ -68,7 +65,6 @@
 		EntityStats entityStats = this._entity.getStats();
 		EntityStats entityStatsIn1Turn = this._entity.getStatsInTurns(1);
 		integer entityMP = entityStatsIn1Turn.getMP();
-		Team entityTeam = this._entity.getTeam()!;
 		
 		if (!this._entity.isEntityAlive()) {
 			/* Resurection */
@@ -102,7 +98,7 @@
 			integer alliesNearCount = 0;
 			integer ennemiesNearCount = 0;
 			for (Team team in Team.getTeams()) {
-				boolean isOnMyTeam = team == entityTeam;
+				boolean isOnMyTeam = team == this._entity.getTeam();
 
 				for (AbstractEntity entity in team.getAliveLeeks()) {
 					if (entity == this._entity) continue;
@@ -117,8 +113,8 @@
 			}
 			
 			
-			isolatedFromAlliesScore = 1.0 + (GAME.leeksPerTeamCount / (1 + alliesNearCount) - 1) / (8.0 * aliveTeamsCount / 2);
-			inDangerScore = 1.0 + (ennemiesNearCount / (1 + alliesNearCount) - 1) / (4.0 * aliveTeamsCount / 2);
+			isolatedFromAlliesScore = 1.0 + (GAME.leeksPerTeamCount / (1 + alliesNearCount) - 1) / (12.0 * aliveTeamsCount / 2);
+			inDangerScore = 1.0 + (ennemiesNearCount / (1 + alliesNearCount) - 1) / (12.0 * aliveTeamsCount / 2);
 			this.isolation = isolatedFromAlliesScore * inDangerScore;
 		}
 		/* * */
@@ -145,15 +141,12 @@
 			EntityStats stats = new EntityStats();
 			stats.copy(entityStats);
 			
-			Array<AbstractEntity> entitiesPlayingAfterMe = GAME.timeline.getEntitiesPlayingAfter(GAME.me, true, true, true, true);
-			integer entitiesPlayingAfterMeCount = count(entitiesPlayingAfterMe)
-			integer i = entitiesPlayingAfterMeCount;
-			for (AbstractEntity otherEntity in entitiesPlayingAfterMe) {
+			for (AbstractEntity otherEntity in GAME.timeline.getEntitiesPlayingAfter(GAME.me, true, true, true, true)) {
 				if (!otherEntity.isEntityAlive()) continue;
 
 				EntityStats otherEntityStatsIn1Turn = otherEntity.getStatsInTurns(1);
 
-				if (otherEntity.getTeam() == entityTeam) {
+				if (otherEntity.getTeam() == this._entity.getTeam()) {
 					integer otherEntityMP = otherEntityStatsIn1Turn.getMP();
 
 					// Si c'est une entité de mon équipe on ajout les shields disponibles
@@ -181,7 +174,7 @@
 						if (Cell.getDistance(otherEntity.getCell()!, entityCell) < otherEntityMP / 2 + item.getAreaSize() + item.getMaxRange()) {
 							
 							if (item.hasEffectType(EFFECT_DEBUFF) && otherEntity != GAME.me) {
-								debuffedStats.debuff(60 * (i / entitiesPlayingAfterMeCount));
+								debuffedStats.debuff(60);
 							} else if (item.hasEffectTypeIn(Effect.directDamageEffects)) {
 								real dmgWithDebuffsPerTp = 0.0;
 								real dmgPerTp = 0.0;
@@ -203,13 +196,11 @@
 						}
 					}
 					dmgPotentialWithDebuffs += bestDamageWithDebuffsPerTp * otherEntity.getStats().getTP();
-					dmgPotential += bestDamagePerTp * otherEntity.getStats().getTP()// * (i / entitiesPlayingAfterMeCount);
+					dmgPotential += bestDamagePerTp * otherEntity.getStats().getTP();
 				}
-				
-				i--;
 			}
 		}
-		this.debuffShield = dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 4 * this.isolation * this.turnOrderFar;
+		this.debuffShield = dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 3 * this.isolation * this.turnOrderFar;
 		/* * */
 		
 		
@@ -242,39 +233,15 @@
 		real directDamageDanger = 0.0;
 		real poisonDamageDanger = 0.0;
 		for (Team team in Team.getTeams()) {
-			if (team != entityTeam)
+			if (team != this._entity.getTeam())
 				directDamageDanger += team.getScores().directDamageDanger;
 				poisonDamageDanger += team.getScores().poisonDamageDanger;
 			
 		}
-		this.shield = max(0.0, min(1.6, directDamageDanger)) * (isGoodTarget ? 1.2 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 6) * this.isolation * this.turnOrderNear;
+		this.shield = max(0.0, min(1.6, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderNear;
 		// Si il n'y a personne à proximité, on a moins besoin de shield
 		if (setSize(possibleTargets) == 0)
-			this.shield /= 1.5;
-		
-		this.shieldAbso = this.shield;
-		integer entityAbso = this._entity.getStats().getAbso();
-		real totalDirectDmgFromAbsoVulne = 0.0;
-		if (entityAbso < 0) {
-			Array<AbstractEntity> enemiesPlayingAfterMe =  GAME.timeline.getEntitiesPlayingAfter(GAME.me, false, true, true, true);
-			integer enemiesPlayingAfterMeCount = count(enemiesPlayingAfterMe);
-			integer i = enemiesPlayingAfterMeCount;
-			for (AbstractEntity otherEntity in enemiesPlayingAfterMe) {
-				real maxDirectDmgEffectsCountPerTP = 0.0;
-				for (Item item in otherEntity.getOffCooldownsItemsInTurns(1)) {
-					integer directDmgEffectsCountPerTP = 0;
-					directDmgEffectsCountPerTP += setSize(item.getEffectsOfTypes(Effect.directDamageEffects));
-					if (directDmgEffectsCountPerTP / item.getCost() > maxDirectDmgEffectsCountPerTP) {
-						maxDirectDmgEffectsCountPerTP = directDmgEffectsCountPerTP / item.getCost();
-					}
-				}
-				
-				totalDirectDmgFromAbsoVulne += maxDirectDmgEffectsCountPerTP * otherEntity.getStats().getTP() * entityAbso * (i / enemiesPlayingAfterMeCount);
-				i--;
-			}
-			// On a multiplié par la vulné absolue donc il faut inverser le signe
-			this.shieldAbso = this.shield + -totalDirectDmgFromAbsoVulne / EntityStatsDiviser.maxLife;
-		}
+			this.shield /= 2;
 		/* * */
 		
 		
@@ -293,26 +260,26 @@
 				}
 			}
 		}
-		this.resBuff = shieldItemsOffCooldownCount / 2.0 * max(0.0, min(1.6, directDamageDanger)) * this.turnOrderNear;
+		this.resBuff = shieldItemsOffCooldownCount / 2.0 * this.shield // * teamNeedShields;
 		/* * */
 		
 		
 		/* Dmg return */
-		this.dmgReturn = max(0.0, min(1.6, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 9) * this.isolation;
+		this.dmgReturn = max(0.0, min(1.6, directDamageDanger)) * this.isolation;
 		/* * */
 		
 		
 		/* Heal */
 		AbstractEntity nextEnemy = GAME.timeline.getNextEntity(GAME.me, false, true)!;
-		real entityAfterPotentialNovaDmg = 0.0;
+		integer entityAfterNovaDmgItemsOffCooldownCount = 0;
 		for (Item item in nextEnemy.getItems()) {
 			if (nextEnemy.getItemCooldown(item) <= 1) {
 				for (Effect eff in item.getEffectsOfTypes(Effect.novaDamageEffects)) {
-					entityAfterPotentialNovaDmg += eff.getAppliedValue(null, null, this._entity, entityStats, nextEnemy.getStatsInTurns(1), 0);
+					entityAfterNovaDmgItemsOffCooldownCount++;
 				}
 			}
 		}
-		this.heal = min(1.3, 1.0 + 0.1 * entityAfterPotentialNovaDmg / (EntityStatsDiviser.maxLife / 10)) * (isGoodTarget ? 1.3 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 8) * this.isolation * this.turnOrderNear;
+		this.heal = max(1.3, 1.0 + 0.1 * entityAfterNovaDmgItemsOffCooldownCount) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderNear;
 		/* * */
 		
 		
@@ -320,20 +287,17 @@
 		this.buffDamage = 1.0 * this.turnOrderNear;
 		if (setSize(possibleTargets) == 0)
 			this.buffDamage /= 2;
-		
-		// S'il y a des possibleTarget on a pas forcément besoin de buff les mp
-		this.buffMP = (1.0 - (!setIsEmpty(possibleTargets) ? 0.5 : 0)) * this.turnOrderNear;
 		/* * */
 		
 		/* Damage */
-		this.directDmg = 1.0 * max(1.0, min(1.2, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 10) * this.isolation * this.turnOrderFar;
+		this.directDmg = 1.0 * max(1.0, min(1.2, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar;
 		/* * */
 		
 		this.poison = 1.0 * this.isolation * this.turnOrderNear;
 		this.novaDamage = 1.0 * this.isolation * this.turnOrderFar;
 		
 		
-		this.vulneAbso = 1.3  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 8) * this.isolation * this.turnOrderFar * (1 + min(2.0, totalDirectDmgFromAbsoVulne / EntityStatsDiviser.maxLife) / 2);
-		this.vulneRel = 1.3  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 8) * this.isolation * this.turnOrderFar;
+		this.vulneAbso = 1.5  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar;
+		this.vulneRel = 1.5  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar;
 	}
 }

@@ -9,14 +9,14 @@ class RawAbsoluteShieldEffect extends Effect {
 		EntityScores targetScores = target.getScores();
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
-		return targetScores.getAbsoScore(round(value), targetStats.getAbso()) * targetAllyMult * targetScores.getAdjuster().shieldAbso;
+		return targetScores.getAbsoScore(round(value), targetStats.getAbso()) * targetAllyMult// * targetScores.getAdjuster().shieldAbso;
 	}
 	
 	public static real getFinalEffectScoreStatic(integer finalValue, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
 		EntityScores targetScores = target.getScores();
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
-		return targetScores.getAbsoScore(finalValue, targetStats.getAbso()) * targetAllyMult * targetScores.getAdjuster().shieldAbso;
+		return targetScores.getAbsoScore(finalValue, targetStats.getAbso()) * targetAllyMult// * targetScores.getAdjuster().shieldAbso;
 	}
 	
 	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {

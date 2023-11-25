@@ -70,7 +70,7 @@ def exportAI() :
                     aisPerParentFolder[parentFolder] = []
                 aisPerParentFolder.get(parentFolder).append(ai)
 
-            createFolderArbo(os.getcwd(), foldersPerParentFolder, aisPerParentFolder, 0, 0)
+            createFolderArbo(os.path.join(os.getcwd(), "LeekWarsIA"), foldersPerParentFolder, aisPerParentFolder, 0, 0)
         else :
             print('La récupération des id des IA a échouée')
 

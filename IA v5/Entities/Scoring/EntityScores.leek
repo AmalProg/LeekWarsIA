@@ -55,8 +55,8 @@ class EntityScores {
 	}
 	
 	public real getMaxLifeScore(integer maxLifeAdded, integer maxLife = this._entity.getStats().getLife()) {
-		// 10\left(1-\min\left(0.8,\frac{a}{20\cdot2150}\right)\right)x
-		return 10 * (1 - min(0.8, maxLife / (18 * EntityStatsDiviser.maxLife))) * maxLifeAdded * EntityScoresAdjuster.maxLife;
+		// 10\left(1-\min\left(0.8,\frac{a}{2.1\cdot2000}\right)\right)x
+		return 10 * (1 - min(0.8, maxLife / (2.1 * EntityStatsDiviser.maxLife))) * maxLifeAdded * EntityScoresAdjuster.maxLife;
 	}
 	
 	public real getDmgScore(integer dmg, integer life = this._entity.getStats().getLife()) {
@@ -65,8 +65,8 @@ class EntityScores {
 	}
 	
 	public real getHealScore(integer heal, integer life = this._entity.getStats().getLife()) {	
-		// 7\left(1-\min\left(0.6,\frac{a}{12\cdot2150}\right)\right)x
-		return 7 * (1 - min(0.6, life / (12 * EntityStatsDiviser.maxLife))) * heal * EntityScoresAdjuster.heal;	
+		// 4\left(1-\min\left(0.6,\frac{a}{4\cdot2000}\right)\right)x
+		return 4 * (1 - min(0.6, life / (4 * EntityStatsDiviser.maxLife))) * heal * EntityScoresAdjuster.dmg;	
 	}
 	
 	public real getStrengthScore(integer strAdded, integer str = this._entity.getStats().getStrength()) {
@@ -82,7 +82,7 @@ class EntityScores {
 	public real getMagicScore(integer magicAdded, integer magic = this._entity.getStats().getMagic()) {
 		// 4x\cdot\frac{\left(500-\frac{\left(g-750\right)^{2}}{1125}\right)}{500}
 		return 4 * (EntityStatsDiviser.magic - (magic - EntityStatsDiviser.magic * 1.5) * (magic - EntityStatsDiviser.magic * 1.5) / (EntityStatsDiviser.magic * 2.25)) / EntityStatsDiviser.magic * magicAdded * EntityScoresAdjuster.magic;
-			}
+	}
 	
 	public real getWisdomScore(integer wisdomAdded, integer wisdom = this._entity.getStats().getWisdom()) {
 		// 2x\cdot\frac{\left(500-\frac{\left(g-750\right)^{2}}{1125}\right)}{500}
@@ -106,17 +106,21 @@ class EntityScores {
 	
 	public real getAbsoScore(integer absoAdded, integer abso = this._entity.getStats().getAbso(), integer rel = this._entity.getStats().getRel()) {
 		if (abso >= 0) {
-			// \frac{h-0.3d}{h}\left(7x-\frac{3f}{F}x\right)
+			// \frac{h-0.3d}{h}\left(6x-\frac{f}{60}x\right)
 			return 	(EntityStatsDiviser.rel - 0.3 * rel) / EntityStatsDiviser.rel * (7 * absoAdded - (3 * abso / EntityStatsDiviser.abso) * absoAdded) * EntityScoresAdjuster.abso;
 		} else {
-			// \left(7x-\frac{3f}{F}x\right)
 			return 7 * absoAdded - (3 * abso / EntityStatsDiviser.abso) * absoAdded * EntityScoresAdjuster.abso;
 		}
 	}
 	
 	public real getRelScore(integer relAdded, integer rel = this._entity.getStats().getRel()) {
-		// \left(40-10\cdot\frac{d}{h}\right)x-\frac{\left(d\right)}{3h}x^{2}
-		return 	((40 - 10 * rel / EntityStatsDiviser.rel) * relAdded - rel / (3 * EntityStatsDiviser.rel) * relAdded * relAdded) * EntityScoresAdjuster.rel;
+		if (rel >= 0) {
+			// \left(40-10\cdot\frac{d}{h}\right)x-\frac{\left(d\right)}{3h}x^{2}
+			return 	((40 - 10 * rel / EntityStatsDiviser.rel) * relAdded - rel / (3 * EntityStatsDiviser.rel) * relAdded * relAdded) * EntityScoresAdjuster.rel;
+		} else {
+			// \frac{100+d}{100}\left(30-15\cdot\frac{d}{100}\right)x
+			return 	(EntityStatsDiviser.rel + rel) / EntityStatsDiviser.rel * (30 - 15 * (rel / EntityStatsDiviser.rel)) * relAdded * EntityScoresAdjuster.rel;
+		}
 	}
 	
 	public real getDmgReturnScore(integer dmgReturnAdded, integer dmgReturn = this._entity.getStats().getDmgReturn(), integer abso = this._entity.getStats().getAbso(), integer rel = this._entity.getStats().getRel()) {
@@ -130,15 +134,11 @@ class EntityScores {
 	}
 	
 	public real getMPScore(integer addedMp, integer mp = this._entity.getStats().getMP()) {
-		if (addedMp <= 0 && mp <= 0) return 0.0;
-		
 		// 200x\cdot\frac{\left(w-\frac{\left(k-w\cdot1.5\right)^{2}}{w\cdot2.25}\right)}{w}
 		return 200 * (EntityStatsDiviser.mp - (mp - EntityStatsDiviser.mp * 1.5) * (mp - EntityStatsDiviser.mp * 1.5) / (EntityStatsDiviser.mp * 2.25)) / EntityStatsDiviser.mp * addedMp * EntityScoresAdjuster.mp;	
 	}
 		
 	public real getTPScore(integer addedTp, integer tp = this._entity.getStats().getTP()) {
-		if (addedTp <= 0 && tp <= 0) return 0.0;
-
 		// 200x\cdot\frac{\left(w-\frac{\left(k-w\cdot1.5\right)^{2}}{w\cdot2.25}\right)}{w}
 		return 200 * (EntityStatsDiviser.tp - (tp - EntityStatsDiviser.tp * 1.5) * (tp - EntityStatsDiviser.tp * 1.5) / (EntityStatsDiviser.tp * 2.25)) / EntityStatsDiviser.tp * addedTp * EntityScoresAdjuster.tp;	
 	}	

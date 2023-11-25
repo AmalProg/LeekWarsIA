@@ -12,14 +12,14 @@ class BuffMpEffect extends Effect {
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
 		integer finalValue = round(value * caster.getStats().getScienceMult());
-		return targetScores.getMPScore(finalValue, targetStats.getMP()) * targetAllyMult * targetScores.getAdjuster().buffMP;
+		return targetScores.getMPScore(finalValue, targetStats.getMP()) * targetAllyMult// * targetScores.getAdjuster().buffMP;
 	}
 	
 	public static real getFinalEffectScoreStatic(integer finalValue, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
 		EntityScores targetScores = target.getScores();
 		
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
-		return targetScores.getMPScore(finalValue, targetStats.getMP()) * targetAllyMult * targetScores.getAdjuster().buffMP;
+		return targetScores.getMPScore(finalValue, targetStats.getMP()) * targetAllyMult// * targetScores.getAdjuster().buffMP;
 	}
 	
 	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {

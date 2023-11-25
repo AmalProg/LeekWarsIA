@@ -142,23 +142,20 @@ class DangerMap {
 	}
 
 	private void calculateEnemyTeamDangerMap(Map<AbstractEntity, ScoreMap> damageMapPerEntity, integer alliesTotalLife, integer alliesAliveLeeksCount) {
-		Team targetTeam = this._targetedEntity.getTeam()!;
+		Cell myCell = this._targetedEntity.getCell()!;
 		
-		real SCORE_PER_DIST = this._referenceScorePerDist / 50;
+		real SCORE_PER_DIST = this._referenceScorePerDist / 30;
+		if (getTurn() < 3)
+			SCORE_PER_DIST /= 10;
 		
 		for (Team team in Team.getTeams()) {
-			if (team == targetTeam) continue;
-			
 			integer teamTotalLife = 0;
 			integer teamAlivesLeeksCount = setSize(team.getAliveLeeks());
 			for (AbstractEntity entity in team.getAlive()) {
 				teamTotalLife += round(entity.getStats().getLife() * entity.getScores().getAdjuster().entityType);
 			}
 			
-			real augmentMaxLifeDanger = max(0.5, 2 * (1 + team.getScores().augmentMaxLifeDanger - targetTeam.getScores().augmentMaxLifeDanger));
-			Debug.log("augmentMaxLifeDanger : " + augmentMaxLifeDanger);
-			
-			real lifeAdvantageScore = max(0.2, 1 + (alliesTotalLife - teamTotalLife) / (4 * EntityStatsDiviser.maxLife));
+			real lifeAdvantageScore = max(0.2, 1 + (alliesTotalLife - teamTotalLife) / (2 * EntityStatsDiviser.maxLife));
 			real countAdvantageScore = 1.0 + (alliesAliveLeeksCount - teamAlivesLeeksCount) / GAME.leeksPerTeamCount;
 			real advantageScore = lifeAdvantageScore * countAdvantageScore;
 			Debug.log("advantageScore enemy : " + advantageScore);
@@ -168,14 +165,13 @@ class DangerMap {
 				AccessibleCells entityPathLength = entity.getPathLengthCells();
 				boolean entityIsBulb = entity instanceof Bulb;
 				real entityTypeMult = entity.getScores().getAdjuster().entityType;
+				//real entityDmgTakenMult = entity.getScores().getAdjuster().dmgTakenPotentialWithDebuffs * 10;
 				Cell entityCell = entity.getCell()!;
 				integer entityMP = entity.getStats().getMP();
 				
-				
-				
-				integer distWantedFromEntity = round(entityMP * 1.5 / (advantageScore * augmentMaxLifeDanger));
-				real scorePerDistFromEntity = SCORE_PER_DIST * advantageScore * augmentMaxLifeDanger * entityTypeMult / GAME.leeksPerTeamCount;
-
+				integer distWantedFromEntity = round(entityMP * 2 / advantageScore);
+				real scorePerDistFromEntity = SCORE_PER_DIST * advantageScore * entityTypeMult / GAME.leeksPerTeamCount;
+				real distWantedScore = (1 - distWantedFromEntity / 24) * scorePerDistFromEntity;
 				ScoreMap? entityDamageMap = mapGet(damageMapPerEntity, entity, null) as ScoreMap;
 				
 				integer alliesBeforeEntityCount = GAME.timeline.getEntitiesPlayingBetweenEntitiesCount(this._targetedEntity, entity, true);
@@ -202,18 +198,15 @@ class DangerMap {
 					distToEntity /= meanWeight;
 					
 					real distScore =  max(0.0, abs(distWantedFromEntity - distToEntity) - 2) * scorePerDistFromEntity;
-					if (getTurn() > 2)
-						this._scoreMap.addScore(cell, distScore);
+					this._scoreMap.addScore(cell, distScore);
 				}
 			}
 		}
 	}
-
 	private void calculateAllyTeamDangerMap(integer alliesTotalLife, integer alliesAliveLeeksCount) {
 		Cell myCell = this._targetedEntity.getCell()!;
 		
-		real SCORE_PER_DIST = this._referenceScorePerDist / 6;
-
+		real SCORE_PER_DIST = this._referenceScorePerDist / 4;
 		// Pour voir si les enemis ont beaucoup d'items dangereux en AOE
 		real areaSizeWeightedMean = 0.0;
 		integer areaSizeWeightValue = 0;
@@ -225,11 +218,9 @@ class DangerMap {
 			enemyTeamAlivesLeeksCount += setSize(team.getAliveLeeks());
 			
 			for (AbstractEntity entity in team.getAlive()) {
-				real entityTypeScore = entity.getScores().getAdjuster().entityType;
+				enemyTeamsTotalLife += round(entity.getStats().getLife() * entity.getScores().getAdjuster().entityType);
 				
-				enemyTeamsTotalLife += round(entity.getStats().getLife() * entityTypeScore * entityTypeScore);
-				
-				Array<Item> dangerItems = entity.getOrderedAndFilteredDangerItemsInTurns(1, this._targetedEntity);
+				Array<Item> dangerItems = this.orderAndFilterDangerItems(entity, entity.getOffCooldownsItemsInTurns(1));
 				areaSizeWeightValue += count(dangerItems);
 				for (integer i : Item item in dangerItems) {
 					if (item.getAreaType() != AREA_LASER_LINE && item.getAreaType() != AREA_FIRST_INLINE) {
@@ -238,10 +229,10 @@ class DangerMap {
 				}
 			}
 		}
-		areaSizeWeightedMean /= areaSizeWeightValue;
-		//Debug.log("areaSizeWeightedMean : " + areaSizeWeightedMean);
+		if (areaSizeWeightValue != 0)
+			areaSizeWeightedMean /= areaSizeWeightValue;
+		debug("areaSizeWeightedMean : " + areaSizeWeightedMean);
 		integer distAwayWantedFromEntity = ceil(areaSizeWeightedMean);
-
 		
 		real lifeAdvantageScore = max(0.2, 1.0 + (alliesTotalLife - enemyTeamsTotalLife) / (2 * EntityStatsDiviser.maxLife));
 		real countAdvantageScore = 1.0 + (alliesAliveLeeksCount - enemyTeamAlivesLeeksCount) / GAME.leeksPerTeamCount;
@@ -249,23 +240,23 @@ class DangerMap {
 		Debug.log("advantageScore ally : " + advantageScore);
 		for (AbstractEntity entity in this._targetedEntity.getTeam()!.getAlive()) {
 			if (entity == this._targetedEntity) continue;
-
 			AccessibleCells entityPathLength = entity.getPathLengthCells();
 			boolean entityIsBulb = entity instanceof Bulb;
 			real entityTypeMult = entity.getScores().getAdjuster().entityType;
-			real entityIsolationScore = entity.getScores().getAdjuster().isolation;
+			real entityIsolationMult = entity.getScores().getAdjuster().isolation;
 			Cell entityCell = entity.getCell()!;
 			integer entityMP = entity.getStats().getMP();
-
-			integer distWantedFromEntity = round(entityMP * 0.75 * advantageScore);
-			real scorePerDistFromEntity = SCORE_PER_DIST * entityTypeMult * entityIsolationScore / advantageScore / GAME.leeksPerTeamCount;
-			real distWantedScore = 5 * scorePerDistFromEntity;
-
+			integer distWantedFromEntity = round(entityMP * 0.5 * advantageScore);
+			real scorePerDistFromEntity = SCORE_PER_DIST * entityTypeMult * entityIsolationMult / advantageScore / GAME.leeksPerTeamCount;
+			real distWantedScore = (4 - distWantedFromEntity / 6) * scorePerDistFromEntity;
 			integer alliesBeforeEntityCount = GAME.timeline.getEntitiesPlayingBetweenEntitiesCount(this._targetedEntity, entity, true);
 			integer alliesBeforeEntityCountDiviser = 1 + alliesBeforeEntityCount;
+			//debug(entity.getName() + " entityIsolationMult " + entityIsolationMult)
+			//debug(entity.getName() + " distWantedFromEntity " + distWantedFromEntity)
+			//debug(entity.getName() + " scorePerDistFromEntity " + scorePerDistFromEntity)
+			//debug(entity.getName() + " distWantedScore " + distWantedScore)
 			for (Cell cell in CellMap.getCells()) {
 				if (cell._isObstacle) continue;
-
 				real distToEntity = 0.0;
 				real meanWeight = 2.5;
 				if (entityPathLength.hasCell(cell)) {
@@ -274,7 +265,6 @@ class DangerMap {
 				}
 				distToEntity += Cell.getDistance(entityCell, cell) * 2.5;
 				distToEntity /= meanWeight;	
-
 				// Si on retire du score de danger
 				if (distToEntity <= distWantedFromEntity) {
 					// On retire un score constant pour toutes les cells à moins de la distance demandée
@@ -292,6 +282,36 @@ class DangerMap {
 				}
 			}
 		}
+	}
+	
+	private Array<Item> orderAndFilterDangerItems(AbstractEntity entity, Set<Item> items) {
+		EntityStats entityStats = entity.getStatsInTurns(1);
+		Map<Item, real> dangerScorePerItem = [:];
+		for (Item item in items) {
+			real score = 0.0;
+			for (Effect eff in item.getEffects()) {
+				if (setContains(Effect.dangerEffects, eff.getType())) {
+					if (eff.getType() == EFFECT_INVERT || eff.getType() == EFFECT_ATTRACT || eff.getType() == EFFECT_PUSH) {
+					} else {
+						if (item.getId() == 143) continue;
+						// TODO : gérer plasma
+						
+						score += eff.getScore(null, null, this._targetedEntity, entity, this._targetedEntity.getStats(), entityStats, 0);
+					}
+				}
+			}
+			
+			dangerScorePerItem[item] = item.scaleScoreOnCost(score);
+		}
+		
+		Array<Item> orderedItems = setToArray(items) as Array<Item>;
+		orderedItems = arrayFilter(orderedItems, function(Item i1) => boolean {
+			return dangerScorePerItem[i1] != 0;
+		}) as Array<Item>;
+		orderedItems = arraySort(orderedItems, function(Item i1, Item i2) => real {
+			return dangerScorePerItem[i1]! - dangerScorePerItem[i2]!;
+		}) as Array<Item>;
+		return orderedItems;
 	}
 	
 	public void debugMap() {
