@@ -11,6 +11,7 @@ include("Bulb");
 include("Teams/Team");
 include("../Effects/Effect");
 include("../Game");
+include("../Items/Combo");
 
 class AbstractEntity {
 	public static final integer ACCESSIBLE_CELLS_SIZE = 40; 
@@ -39,6 +40,8 @@ class AbstractEntity {
 	public Cell? getCell() { return this._cell; }
 	protected integer _turnOrder; public integer getTurnOrder() { return this._turnOrder; }
 	protected Set<Item> _items; public Set<Item> getItems() { return this._items; }
+	protected Set<Item> _killComboItems; public Set<Item> getKillComboItems() { return this._killComboItems; }
+	protected Array<Combo> _killCombos; public Array<Combo> getKillCombos() { return this._killCombos; }
 	protected Array<Item> _movementItems; public Array<Item> getMovementItems() { return this._movementItems; }
 	protected Map<Item, integer> _cooldowns; public Map<Item, integer> getCooldowns() { return this._cooldowns; }
 
@@ -58,6 +61,7 @@ class AbstractEntity {
 		this._id = id;
 		this._items = <>;
 		this._movementItems = [];
+		this._killComboItems = <>;
 		this._cooldowns = [:];
 		this._launchedEffects = [];
 		this._summons = [];
@@ -93,6 +97,9 @@ class AbstractEntity {
 			setPut(this._items, item);
 			this._cooldowns[item] = getCooldown(chipId, this._id);
 			
+			if (item.hasEffectTypeIn(Effect.killCombosEffects))
+				setPut(this._killComboItems, item);
+			
 			if (item.hasEffectTypeIn(Effect.teleportEffects)) {
 				push(this._movementItems, item);
 			}
@@ -102,7 +109,13 @@ class AbstractEntity {
 				return i1.getCost() - i2.getCost();
 			}) as Array<Item>;
 		}
-
+	
+		if (this._id == getEntity()) {
+			Set<Combo> killCombos = Combo.generateCombos(this._killComboItems, 32);
+			this._killCombos = arraySort(setToArray(killCombos), function(Combo c1, Combo c2) => integer {
+				return c1.getCost() - c2.getCost();
+			}) as Array<Combo>;
+		}
 
 		this._baseStats = new EntityStats(this);	
 		// les poireaux n'ont pas d'effet de base
@@ -356,9 +369,6 @@ class AbstractEntity {
 	}
 
 	private void setCell(Cell? cell) {
-		if(getTurn() >= 11) {
-			debug(this + " " + this._cell + " "	+ cell);
-		}
 		// On vérifie que c'est bien nous sur la cellule et qu'il n'y a pas eu l'update d'une autre entité avant
 		if (this._cell != null && this._cell!.getCellEntity() == this)
 			this._cell!.setType(CELL_EMPTY);

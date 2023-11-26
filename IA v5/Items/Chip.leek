@@ -16,10 +16,9 @@ class Chip extends Item {
 	
 	constructor(integer id) {
 		super(id);
-		initStats();
 	}
 
-	private void initStats() {
+	protected void initStats() {
 		this.name = getChipName(this.id);
 		this.areaType = getChipArea(this.id)!;
 		this.cost = getChipCost(this.id)!;
@@ -37,6 +36,8 @@ class Chip extends Item {
 		}
 		
 		this.initTeamTargetsBool();
+		
+		super.initStats();
 	}
 	
 	protected Set<Cell> getItemEffectiveArea(Cell cell, Cell? from) {

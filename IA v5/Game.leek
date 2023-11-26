@@ -7,6 +7,7 @@ include("Entities/Turret");
 include("Entities/Timeline");
 include("AI");
 include("Utils/Register");
+include("Items/Combo");
 
 global Game GAME = Game.getInstance();
 
@@ -33,7 +34,7 @@ class Game {
 		this._allEntities = <>;
 		
 		Debug.enabledLog = true;
-		Debug.enabledOp = false;
+		Debug.enabledOp = true;
 		Debug.enabledInfo = false;
 
 		Debug.startOpCount();
@@ -62,7 +63,7 @@ class Game {
 		AbstractEntity? me = AbstractEntity.get(getEntity());
 		if (me != null) {
 			this.me = me!;
-			
+
 			Debug.log(me);
 			
 			this._ai = new AI(this.me, this._teams);

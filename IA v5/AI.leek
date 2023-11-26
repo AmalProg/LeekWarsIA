@@ -16,6 +16,7 @@ class AI {
 	private DangerMap _dangerMap;
 	private Array<Action> _everyActions; public void resetEveryActions() { arrayClear(this._everyActions); }
 	private Array<Action> _actions;
+	private Map<string, Set<Action>> _actionsPerItemTargetsHash;
 	private real _highestActionScore;
 	private ActionsManager _actionsManager;
 	private Item? _movementEscapeItem;
@@ -27,6 +28,7 @@ class AI {
 		this._teams = teams;
 		this._everyActions = [];
 		this._actions = [];
+		this._actionsPerItemTargetsHash = [:];
 		this._highestActionScore = 0.0;
 		this._actionsManager = new ActionsManager();
 		this._movementEscapeItem = null;
@@ -56,6 +58,7 @@ class AI {
 		
 		Action? prevChoosenAction = null;
 
+		boolean tryFindKillCombo = true;
 		boolean canDoAction = true;
 		while (canDoAction && this._me.isEntityAlive()) {			
 			arrayClear(this._actions);
@@ -66,13 +69,6 @@ class AI {
 				this._dangerMap.calculateDangerMap();
 				Debug.stopOpCount("calculateDangerMap : ");
 			}
-			
-			// update tout les multiplicateurs qui ont pu être modifiés par la simulation d'un effet
-			//for (Team team in this._teams) {
-				//for (AbstractEntity entity in team.getEntities()) {
-					//entity.getStats().updateMults();
-				//}
-			//}
 			
 			// On vérifie que l'on a toujours besoin de fuir en utilisant un item
 			if (this._movementEscapeItem != null) {
@@ -99,6 +95,31 @@ class AI {
 			this.filterToFarActions();
 			Debug.stopOpCount("filterToFarActions : ");
 			
+			if (tryFindKillCombo) {
+				// Détermine si on peut faire un combo d'actions pour tuer un ennemi
+				Debug.startOpCount();
+				if (this.tryFindKillCombos()) {
+					for (Action action in this._actionsManager.getOrderedOtherActions()) {
+						action.addUse();	
+					}
+					
+					GAME.updateAllStats();
+					for (AbstractEntity entity in GAME.getAllEntities()) {
+						// On reset les stats de simulation pour enlever les cellules modifiés lors de la simu
+						entity.getSimulationEntity().resetStats();
+					}
+					if (this._movementEscapeItem != null)
+						this._me.simulateItemUse(this._movementEscapeItem!);
+					this._actionsManager.simulate(this._me);
+				}
+				Debug.stopOpCount("tryFindKillCombos : ");
+				
+				tryFindKillCombo = false;
+				// On reprend la recherche d'une nouvelle action après avoir ajouté celle pour le kill
+				continue;
+			}
+		
+			
 			Debug.startOpCount();
 			this.calculateActionsScore();
 			Debug.stopOpCount("calculateActionsScore : ");
@@ -112,13 +133,13 @@ class AI {
 			}
 			
 			//Debug.log("Actions possible found : " + count(this._actions));
-			integer i = 0;
-			for (Action action in this._actions) {
-				Debug.log(action, getColor(175, 175, 175));
+			//integer i = 0;
+			//for (Action action in this._actions) {
+				//Debug.log(action, getColor(175, 175, 175));
 				
-				i++;
-				if (i > 20) break;
-			}
+				//i++;
+				//if (i > 20) break;
+			//}
 			
 			boolean useDangerMap = this.doNeedDangerMap();
 			
@@ -151,6 +172,121 @@ class AI {
 			if (bestDoableAction == null)
 				Debug.log("Pas d'action réalisable trouvée");
 		}
+	}
+	
+	private boolean tryFindKillCombos() {
+		integer myTP = this._me.getStats().getTP();
+		
+		Array<AbstractEntity> enemiesLeek = [];
+		for (Team team in Team.getTeams()) {
+			if (team == this._me.getTeam()) continue;
+			
+			for (AbstractEntity entity in team.getAliveLeeks()) {
+				push(enemiesLeek, entity);
+			}
+		}
+		enemiesLeek = arraySort(enemiesLeek, function(AbstractEntity e1, AbstractEntity e2) => real {
+			return e1.getScores().getAdjuster().kill - e2.getScores().getAdjuster().kill;
+		}) as Array<AbstractEntity>;
+		
+		for (Combo combo in this._me.getKillCombos()) {
+			combo.updateCost(this._me);
+			if (combo.getCost() > myTP) continue;
+			
+			for (AbstractEntity target in enemiesLeek) {
+				EntityStats stats = new EntityStats();
+				stats.copy(target.getStats());
+				
+				if (this.canDoKillCombo(combo, target)) {
+					debug("Can kill " + target.getName() + " with " + combo);
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+	
+	/**
+	 * Détermine si le combo peut être réalisé
+	 **/
+	private boolean canDoKillCombo(Combo combo, AbstractEntity target) {
+		Array<Action> comboActions = [];
+		Map<Item, integer> aoePerItem = [:];
+		for (Item item in combo.getOrderedItems()) {
+			aoePerItem[item] = 0;
+		}
+					
+		boolean canDoCombo = false;
+		while (!canDoCombo && combo.canKill(target, this._me, aoePerItem)) {
+			arrayClear(comboActions);
+			boolean foundAllActions = true;
+			for (Item item in combo.getOrderedItems()) {
+				string targetsHash = target.getId() + "|" + aoePerItem[item] + ",";
+				if ((!this._me.isSummon() && item.isObligatedToHitSelfNonSummon()) || (this._me.isSummon() && item.isObligatedToHitSelfSummon()))
+					targetsHash += this._me.getId() + "|" + item.getMaxRange() + ","; 
+				targetsHash += item.getId();
+				
+				Set<Action> actions = mapGet(this._actionsPerItemTargetsHash, targetsHash, <>) as Set<Action>;
+				if (!setIsEmpty(actions))
+					push(comboActions, setGetOne(actions));
+				else {
+					debug("Couldn't find action for " + item + " on " + target.getName());
+					foundAllActions = false;
+				}
+			}
+
+			if (foundAllActions) {
+				debug("trying kill combo : " + comboActions)
+				
+				if (!this._me.isStatic()) {
+					for (Item moveItem in this._me.getOffCooldownMovementItemsOrderedByCost()) {
+						// Si j'ai assez de TP pour faire l'action et utiliser l'item de movement
+						// Et que l'action est réalisable en utilisant l'item de movement
+						if (moveItem.getCost() + combo.getCost() > this._me.getStats().getTP()) continue;
+
+						this._actionsManager.addUseableMovementItem(moveItem);
+					}
+				}
+				
+				Array<Action> doableActions = [];
+				canDoCombo = true;
+				for (Action action in comboActions) {
+					// Si ce n'est pas un self cast
+					if (!setIsEmpty(action.getTargetCells())) {
+						for (AbstractEntity entity in GAME.getAllEntities()) {
+							// On reset les stats de simulation pour le prochain test de pathing
+							entity.getSimulationEntity().resetStats();
+						}
+
+						if (this.canDoAction(action, doableActions, false)) {
+							push(doableActions, action);
+						} else {
+							canDoCombo = false;
+							break;
+						}
+					} else {
+						push(doableActions, action);
+					}
+				}
+			}
+			
+			if (!canDoCombo) {
+				boolean hasOtherAoeToTest = false;
+				// On augmente l'aoe d'un des items pour continuer les tests
+				for (Item item in combo.getOrderedItems()) {
+					if (aoePerItem[item] >= item.getAreaSize()) continue;
+					
+					aoePerItem[item]++;
+					hasOtherAoeToTest = true;
+				}
+				
+				if (!hasOtherAoeToTest)
+					return false;
+			}
+		}
+		
+		return canDoCombo;
 	}
 	
 	private boolean needToRecalculateDangerMap(Action? prevChoosenAction) {
@@ -343,6 +479,8 @@ class AI {
 		Map<Item, real> cumulatedScorePerItem = [:];
 		Map<Item, integer> scoresCountPerItem = [:];
 		for (Action action in this._actions) {
+			if (action.getScore() <= AI.MIN_SCORE_USEFUL_ACTION) continue;
+			
 			Item item = action.getItem();
 			real score = action.getScore();
 			
@@ -606,7 +744,7 @@ class AI {
 		real scoreMult = costMult * cdMult;
 		
 		// Si le score est < à la moyenne des très haute moyenne de chaque item, alors la tp ne vaut pas le coup
-		if (action.getScore() < this._highHighMeanScore * (1 + scoreMult)) return false;
+		if (action.getScore() < this._highHighMeanScore * (1 + scoreMult - 0.5)) return false;
 
 		string itemName = item.getName();
 		JsonObject itemScoreStatsObj;
@@ -617,11 +755,12 @@ class AI {
 				integer meanHighHigh = itemScoreStatsObj.getProp("meanHighHigh") as integer;
 				// Ecart entre la moyenne et la moyenne haute
 				integer diff = (meanHighHigh - itemScoreStatsObj.getProp("meanHigh")) as integer;
-				real scoreNeeded = meanHighHigh + diff / 2 - diff * (scoreMult - 0.5);
+				real scoreNeeded = meanHighHigh + diff / 2 - diff * (scoreMult - 0.7);
 
 				// Si le score est > à la moyenne haute des scores de l'item, alors le téléport vaut le coup
-				if (action.getScore() > scoreNeeded)
+				if (action.getScore() > scoreNeeded) {
 					return true;
+				}
 			}
 		}
 				
@@ -633,6 +772,7 @@ class AI {
 	 **/
 	private Set<MoveCell> getCellsAccessibleToHit(Action action) {
 		Set<Cell> cellsCanMoveToHit = this.getActionCellsCanMoveToHit(action);
+
 		AccessibleCells accessibleCells = this._me.getPathCalcAccessibleCells();
 		
 		// Cells accessibles qui permettent d'utiliser l'item sur une des targetCell
@@ -711,7 +851,7 @@ class AI {
 			
 			if (invertAction == null) {
 				// On ordonne les actions dans le sens le plus logique
-				newOtherActions = this._actionsManager.orderOtherActions(newOtherActions);
+				newOtherActions = ActionsManager.orderOtherActions(newOtherActions);
 			} else {
 				// Dans le cas d'une inversion, on vérifie qu'il soit possible de réaliser les autres actions même si inversion est fait avant
 				boolean canInvertBeforeOtherActions = true;
@@ -727,7 +867,7 @@ class AI {
 				
 				if (canInvertBeforeOtherActions) {
 					// On ordonne les actions dans le sens le plus logique
-					newOtherActions = this._actionsManager.orderOtherActions(newOtherActions);
+					newOtherActions = ActionsManager.orderOtherActions(newOtherActions);
 				}
 			}
 			
@@ -783,10 +923,10 @@ class AI {
 
 					boolean canBeReversed = true;
 					Set<AbstractEntity> sameTargets = setIntersection(newOtherActions[i].getTargets(), newOtherActions[i+1].getTargets()) as Set<AbstractEntity>;
-					if (setContains(sameTargets, this._me) && this._actionsManager.compareSelfActionOrder(newOtherActions[i], newOtherActions[i+1]) != 0) {
+					if (setContains(sameTargets, this._me) && ActionsManager.compareSelfItemOrder(newOtherActions[i].getItem(), newOtherActions[i+1].getItem()) != 0) {
 						// Si on est affecté par les deux actions et que les deux actions n'ont pas le même score de priorité
 						canBeReversed = false;
-					} else if (!setIsEmpty(sameTargets) && this._actionsManager.compareActionOrder(newOtherActions[i], newOtherActions[i+1]) != 0) {
+					} else if (!setIsEmpty(sameTargets) && ActionsManager.compareItemOrder(newOtherActions[i].getItem(), newOtherActions[i+1].getItem()) != 0) {
 						// Si au moins une entité est affecté par les deux actions et que les deux actions n'ont pas le même score de priorité
 						canBeReversed = false;
 					}
@@ -1113,7 +1253,7 @@ class AI {
 				setPut(cellsCanMoveToHit, targetCell.cellFrom);
 			} else {
 				integer distWanted = action.getHitCasterDist();
-				Set<Cell> allCellsCanMoveToHitTarget = item.getCellsCanMoveToHit(targetCell.cellTarget);
+				Set<Cell> allCellsCanMoveToHitTarget = item.getCellsCanMoveToHit(targetCell.cellTarget);		
 				if (distWanted != -1) {
 					for (Cell areaCell in item.getEffectiveArea(targetCell.cellTarget, null)) {
 						// Si la cell permet d'utiliser l'item sur targetCell et qu'on est à la distance voulue
@@ -1368,14 +1508,19 @@ class AI {
 	 **/
 	private void createActions(Item item, Map<string, Set<TargetCell>> cellsPerTargets) {
 		boolean canHitSelf = item.getAreaType() != AREA_LASER_LINE  && item.getAreaType() != AREA_FIRST_INLINE && item.getAreaSize() >= item.getMinRange() && item.canTarget(this._me, this._me) ;
-		boolean isObligatedToHitSelf = item.getAreaType() != AREA_LASER_LINE  && item.getAreaType() != AREA_FIRST_INLINE && item.getAreaSize() >= item.getMaxRange() && item.canTarget(this._me, this._me);
+		boolean isObligatedToHitSelf = item.isObligatedToHitSelfNonSummon();
 
+		integer itemId = item.getId();
+		
 		for (string targetsHash : Set<TargetCell> cells in cellsPerTargets) {
 			Set<AbstractEntity> targets = <>;
 			for (string targetsDist in split(targetsHash, ",")) {
 				string targetId = split(targetsDist, "|")[0];
 				setPut(targets, AbstractEntity.get(number(targetId) as integer));
 			}
+			
+			string itemTargetsHash = targetsHash + itemId;
+			this._actionsPerItemTargetsHash[itemTargetsHash] = <>; 
 			
 			if (!isObligatedToHitSelf) {
 				if (item.hasEffectType(EFFECT_INVERT)) {
@@ -1386,6 +1531,7 @@ class AI {
 						newAction.setTargetsHash(targetsHash);
 						newAction.setTargets(targets);
 						push(this._actions, newAction);
+						setPut(this._actionsPerItemTargetsHash[itemTargetsHash]!, newAction);
 					}
 				} else {
 					Action newAction = new Action();
@@ -1394,6 +1540,7 @@ class AI {
 					newAction.setTargetsHash(targetsHash);
 					newAction.setTargets(targets);
 					push(this._actions, newAction);
+					setPut(this._actionsPerItemTargetsHash[itemTargetsHash]!, newAction);
 				}
 			}
 			
@@ -1410,11 +1557,15 @@ class AI {
 					Action newSelfAction = new Action();
 					newSelfAction.setItem(item);
 					newSelfAction.setTargetCells(cells);
-					newSelfAction.setTargetsHash(targetsHash + this._me.getId() + "|"  + dist + ",");
+					string newTargetsHash = targetsHash + this._me.getId() + "|"  + dist + ",";
+					newSelfAction.setTargetsHash(newTargetsHash);
 					newSelfAction.setTargets(targets);
 					newSelfAction.addTarget(this._me);
 					newSelfAction.setHitCasterDist(dist);
-					push(this._actions, newSelfAction);
+					push(this._actions, newSelfAction); 
+					string newItemTargetsHash = newTargetsHash + itemId;
+					this._actionsPerItemTargetsHash[newItemTargetsHash] = <>; 
+					setPut(this._actionsPerItemTargetsHash[newItemTargetsHash]!, newSelfAction);
 				}
 			}
 		}
@@ -1425,10 +1576,14 @@ class AI {
 			for (integer dist = item.getMinRange(); dist <= item.getAreaSize(); dist++) {
 				Action newSelfAction = new Action();
 				newSelfAction.setItem(item);
-				newSelfAction.setTargetsHash(this._me.getId() + "|" + dist + ",");					
+				string newTargetsHash = this._me.getId() + "|"  + dist + ",";
+				newSelfAction.setTargetsHash(newTargetsHash);					
 				newSelfAction.setTargets(<this._me>);
 				newSelfAction.setHitCasterDist(dist);
 				push(this._actions, newSelfAction);
+				string newItemTargetsHash = newTargetsHash + itemId;
+				this._actionsPerItemTargetsHash[newItemTargetsHash] = <>; 
+				setPut(this._actionsPerItemTargetsHash[newItemTargetsHash]!, newSelfAction);
 			}
 		}
 	}

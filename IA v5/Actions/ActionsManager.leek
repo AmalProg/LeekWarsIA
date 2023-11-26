@@ -313,22 +313,22 @@ class ActionsManager {
 
 	public Array<Action> orderSelfActions() {
 		this._selfActions = arraySort(this._selfActions, function(Action a1, Action a2) => integer {
-			return this.compareSelfActionOrder(a1, a2) as integer;
+			return ActionsManager.compareSelfItemOrder(a1.getItem(), a2.getItem()) as integer;
 		}) as Array<Action>;
 	}
 	public Array<Action> orderDelayedSelfActions() {
 		this._delayedSelfActions = arraySort(this._delayedSelfActions, function(Action a1, Action a2) => integer {
-			return this.compareSelfActionOrder(a1, a2) as integer;
+			return ActionsManager.compareSelfItemOrder(a1.getItem(), a2.getItem()) as integer;
 		}) as Array<Action>;
 	}
 
-	public Array<Action> orderOtherActions(Array<Action> actions) {
+	public static Array<Action> orderOtherActions(Array<Action> actions) {
 		return arraySort(actions, function(Action a1, Action a2) => integer {
 			Set<AbstractEntity> sameTargets = setIntersection(a1.getTargets(), a2.getTargets()) as Set<AbstractEntity>;
 			if (setContains(sameTargets, GAME.me))
-				return this.compareSelfActionOrder(a1, a2) as integer;
+				return ActionsManager.compareSelfItemOrder(a1.getItem(), a2.getItem()) as integer;
 			if (!setIsEmpty(sameTargets))
-				return this.compareActionOrder(a1, a2);
+				return ActionsManager.compareItemOrder(a1.getItem(), a2.getItem());
 			return 0;
 		}) as Array<Action>;
 	}
@@ -336,12 +336,12 @@ class ActionsManager {
 	/*
 	 * @returns -1 if a1 need to be done first, 0 if they can be done in any order, 1 if a2 need to be done first
 	 */
-	public real compareSelfActionOrder(Action a1, Action a2) {
-		return getSelfActionOrderScore(a1) - getSelfActionOrderScore(a2);
+	public static real compareSelfItemOrder(Item i1, Item i2) {
+		return getSelfActionOrderScore(i1) - getSelfActionOrderScore(i2);
 	}
-	public real getSelfActionOrderScore(Action action) {
+	public static real getSelfActionOrderScore(Item item) {
 		integer score = 0;
-		for (Effect effect in action.getItem().getEffects()) {
+		for (Effect effect in item.getEffects()) {
 			integer effType = effect.getType();
 			 if (effType == EFFECT_DEBUFF) {
 				score += 0;
@@ -364,25 +364,25 @@ class ActionsManager {
 			}
 		}
 		
-		return score / count(action.getItem().getEffects());
+		return score / count(item.getEffects());
 	}
 
 	/*
 	 * @returns -1 if a1 need to be done first, 0 if they can be done in any order, 1 if a2 need to be done first
 	 */
-	public integer compareActionOrder(Action a1, Action a2) {
-		boolean a1HasEffectDebuff = a1.getItem().hasEffectType(EFFECT_DEBUFF);
-		boolean a2HasEffectDebuff = a2.getItem().hasEffectType(EFFECT_DEBUFF);
+	public static integer compareItemOrder(Item i1, Item i2) {
+		boolean a1HasEffectDebuff = i1.hasEffectType(EFFECT_DEBUFF);
+		boolean a2HasEffectDebuff = i2.hasEffectType(EFFECT_DEBUFF);
 		if (a1HasEffectDebuff && !a2HasEffectDebuff)
 			return -1;
 		if (!a1HasEffectDebuff && a2HasEffectDebuff)
 			return 1;
 		
 		
-		boolean a1HasEffectNovaVitality = a1.getItem().hasEffectType(EFFECT_NOVA_VITALITY);
-		boolean a2HasEffectNovaVitality = a2.getItem().hasEffectType(EFFECT_NOVA_VITALITY);
-		boolean a1HasEffectHeal = a1.getItem().hasEffectTypeIn(Effect.healEffects);
-		boolean a2HasEffectHeal = a2.getItem().hasEffectTypeIn(Effect.healEffects);
+		boolean a1HasEffectNovaVitality = i1.hasEffectType(EFFECT_NOVA_VITALITY);
+		boolean a2HasEffectNovaVitality = i2.hasEffectType(EFFECT_NOVA_VITALITY);
+		boolean a1HasEffectHeal = i1.hasEffectTypeIn(Effect.healEffects);
+		boolean a2HasEffectHeal = i2.hasEffectTypeIn(Effect.healEffects);
 		if (a1HasEffectNovaVitality && !a2HasEffectNovaVitality)
 			if (a2HasEffectHeal)
 				return -1;
@@ -391,10 +391,10 @@ class ActionsManager {
 				return 1;
 		
 		
-		boolean a1HasEffectVulnerability = a1.getItem().hasEffectTypeIn(Effect.vulnerabilityEffects);
-		boolean a2HasEffectVulnerability = a2.getItem().hasEffectTypeIn(Effect.vulnerabilityEffects);
-		boolean a1HasEffectDamage = a1.getItem().hasEffectTypeIn(Effect.directDamageEffects);
-		boolean a2HasEffectDamage = a2.getItem().hasEffectTypeIn(Effect.directDamageEffects);
+		boolean a1HasEffectVulnerability = i1.hasEffectTypeIn(Effect.vulnerabilityEffects);
+		boolean a2HasEffectVulnerability = i2.hasEffectTypeIn(Effect.vulnerabilityEffects);
+		boolean a1HasEffectDamage = i1.hasEffectTypeIn(Effect.directDamageEffects);
+		boolean a2HasEffectDamage = i2.hasEffectTypeIn(Effect.directDamageEffects);
 		if ((a1HasEffectVulnerability && !a2HasEffectVulnerability) || (a1HasEffectHeal && !a2HasEffectHeal))
 			if (a2HasEffectDamage)
 				return -1;
@@ -403,8 +403,8 @@ class ActionsManager {
 				return 1;
 		
 		
-		boolean a1HasEffectNoveDamage = a1.getItem().hasEffectType(EFFECT_NOVA_DAMAGE);
-		boolean a2HasEffectNoveDamage = a2.getItem().hasEffectType(EFFECT_NOVA_DAMAGE);
+		boolean a1HasEffectNoveDamage = i1.hasEffectType(EFFECT_NOVA_DAMAGE);
+		boolean a2HasEffectNoveDamage = i2.hasEffectType(EFFECT_NOVA_DAMAGE);
 		if (a1HasEffectDamage && !a2HasEffectDamage)
 			if (a2HasEffectNoveDamage)
 				return -1;

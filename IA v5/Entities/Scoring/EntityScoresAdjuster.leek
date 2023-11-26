@@ -1,20 +1,20 @@
 class EntityScoresAdjuster {
-	public static real maxLife = 1.2;
+	public static real maxLife = 0.8;
 	public static real dmg = 0.8;
 	public static real heal = 1.2;
 	public static real abso = 1.7;
 	public static real rel = 1.3;
 	public static real dmgReturn = 1.0;
-	public static real strength = 1.6;
+	public static real strength = 2.4;
 	public static real power = 1.0;
 	public static real magic = 1.0;
 	public static real wisdom = 1.0;
-	public static real resistance = 0.5;
+	public static real resistance = 0.8;
 	public static real agility = 1.2;
 	public static real science = 1.0;
 	public static real poison = 1.0;
-	public static real mp = 1.2;
-	public static real tp = 1.4;
+	public static real mp = 1.1;
+	public static real tp = 1.3;
 	
 	public real kill;
 	public real entityType;

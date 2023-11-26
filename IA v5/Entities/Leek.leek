@@ -26,17 +26,15 @@ class Leek extends AbstractEntity {
 	private Set<Bulb> _summons; public Set<Bulb> getSummons() { return _summons; }
 
 	constructor(integer id) {
-		super(id);
-
 		this._weapons = <>;
 		this._passiveItemEffects = [:];
 		
 		this._summons = <>;
-
-		initBaseStats();
+		
+		super(id);
 	}
 
-	public initBaseStats() {
+	public void initStats() {
 		for(integer wepId in getWeapons(this._id)!) {
 			Weapon weapon = Weapon.get(wepId);
 			setPut(this._items, weapon);
@@ -47,7 +45,12 @@ class Leek extends AbstractEntity {
 			}
 			setPut(this._weapons, weapon);
 			this._cooldowns[weapon] = 0;
+			
+			if (weapon.hasEffectTypeIn(Effect.anyDamageEffects) || weapon.hasEffectTypeIn(Effect.vulnerabilityEffects) || weapon.hasEffectTypeIn(Effect.debuffEffects))
+				setPut(this._killComboItems, weapon);
 		}
+		
+		super.initStats();
 	}
 
 	public static updateLeeksStats() {
@@ -61,7 +64,6 @@ class Leek extends AbstractEntity {
 		
 		if (GAME.isBR)
 			this._powerOnDeath = round(10 + 0.5 * this._stats.getPower());
-		
 	}
 	
 	public void addSummon(Bulb bulb) {
