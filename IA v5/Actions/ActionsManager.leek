@@ -5,16 +5,32 @@ class ActionsManager {
 	private Map<integer, Action> _choosenActions;
 	public boolean hasChoosenAction(integer id) { return mapContainsKey(this._choosenActions, id); }
 	public Action? getChoosenAction(integer id) { return mapGet(this._choosenActions, id, null) as Action?; }
+	public void resetChoosenActions() { 
+		mapClear(this._choosenActions); 
+		this.clearOrderedOtherActions();
+		this.clearSelfActions();
+		this.clearDelayingSelfActions();
+		this.clearDelayedSelfActions();
+	}
 	
 	private Array<Action> _selfActions;
+	public Array<Action> getSelfActions() { return this._selfActions; }
+	public void clearSelfActions() { arrayClear(this._selfActions); }
+
 	private Array<Action> _summonActions;
+												 
 	private Array<Action> _orderedOtherActions; 
 	public Array<Action> getOrderedOtherActions() { return this._orderedOtherActions; }
-	public void clearOrderedOtherAction() { arrayClear(this._orderedOtherActions); }
+	public void clearOrderedOtherActions() { arrayClear(this._orderedOtherActions); }
 	
 	private Set<Action> _delayingActions;
+	public Set<Action> getDelayingSelfActions() { return this._delayingActions; }
+	public void clearDelayingSelfActions() { setClear(this._delayingActions); }
+	 
 	private Array<Action> _delayedSelfActions;
-	
+	public Array<Action> getDelayedSelfActions() { return this._delayedSelfActions; }
+	public void clearDelayedSelfActions() { arrayClear(this._delayedSelfActions); }
+
 	private Map<Action, Action> _linkedPrevActions;
 	private Map<Action, Set<Action>> _sameCellsFromLinkedActions;
 	
@@ -171,6 +187,16 @@ class ActionsManager {
 		
 		caster.resetEquippedWeaponId();
 		
+		return cost;
+	}
+	/**
+	 * Retourne le coût de l'utilisation des actions, dans l'ordre donné, par caster
+	 **/
+	public integer getSelfActionsCost(Array<Action> actions, SimulationEntity caster) {
+		integer cost = 0;
+		for (Action action in actions) {
+			cost += action.getItem().getCost();
+		}
 		return cost;
 	}
 	
@@ -370,7 +396,7 @@ class ActionsManager {
 	/*
 	 * @returns -1 if a1 need to be done first, 0 if they can be done in any order, 1 if a2 need to be done first
 	 */
-	public static integer compareItemOrder(Item i1, Item i2) {
+	public static integer compareItemOrder(Item i1, Item i2) {	
 		boolean a1HasEffectDebuff = i1.hasEffectType(EFFECT_DEBUFF);
 		boolean a2HasEffectDebuff = i2.hasEffectType(EFFECT_DEBUFF);
 		if (a1HasEffectDebuff && !a2HasEffectDebuff)

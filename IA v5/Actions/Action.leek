@@ -86,6 +86,7 @@ class Action {
 		while (useCount-- > 0) {
 			if (!setIsEmpty(this._targetCells)) {
 				MoveCell moveCell = setGetOne(this._cellsFrom) as MoveCell;
+				debug(this._teleportItem + "  " + !manager.isUsedMovementItem(this._teleportItem!))
 				// On ne se téléporte que à la première réalisation de l'action
 				if (this._teleportItem != null && !manager.isUsedMovementItem(this._teleportItem!)) {
 					manager.addUsedMovementItem(this._teleportItem!);
@@ -98,12 +99,12 @@ class Action {
 				}
 
 				TargetCell targetCell = setGetOne(this._targetCells) as TargetCell;
-				Debug.log("Simulating " + this._item + " on " + targetCell + " from " + targetCell.cellFrom + " with caster at dist " + this._hitCasterDist + " for a score of " + this._score, Action.SIMULATING_DEBUG_COLOR);
+				Debug.log("Simulating " + this + " with caster at dist " + this._hitCasterDist + " for a score of " + this._score, Action.SIMULATING_DEBUG_COLOR);
 				Debug.log("cellsFrom : " + this._cellsFrom, Action.SIMULATING_DEBUG_COLOR);
 				Debug.log("targetCells : " + this._targetCells, Action.SIMULATING_DEBUG_COLOR);
 				this._item.applyOnCell(targetCell.cellTarget, targetCell.cellFrom, caster, this._hitCasterDist);
 			} else {
-				Debug.log("Simulating " + this + " on self ", Action.SIMULATING_DEBUG_COLOR);
+				Debug.log("Simulating " + this + " on self for a score of " + this._score, Action.SIMULATING_DEBUG_COLOR);
 				this._item.applyTo(caster, caster, this._hitCasterDist, true);
 			}
 
@@ -224,7 +225,8 @@ class Action {
 			+ ", item : " + this._item
 			//+ "cellsTo : " + this._targetCells + "\n"
 			+ ", score : " + this._score
-			+ ", useCount : " + this._useCount;
+			+ ", useCount : " + this._useCount
+			+ ", targetsHash : " + this._targetsHash;
 		
 		if (this._teleportItem != null) {
 			ret += ", teleportItem : " + this._teleportItem;

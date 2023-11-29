@@ -175,7 +175,7 @@ class Effect {
 		}
 		
 		real value = this.getBaseValueToApply(cellTarget, cellFrom, caster, dist, isCasterHit);
-		this.apply(value, caster, target, targetStats, cellTarget);
+		this.apply(value, caster, target, targetStats, casterStats, cellTarget);
 		
 		if (targetStats.getAgility() > 800 && !(this instanceof PassiveEffect)) {
 			if (target instanceof Leek) {
@@ -188,7 +188,7 @@ class Effect {
 			
 		targetStats.updateMults();
 	}
-	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, EntityStats casterStats, Cell? cellTarget) {
 		// need to be overriden
 	}
 	

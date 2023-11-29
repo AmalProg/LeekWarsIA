@@ -123,6 +123,10 @@ class AbstractEntity {
 		this._scores = new EntityScores(this);
 	}
 
+	public static void updateEntitiesStats() {
+		for (AbstractEntity entity in AbstractEntity.entities)
+			entity.updateStats();
+	}
 	public void updateStats() {
 		this._isAlive = isAlive(this._id);
 		
@@ -322,7 +326,7 @@ class AbstractEntity {
 	public void unsimulateItemUse(Item item) {			
 		this.useTP(-item.getCost());
 		this._cooldowns[item] = 0;
-	}	
+	}
 	
 	public void kill(AbstractEntity caster) {
 		if (!this._isAlive) return;
@@ -361,7 +365,7 @@ class AbstractEntity {
 		this._isAlive = true;
 		this.setCell(cell);
 		
-		GAME.triggerEntityDisplacedEvent();
+		GAME.triggerEntityDisplacedEvent(this);
 	}
 	
 	public void removeLaunchedEffect(EntityEffect effect) {
@@ -394,7 +398,7 @@ class AbstractEntity {
 		if (this._id != getEntity())
 			this.updatePathLength();
 		
-		GAME.triggerEntityDisplacedEvent();
+		GAME.triggerEntityDisplacedEvent(this);
 	}
 	
 	/**
@@ -436,7 +440,7 @@ class AbstractEntity {
 		if (this._id != getEntity())
 			this.updatePathLength();
 		
-		GAME.triggerEntityDisplacedEvent();
+		GAME.triggerEntityDisplacedEvent(this);
 	}
 	
 	/**
@@ -450,7 +454,7 @@ class AbstractEntity {
 		if (this._id != getEntity())
 			this.updatePathLength();
 		
-		GAME.triggerEntityDisplacedEvent();
+		GAME.triggerEntityDisplacedEvent(this);
 	}
 
 	public void useTP(integer tp) {

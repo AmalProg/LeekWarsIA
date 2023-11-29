@@ -47,12 +47,31 @@ class SimulationEntity {
 	public void simulateAction(Action action) {
 		Item item = action.getItem();
 		integer dist = action.getHitCasterDist();
-		for (Effect eff in item.getEffectsOfTypes(<EFFECT_RAW_BUFF_MP, EFFECT_BUFF_MP>)) {
-			this._mp = this._mp + eff.getAppliedValue(null, null, this._entity, this._entity.getStats(), this._entity.getStats(), dist, true);
+		if (dist != -1 && setContains(action.getTargets(), this._entity)) {
+			for (Effect eff in item.getEffectsOfTypes(<EFFECT_RAW_BUFF_MP, EFFECT_BUFF_MP>)) {
+				this._mp += eff.getAppliedValue(null, null, this._entity, this._entity.getStats(), this._entity.getStats(), dist, true);
+
+				if (!eff.isStackable) {
+					// Si l'effet n'est pas stackable on retire la valeur de l'effet déjà présente
+					for (EntityEffect entityEff in this._entity.getStats().getEffectsOn(eff)) {
+						this._mp -= entityEff.getValue();
+					}
+				}
+			}
+		
+			for (Effect eff in item.getEffectsOfTypes(<EFFECT_RAW_BUFF_TP, EFFECT_BUFF_TP>)) {
+				integer value = eff.getAppliedValue(null, null, this._entity, this._entity.getStats(), this._entity.getStats(), dist, true)
+				this._tp += value;
+
+				if (!eff.isStackable) {
+					// Si l'effet n'est pas stackable on retire la valeur de l'effet déjà présente
+					for (EntityEffect entityEff in this._entity.getStats().getEffectsOn(eff)) {
+						this._tp -= entityEff.getValue();
+					}
+				}
+			}
 		}
-		for (Effect eff in item.getEffectsOfTypes(<EFFECT_RAW_BUFF_TP, EFFECT_BUFF_TP>)) {
-			this._tp = this._tp + eff.getAppliedValue(null, null, this._entity, this._entity.getStats(), this._entity.getStats(), dist, true);
-		}
+
 		for (Effect eff in item.getEffectsOfType(EFFECT_INVERT)) {
 			// On ne peut viser qu'une entité avec inversion, et on inverse forcément avec nous même
 			AbstractEntity target = setGetOne(action.getTargets()) as AbstractEntity;
@@ -66,5 +85,11 @@ class SimulationEntity {
 			tmpCell.setType(CELL_EMPTY);
 			moveCell.cell.setType(CELL_ENTITY, target);
 		}
+
+		if (item instanceof Weapon && item.getId() != this.getEquippedWeaponId()) {
+			this._tp--;
+			this.setEquippedWeaponId(item.getId())
+		}
+		this._tp -= item.getCost();
 	}
 }

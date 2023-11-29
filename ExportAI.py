@@ -5,6 +5,22 @@ import time
 lwAPIUrl = 'https://leekwars.com/api/'
 
 """
+Connect to Leek Wars and keep the cookies needed for other API calls
+"""
+def connectToLW() :
+    password = input("Leek Wars password : ")
+    loginData = {'login': 'Amal', 'password': password}
+    loginResp = requests.post(lwAPIUrl + 'farmer/login-token/', loginData)
+    if loginResp.status_code == 200 :
+        global cookies
+        cookies = loginResp.cookies
+        return True
+    else :
+        print('La connection à Leek Wars a échouée')
+        return False
+
+
+"""
 Get the code of the specified ai
 """
 def getAiCode(ai) :

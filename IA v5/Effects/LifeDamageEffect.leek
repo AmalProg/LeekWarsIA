@@ -1,8 +1,7 @@
 include("Effect");
 
 class LifeDamageEffect extends Effect {
-	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
-		EntityStats casterStats = caster.getStats();
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, EntityStats casterStats, Cell? cellTarget) {
 		real baseDmg = value / 100 * casterStats.getLife() * casterStats.getPowerMult();
 		integer dmgReturn = round(baseDmg * affectedEntityStats.getDmgReturn() / 100);
 		integer dmg = round(baseDmg * (1 - affectedEntityStats.getRel() / 100) - affectedEntityStats.getAbso());

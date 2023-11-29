@@ -7,8 +7,7 @@ class PoisonEffect extends Effect {
 		super(effectArray, item);
 	}
 	
-	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
-		EntityStats casterStats = caster.getStats();
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, EntityStats casterStats, Cell? cellTarget) {
 		integer finalValue = round(value * casterStats.getMagicMult() * casterStats.getPowerMult());
 		    			
 		affectedEntityStats.addEffect(null, this._type, finalValue, caster, this._turns, false, this._item.getId(), affectedEntity, this._modifiers);

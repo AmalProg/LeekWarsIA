@@ -1,3 +1,4 @@
+include("ZombIA");
 include("Entities/Teams/Team");
 include("Items/Item");
 include("Actions/Action");
@@ -14,7 +15,7 @@ class AI {
 	private AbstractEntity _me;
 	private Set<Team> _teams;
 	private DangerMap _dangerMap;
-	private Array<Action> _everyActions; public void resetEveryActions() { arrayClear(this._everyActions); }
+	private Array<Action> _everyActions; public void resetEveryActions() { debugC("reseting every actions", COLOR_GREEN) arrayClear(this._everyActions); }
 	private Array<Action> _actions;
 	private Map<string, Set<Action>> _actionsPerItemTargetsHash;
 	private real _highestActionScore;
@@ -90,7 +91,7 @@ class AI {
 				this.filterUseableActions();
 				Debug.stopOpCount("filterUseableActions : ");
 			}
-
+			
 			Debug.startOpCount();
 			this.filterToFarActions();
 			Debug.stopOpCount("filterToFarActions : ");
@@ -100,7 +101,7 @@ class AI {
 				Debug.startOpCount();
 				if (this.tryFindKillCombos()) {
 					for (Action action in this._actionsManager.getOrderedOtherActions()) {
-						action.addUse();	
+						action.addUse();
 					}
 					
 					GAME.updateAllStats();
@@ -111,12 +112,15 @@ class AI {
 					if (this._movementEscapeItem != null)
 						this._me.simulateItemUse(this._movementEscapeItem!);
 					this._actionsManager.simulate(this._me);
+					
+					Debug.stopOpCount("tryFindKillCombos : ");
+					tryFindKillCombo = false;
+					// On reprend la recherche d'une nouvelle action après avoir ajouté celle pour le kill
+					continue;
 				}
 				Debug.stopOpCount("tryFindKillCombos : ");
 				
 				tryFindKillCombo = false;
-				// On reprend la recherche d'une nouvelle action après avoir ajouté celle pour le kill
-				continue;
 			}
 		
 			
@@ -133,13 +137,13 @@ class AI {
 			}
 			
 			//Debug.log("Actions possible found : " + count(this._actions));
-			//integer i = 0;
-			//for (Action action in this._actions) {
-				//Debug.log(action, getColor(175, 175, 175));
+			integer i = 0;
+			for (Action action in this._actions) {
+				Debug.log(action, getColor(175, 175, 175));
 				
-				//i++;
-				//if (i > 20) break;
-			//}
+				i++;
+				if (i > 15) break;
+			}
 			
 			boolean useDangerMap = this.doNeedDangerMap();
 			
@@ -171,6 +175,11 @@ class AI {
 			
 			if (bestDoableAction == null)
 				Debug.log("Pas d'action réalisable trouvée");
+		}
+		
+		for (AbstractEntity entity in GAME.getAllEntities()) {
+			// On reset les stats de simulation pour enlever les cellules modifiés lors de la simu
+			entity.getSimulationEntity().resetStats();
 		}
 	}
 	
@@ -204,6 +213,8 @@ class AI {
 			}
 		}
 
+		this._actionsManager.resetChoosenActions();
+
 		return false;
 	}
 	
@@ -220,6 +231,7 @@ class AI {
 		boolean canDoCombo = false;
 		while (!canDoCombo && combo.canKill(target, this._me, aoePerItem)) {
 			arrayClear(comboActions);
+			
 			boolean foundAllActions = true;
 			for (Item item in combo.getOrderedItems()) {
 				string targetsHash = target.getId() + "|" + aoePerItem[item] + ",";
@@ -237,8 +249,9 @@ class AI {
 			}
 
 			if (foundAllActions) {
-				debug("trying kill combo : " + comboActions)
+				debug("trying kill combo : " + comboActions + " on " + target)
 				
+				this._actionsManager.clearUseableMovementItems();
 				if (!this._me.isStatic()) {
 					for (Item moveItem in this._me.getOffCooldownMovementItemsOrderedByCost()) {
 						// Si j'ai assez de TP pour faire l'action et utiliser l'item de movement
@@ -266,7 +279,7 @@ class AI {
 							break;
 						}
 					} else {
-						push(doableActions, action);
+						this._actionsManager.addSelfAction(action);
 					}
 				}
 			}
@@ -572,9 +585,11 @@ class AI {
 		
 		this._me.updateStats();
 		
+		//if (getTurn() > 1) {
 		//clearMarks();
 		//this._dangerMap.debugMap();
 		//pause();
+		//}
 		
 		AccessibleCells accCellsToUse;
 		if (this._movementEscapeItem != null) {
@@ -810,7 +825,7 @@ class AI {
 	/**
 	 * Détermine si on peu réaliser l'action en même temps que toutes les autres déjà choisies
 	 **/
-	private boolean canDoAction(Action action, Array<Action> otherActions, boolean useDangerMap) {			
+	private boolean canDoAction(Action action, Array<Action> otherActions, boolean useDangerMap) {
 		// S'il n'y a pas encore d'action non self cast
 		if (isEmpty(otherActions)) {
 			this._actionsManager.clearUsedMovementItems();
@@ -865,20 +880,24 @@ class AI {
 					}
 				}
 				
-				if (canInvertBeforeOtherActions) {
+				if (false/*canInvertBeforeOtherActions*/) {
 					// On ordonne les actions dans le sens le plus logique
 					newOtherActions = ActionsManager.orderOtherActions(newOtherActions);
 				}
 			}
 			
 						
+			integer escapeItemCost = 0;
+			if (this._movementEscapeItem != null)
+				escapeItemCost = this._movementEscapeItem!.getCost();
+			
 			Set<integer> alreadyReversed = <>;
 			boolean isTestingPossibilities = false;
 			do {
 				//Debug.log("Trying new path " + newOtherActions, COLOR_BLUE);
 
 				// Si l'ordre des items fait que la suite d'action coûte plus que nos TP, alors on ne peut pas faire l'action
-				if (this._actionsManager.getOrderedActionsCost(newOtherActions, this._me.getSimulationEntity()) > this._me.getSimulationEntity().getTP()) return false;
+				if (this._actionsManager.getOrderedActionsCost(newOtherActions, this._me.getSimulationEntity()) + escapeItemCost > this._me.getSimulationEntity().getTP()) return false;
 				
 				// On clear les items de mouvement déjà utilisés
 				this._actionsManager.clearUsedMovementItems();
@@ -892,74 +911,85 @@ class AI {
 					entity.getSimulationEntity().resetStats();
 				}
 				
+				
+				for (Action selfAction in this._actionsManager.getSelfActions()) {
+					this._me.getSimulationEntity().simulateAction(selfAction);
+				}
+
+				
 				isTestingPossibilities = false;
 				boolean isActionDoable = true;
-				integer curUsedTP = 0;
 				
 				Action firstAction = newOtherActions[0];
 				if (this.findCellsFromForFirstAction(firstAction, useDangerMap)) {
-					this.simulateActionForPathing(firstAction);
+					this._me.getSimulationEntity().simulateAction(firstAction);
 
 					if (firstAction.getItem().hasEffectType(EFFECT_INVERT))
 						this.invertActionCells(firstAction, newOtherActions, 0);
-				}
 
-				// Pour toutes les actions choisie + cette action, ordonnée
-				for (integer i = 0; i < count(newOtherActions) - 1; i++) {						
-					curUsedTP += newOtherActions[i+1].getItem().getCost();
-					
-					Action choosenAction = newOtherActions[i];
-					Action nextChoosenAction = newOtherActions[i+1]
-					
-					// Si on a actuellement assez de TP pour faire l'action et qu'on trouve un path
-					if (curUsedTP <= this._me.getSimulationEntity().getTP() && this.findPathsBetweenChoosenActions(choosenAction, nextChoosenAction, useDangerMap)) {
-						this.simulateActionForPathing(nextChoosenAction);
+					// Pour toutes les actions choisie + cette action, ordonnée
+					for (integer i = 0; i < count(newOtherActions) - 1; i++) {
+						integer itemCost = newOtherActions[i+1].getItem().getCost();
+						if (newOtherActions[i+1].getItem() instanceof Weapon && newOtherActions[i+1].getItem().getId() != this._me.getSimulationEntity().getEquippedWeaponId())
+							itemCost++;
 
-						if (nextChoosenAction.getItem().hasEffectType(EFFECT_INVERT))
-							this.invertActionCells(nextChoosenAction, newOtherActions, i+1);
-						
-						continue;
+
+						Action choosenAction = newOtherActions[i];
+						Action nextChoosenAction = newOtherActions[i+1]
+
+						debug(itemCost + " + " + escapeItemCost + " <= " + this._me.getSimulationEntity().getTP());
+						// Si on a actuellement assez de TP pour faire l'action et qu'on trouve un path
+						if (itemCost + escapeItemCost <= this._me.getSimulationEntity().getTP() && this.findPathsBetweenChoosenActions(choosenAction, nextChoosenAction, useDangerMap)) {
+						this._me.getSimulationEntity().simulateAction(nextChoosenAction);
+
+							if (nextChoosenAction.getItem().hasEffectType(EFFECT_INVERT))
+								this.invertActionCells(nextChoosenAction, newOtherActions, i+1);
+
+							continue;
+						}
+
+						boolean canBeReversed = true;
+						Set<AbstractEntity> sameTargets = setIntersection(newOtherActions[i].getTargets(), newOtherActions[i+1].getTargets()) as Set<AbstractEntity>;
+						if (newOtherActions[i].getItem().hasEffectType(EFFECT_INVERT) || newOtherActions[i+1].getItem().hasEffectType(EFFECT_INVERT)) {
+							canBeReversed = false;
+						} else if (setContains(sameTargets, this._me) && ActionsManager.compareSelfItemOrder(newOtherActions[i].getItem(), newOtherActions[i+1].getItem()) != 0) {
+							// Si on est affecté par les deux actions et que les deux actions n'ont pas le même score de priorité
+							canBeReversed = false;
+						} else if (!setIsEmpty(sameTargets) && ActionsManager.compareItemOrder(newOtherActions[i].getItem(), newOtherActions[i+1].getItem()) != 0) {
+							// Si au moins une entité est affecté par les deux actions et que les deux actions n'ont pas le même score de priorité
+							canBeReversed = false;
+						}
+
+						// On vérifit qu'on a pas déjà inversé les deux actions
+						if (canBeReversed && !setContains(alreadyReversed, i)) {
+							// Intervertit
+							Action tmpAction = newOtherActions[i];
+							newOtherActions[i] = newOtherActions[i+1];
+							newOtherActions[i+1] = tmpAction;
+
+							// On supprime les paths pour ces 2 actions
+							newOtherActions[i].clearCellsFrom();
+							newOtherActions[i].setTeleportItem(null);
+							newOtherActions[i+1].clearCellsFrom();
+							newOtherActions[i+1].setTeleportItem(null);
+							this._actionsManager.unlinkEveryActions();
+
+							setPut(alreadyReversed, i);
+							isTestingPossibilities = true;
+							isActionDoable = false;
+							break;
+						} else {
+							// La nextChoosenAction n'est pas réalisable après choosenAction, donc on continue de tester avec la prochaine action
+							this._actionsManager.unlinkEveryActions();
+							isActionDoable = false;
+							break;
+						}
 					}
 
-					boolean canBeReversed = true;
-					Set<AbstractEntity> sameTargets = setIntersection(newOtherActions[i].getTargets(), newOtherActions[i+1].getTargets()) as Set<AbstractEntity>;
-					if (setContains(sameTargets, this._me) && ActionsManager.compareSelfItemOrder(newOtherActions[i].getItem(), newOtherActions[i+1].getItem()) != 0) {
-						// Si on est affecté par les deux actions et que les deux actions n'ont pas le même score de priorité
-						canBeReversed = false;
-					} else if (!setIsEmpty(sameTargets) && ActionsManager.compareItemOrder(newOtherActions[i].getItem(), newOtherActions[i+1].getItem()) != 0) {
-						// Si au moins une entité est affecté par les deux actions et que les deux actions n'ont pas le même score de priorité
-						canBeReversed = false;
+					if (isActionDoable) {
+						this._actionsManager.setOrderedOtherAction(newOtherActions);
+						return true;
 					}
-
-					// On vérifit qu'on a pas déjà inversé les deux actions
-					if (canBeReversed && !setContains(alreadyReversed, i)) {
-						// Intervertit
-						Action tmpAction = newOtherActions[i];
-						newOtherActions[i] = newOtherActions[i+1];
-						newOtherActions[i+1] = tmpAction;
-						
-						// On supprime les paths pour ces 2 actions
-						newOtherActions[i].clearCellsFrom();
-						newOtherActions[i].setTeleportItem(null);
-						newOtherActions[i+1].clearCellsFrom();
-						newOtherActions[i+1].setTeleportItem(null);
-						this._actionsManager.unlinkEveryActions();
-						
-						setPut(alreadyReversed, i);
-						isTestingPossibilities = true;
-						isActionDoable = false;
-						break;
-					} else {
-						// La nextChoosenAction n'est pas réalisable après choosenAction, donc on continue de tester avec la prochaine action
-						this._actionsManager.unlinkEveryActions();
-						isActionDoable = false;
-						break;
-					}
-				}
-
-				if (isActionDoable) {
-					this._actionsManager.setOrderedOtherAction(newOtherActions);
-					return true;
 				}
 			} while (isTestingPossibilities);
 		}
@@ -1015,7 +1045,6 @@ class AI {
 		} else {
 			choosenActionCellsFrom = choosenAction.getCellsFrom();
 			
-			// On ne teste pas si les deux actions ont les même celle si l'action d'avant était une inversion
 			for (MoveCell moveCell in choosenActionCellsFrom) {
 				if (setContains(cellsCanMoveToHitNextChoosenAction, moveCell.cell))
 					setPut(cellsAccessibleToHitLikeChoosenAction, moveCell);
@@ -1112,12 +1141,6 @@ class AI {
 			}
 			
 			action.setTargetCells(newTargetCells);
-		}
-	}
-
-	private void simulateActionForPathing(Action action) {
-		if (setContains(action.getTargets(), this._me) || action.getItem().hasEffectType(EFFECT_INVERT))  {
-			this._me.getSimulationEntity().simulateAction(action);
 		}
 	}
 
@@ -1237,6 +1260,7 @@ class AI {
 	private Set<Cell> getActionCellsCanMoveToHit(Action action) {
 		Set<Cell> cellsCanMoveToHit = <>;
 		Item item = action.getItem();
+		integer areaSize = item.getAreaSize();
 
 		// Récupère les cell qui permettent de viser targetCell
 		for (TargetCell targetCell in action.getTargetCells()) {
@@ -1262,11 +1286,13 @@ class AI {
 						}
 					}
 				} else {
-					for (Cell areaCell in item.getEffectiveArea(targetCell.cellTarget, null)) {
-						// Si on est en dehors de l'area
-						if (!setContains(allCellsCanMoveToHitTarget, areaCell))
-							setPutAll(cellsCanMoveToHit, allCellsCanMoveToHitTarget);
+					if (item.canSelfTarget(this._me.isSummon())) {
+						for (Cell areaCell in item.getEffectiveArea(targetCell.cellTarget, null)) {
+							// Si on est en dehors de l'area
+							setRemove(allCellsCanMoveToHitTarget, areaCell);
+						}
 					}
+					setPutAll(cellsCanMoveToHit, allCellsCanMoveToHitTarget);
 				}
 			}
 		}
@@ -1422,6 +1448,7 @@ class AI {
 			
 			push(actions, action);
 		}
+		debug("tp : " + this._me.getStats().getTP())
 		
 		this._actions = actions;
 	}

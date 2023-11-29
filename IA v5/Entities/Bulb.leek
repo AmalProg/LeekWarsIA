@@ -34,12 +34,6 @@ class Bulb extends AbstractEntity {
 		}
 	}
 	
-	public static void updateBulbsStats() {
-		for (Bulb bulb in Bulb.bulbs) {
-			bulb.updateStats();
-		}
-	}
-	
 	public static Bulb? get(integer id) {
 		return Bulb.bulbs[id];
 	}

@@ -32,11 +32,6 @@ class Chest extends AbstractEntity {
 		}
 	}
 	
-	public static updateChestsStats() {
-		for (Chest chest in Chest.chests) {
-			chest.updateStats();
-		}
-	}
 	protected void updateStats() {
 		super.updateStats();
 		// can't move

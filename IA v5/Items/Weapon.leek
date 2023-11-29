@@ -16,11 +16,9 @@ class Weapon extends Item {
 	
 	constructor(integer id) {
 		super(id);
-		
-		initStats();
 	}
 
-	public initStats() {
+	protected void initStats() {
 		this.name = getWeaponName(this.id);
 		this.areaType = getWeaponArea(this.id)!;
 		this.cost = getWeaponCost(this.id);
@@ -38,6 +36,8 @@ class Weapon extends Item {
 		}
 		
 		this.initTeamTargetsBool();
+		
+		super.initStats();
 	}
 	
 	protected Set<Cell> getItemEffectiveArea(Cell cell, Cell? from) {

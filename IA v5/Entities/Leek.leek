@@ -53,11 +53,6 @@ class Leek extends AbstractEntity {
 		super.initStats();
 	}
 
-	public static updateLeeksStats() {
-		for (Leek leek in Leek.leeks) {
-			leek.updateStats();
-		}
-	}
 	protected void updateStats() {
 		this._equippedWeaponId = getWeapon();
 		super.updateStats();
@@ -74,11 +69,10 @@ class Leek extends AbstractEntity {
 	}
 	
 	public void simulateItemUse(Item item) {
-		if (item instanceof Weapon and this._equippedWeaponId != item.getId()) {
+		if (item instanceof Weapon && this._equippedWeaponId != item.getId()) {
 			this._equippedWeaponId = item.getId();
 			this.useTP(1);
 		}
 		super.simulateItemUse(item);
-		Debug.info("my tp : " + this._stats.getTP());
 	}
 }

@@ -21,11 +21,6 @@ class Turret extends AbstractEntity {
 		super(id);
 	}
 	
-	public static updateTurretsStats() {
-		for (var turret in Turret.turrets) {
-			turret.updateStats();
-		}
-	}
 	protected void updateStats() {
 		super.updateStats();
 		// can't move

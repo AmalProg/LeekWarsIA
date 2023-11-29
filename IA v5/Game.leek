@@ -34,7 +34,7 @@ class Game {
 		this._allEntities = <>;
 		
 		Debug.enabledLog = true;
-		Debug.enabledOp = true;
+		Debug.enabledOp = false;
 		Debug.enabledInfo = false;
 
 		Debug.startOpCount();
@@ -131,10 +131,7 @@ class Game {
 	}
 	
 	public void updateAllStats() {
-		Bulb.updateBulbsStats();
-		Leek.updateLeeksStats();
-		Chest.updateChestsStats();
-		Turret.updateTurretsStats();
+		AbstractEntity.updateEntitiesStats();
 	}
 	
 	public void startTurn() {		
@@ -164,9 +161,10 @@ class Game {
 		}
 		this.timeline.update(this._allEntities);
 
-		for (AbstractEntity entity in this._allEntities) {
-			Debug.log(entity.getScores().getAdjuster());	
-		}
+		//for (AbstractEntity entity in this._allEntities) {
+			//Debug.log(entity.getStats());	
+			//Debug.log(entity.getScores().getAdjuster());	
+		//}
 		
 		this._ai.determineActions();
 		
@@ -178,8 +176,9 @@ class Game {
 	}
 	
 	
-	public void triggerEntityDisplacedEvent() {
+	public void triggerEntityDisplacedEvent(AbstractEntity entity) {
 		this._ai.resetEveryActions();
+		//this._ai.addDisplacingAction();
 	}
 	public void triggerEntityDiedEvent() {
 		this._ai.resetEveryActions();

@@ -68,11 +68,14 @@ class Combo {
 	public boolean canKill(AbstractEntity target, AbstractEntity caster, Map<Item, integer> aoePerItem = [:]) {
 		EntityStats clonedStats = new EntityStats();
 		clonedStats.copy(target.getStats());
+		
+		EntityStats clonedCasterStats = new EntityStats();
+		clonedCasterStats.copy(caster.getStats());
 		for (Item item in this._orderedItems) {
 			for (Effect eff in item.getEffects()) {
 				if (eff.getType() == EFFECT_INVERT) continue;
 				
-				eff.applyTo(null, null, target, caster, clonedStats, caster.getStats(), mapGet(aoePerItem, item, 0) as integer, false);
+				eff.applyTo(null, null, target, caster, clonedStats, clonedCasterStats, mapGet(aoePerItem, item, 0) as integer, false);
 				if (clonedStats.getLife() <= 0)
 					return true;
 			}

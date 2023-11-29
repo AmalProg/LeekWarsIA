@@ -7,8 +7,7 @@ class NovaDamageEffect extends Effect {
 		super(effectArray, item);
 	}
 	
-	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
-		EntityStats casterStats = caster.getStats();
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, EntityStats casterStats, Cell? cellTarget) {
 		integer dmg = round(value * casterStats.getScienceMult() * casterStats.getPowerMult());
 
 		if (dmg > affectedEntityStats.getMaxLife() - affectedEntityStats.getLife()) {

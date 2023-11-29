@@ -1,8 +1,7 @@
 include("Effect");
 
 class HealEffect extends Effect {
-	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, Cell? cellTarget) {
-		EntityStats casterStats = caster.getStats();
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, EntityStats casterStats, Cell? cellTarget) {
 		integer finalValue = round(value * casterStats.getWisdomMult());
 		if (this._turns == 0) {
 			affectedEntityStats.addLife(finalValue);

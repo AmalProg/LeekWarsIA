@@ -1,7 +1,7 @@
 include("PassiveEffect");
 
 class KillToTpEffect extends PassiveEffect {
-	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, boolean isSelfCast, Cell cellTarget) {
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, EntityStats casterStats, Cell? cellTarget) {
 		affectedEntityStats.addEffect(EntityStats.addTPStatic, EFFECT_RAW_BUFF_TP, round(value), caster, this._turns, false, this._item.getId(), affectedEntity, this._modifiers);	
 	}
 	

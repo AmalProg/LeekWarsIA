@@ -121,7 +121,7 @@ class EntityScoresAdjuster {
 		
 		/* Debuff */
 		this.debuffOther = 0.2;
-		this.debuffBuffDamage = 0.7 * this.turnOrderNear;
+		this.debuffBuffDamage = 1.3 * this.turnOrderNear;
 		this.debuffBuffMP = 0.3;
 		this.debuffBuffTP = 0.4;
 		this.debuffBuffOtherStats = 0.1;
