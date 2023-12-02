@@ -10,7 +10,7 @@ class PushEffect extends Effect {
 	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, EntityStats casterStats, Cell? cellTarget) {
 		affectedEntity.pushTo(cellTarget!);
 		
-		this.tryTriggerPassive(affectedEntity, caster, 1);
+		this.tryTriggerPassive(affectedEntity, caster, affectedEntityStats, casterStats, 1);
 	}
 	
 }

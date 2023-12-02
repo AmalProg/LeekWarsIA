@@ -11,7 +11,7 @@ class PoisonEffect extends Effect {
 		integer finalValue = round(value * casterStats.getMagicMult() * casterStats.getPowerMult());
 		    			
 		affectedEntityStats.addEffect(null, this._type, finalValue, caster, this._turns, false, this._item.getId(), affectedEntity, this._modifiers);
-		this.tryTriggerPassive(affectedEntity, caster, finalValue);
+		this.tryTriggerPassive(affectedEntity, caster, affectedEntityStats, casterStats, finalValue);
 	}
 	
 	protected real getEffectScore(real value, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {

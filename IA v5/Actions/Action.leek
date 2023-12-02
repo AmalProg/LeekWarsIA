@@ -22,7 +22,7 @@ class Action {
 	public string getTargetsHash() { return this._targetsHash; }
 	
 	private Set<AbstractEntity> _targets;
-	publci void addTarget(AbstractEntity target) { setPut(this._targets, target); }
+	public void addTarget(AbstractEntity target) { setPut(this._targets, target); }
 	public void setTargets(Set<AbstractEntity> targets) { this._targets = targets; }
 	public Set<AbstractEntity> getTargets() { return this._targets; }
 	
@@ -54,11 +54,23 @@ class Action {
 	public void addUse() { this._useCount++; }
 	public integer getUseCount() { return this._useCount; }
 	
-	constructor() {	
+	constructor() {
 		this._id = Action.idCounter++;
 		this._targetCells = <>;
 		this._targetsHash = "";
 		this._targets = <>;
+		this._cellsFrom = <>;
+		this._hitCasterDist = -1;
+		this._teleportItem = null;
+		this._score = 0.0;
+		this._useCount = 0;
+	}
+	constructor(Item item, Set<TargetCell> targetCells, string targetsHash, Set<AbstractEntity> targets) {	
+		this._id = Action.idCounter++;
+		this._item = item;
+		this._targetCells = targetCells;
+		this._targetsHash = targetsHash;
+		this._targets = targets;
 		this._cellsFrom = <>;
 		this._hitCasterDist = -1;
 		this._teleportItem = null;

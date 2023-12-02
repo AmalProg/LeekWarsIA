@@ -4,4 +4,8 @@ class RessurectEffect extends Effect {
 	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, EntityStats casterStats, Cell? cellTarget) {
 		affectedEntity.resurrection(cellTarget);
 	}
+	
+	protected real getEffectScore(real value, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
+		return target.getScores().getAdjuster().ressurect;
+	}
 }

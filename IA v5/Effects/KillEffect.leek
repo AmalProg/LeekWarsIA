@@ -7,7 +7,7 @@ class KillEffect extends Effect {
 		if (caster instanceof Leek) {
 			PassiveEffect? eff = (caster as Leek).getPassiveItemEffects()[EFFECT_KILL_TO_TP];
 			if (eff != null) {
-				eff!.applyPassiveTo(caster, caster, 0, 1);
+				eff!.applyPassiveTo(caster, caster, casterStats, casterStats, 0, 1);
 			}
 		}
 	}

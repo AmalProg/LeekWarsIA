@@ -60,7 +60,7 @@ class EntityScores {
 	}
 	
 	public real getDmgScore(integer dmg, integer life = this._entity.getStats().getLife()) {
-		// 2.5\left(1-\min\left(0.6,\frac{a}{2\cdot2000}\right)\right)x
+		// 2.5\left(1-\min\left(0.6,\frac{a}{8\cdot2000}\right)\right)x+0.0005x^{2}
 		return (2.5 * (1 - min(0.6, life / (8 * EntityStatsDiviser.maxLife))) * dmg + 0.0005 * dmg * dmg) * EntityScoresAdjuster.dmg;
 	}
 	
@@ -70,8 +70,13 @@ class EntityScores {
 	}
 	
 	public real getStrengthScore(integer strAdded, integer str = this._entity.getStats().getStrength()) {
-		// 2x\cdot\frac{\left(500-\frac{\left(g-750\right)^{2}}{1125}\right)}{500}
-		return 4 * (EntityStatsDiviser.strength - (str - EntityStatsDiviser.strength * 1.5) * (str - EntityStatsDiviser.strength * 1.5) / (EntityStatsDiviser.strength * 2.25)) / EntityStatsDiviser.strength * strAdded * EntityScoresAdjuster.strength;
+		if (strAdded > 0) {
+			// 2x\cdot\frac{\left(500-\frac{\left(g-750\right)^{2}}{1125}\right)}{500}
+			return 4 * (EntityStatsDiviser.strength - (str - EntityStatsDiviser.strength * 1.5) * (str - EntityStatsDiviser.strength * 1.5) / (EntityStatsDiviser.strength * 2.25)) / EntityStatsDiviser.strength * strAdded * EntityScoresAdjuster.strength;
+		} else {
+			// -2x\cdot\frac{\left(z-\frac{\left(-g-z\cdot1.5\right)^{2}}{z\cdot2.25}\right)}{z}
+			return -2 * (EntityStatsDiviser.strength - (-str - EntityStatsDiviser.strength * 1.5) * (str - EntityStatsDiviser.strength * 1.5) / (EntityStatsDiviser.strength * 2.25)) / EntityStatsDiviser.strength * strAdded * EntityScoresAdjuster.strength;
+		}
 	}
 	
 	public real getPowerScore(integer powerAdded, integer power = this._entity.getStats().getPower()) {
@@ -80,8 +85,13 @@ class EntityScores {
 	}
 	
 	public real getMagicScore(integer magicAdded, integer magic = this._entity.getStats().getMagic()) {
-		// 4x\cdot\frac{\left(500-\frac{\left(g-750\right)^{2}}{1125}\right)}{500}
-		return 4 * (EntityStatsDiviser.magic - (magic - EntityStatsDiviser.magic * 1.5) * (magic - EntityStatsDiviser.magic * 1.5) / (EntityStatsDiviser.magic * 2.25)) / EntityStatsDiviser.magic * magicAdded * EntityScoresAdjuster.magic;
+		if (magicAdded > 0) {
+			// 4x\cdot\frac{\left(500-\frac{\left(g-750\right)^{2}}{1125}\right)}{500}
+			return 4 * (EntityStatsDiviser.magic - (magic - EntityStatsDiviser.magic * 1.5) * (magic - EntityStatsDiviser.magic * 1.5) / (EntityStatsDiviser.magic * 2.25)) / EntityStatsDiviser.magic * magicAdded * EntityScoresAdjuster.magic;
+		} else {
+			// -2x\cdot\frac{\left(z-\frac{\left(-g-z\cdot1.5\right)^{2}}{z\cdot2.25}\right)}{z}
+			return -2 * (EntityStatsDiviser.magic - (-magic - EntityStatsDiviser.magic * 1.5) * (magic - EntityStatsDiviser.magic * 1.5) / (EntityStatsDiviser.magic * 2.25)) / EntityStatsDiviser.magic * magicAdded * EntityScoresAdjuster.magic;
+		}
 	}
 	
 	public real getWisdomScore(integer wisdomAdded, integer wisdom = this._entity.getStats().getWisdom()) {
@@ -124,8 +134,8 @@ class EntityScores {
 	}
 	
 	public real getPoisonScore(integer poison, integer life = this._entity.getStats().getLife()) {
-		// 2.5\left(1-\min\left(0.6,\frac{a}{8\cdot2000}\right)\right)x
-		return 2.5 * (1 - min(0.6, life / (8 * EntityStatsDiviser.maxLife))) * poison * EntityScoresAdjuster.poison;
+		// 4.5\left(1-\min\left(0.6,\frac{a}{8\cdot2000}\right)\right)x+0.0005x^{2}
+		return (4.5 * (1 - min(0.6, life / (8 * EntityStatsDiviser.maxLife))) * poison + 0.0005 * poison * poison) * EntityScoresAdjuster.poison;
 	}
 	
 	public real getMPScore(integer addedMp, integer mp = this._entity.getStats().getMP()) {

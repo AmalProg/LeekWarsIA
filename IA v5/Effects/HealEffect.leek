@@ -44,4 +44,10 @@ class HealEffect extends Effect {
 		integer targetAllyMult = target.isAnAlly() ? 1 : -1;
 		return targetScores.getHealScore(finalValue, targetStats.getLife()) * targetScores.getAdjuster().heal;
 	}
+	
+	public integer getAppliedValue(Cell? cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {		
+		real baseValue = this.getBaseValueToApply(cellTarget, cellFrom, caster, dist, isCasterHit);
+		integer finalValue = round(baseValue * casterStats.getWisdomMult());
+		return finalValue;
+	}
 }

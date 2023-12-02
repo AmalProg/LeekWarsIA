@@ -93,12 +93,12 @@ class Effect {
 		this._isIrreductible = (this._modifiers & EFFECT_MODIFIER_IRREDUCTIBLE) != 0;
 	}
 	
-	protected void tryTriggerPassive(AbstractEntity target, AbstractEntity caster, integer triggerValue) {
+	protected void tryTriggerPassive(AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer triggerValue) {
 		if (target instanceof Leek) {
 			for (integer effectType in this._triggerableEffects) { 
 				PassiveEffect? eff = (target as Leek).getPassiveItemEffects()[effectType];
 				if (eff != null) {
-					eff!.applyPassiveTo(target, caster, 0, triggerValue);
+					eff!.applyPassiveTo(target, caster, targetStats, casterStats, 0, triggerValue);
 				}
 			}
 		}
@@ -181,7 +181,7 @@ class Effect {
 			if (target instanceof Leek) {
 				PassiveEffect? eff = (target as Leek).getPassiveItemEffects()[EFFECT_CRITICAL_TO_HEAL];
 				if (eff != null) {
-					eff!.applyPassiveTo(target, caster, 0, 1);
+					eff!.applyPassiveTo(target, caster, targetStats, casterStats, 0, 1);
 				}
 			}
 		}

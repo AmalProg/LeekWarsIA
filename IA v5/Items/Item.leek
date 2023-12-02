@@ -54,10 +54,10 @@ class Item {
 	protected void initTeamTargetsBool() {
 		for (Effect eff in this._effects) {
 			Object? effUseTargets = Effect.getEffectUseTargets(eff.getType());
-			if (effUseTargets!.ally || eff.getTargets() & EFFECT_TARGET_ALLIES) {
+			if (effUseTargets!.ally && eff.getTargets() & EFFECT_TARGET_ALLIES) {
 				this._canTargetAlly = true;
 			}
-			if (effUseTargets!.enemy || eff.getTargets() & EFFECT_TARGET_ENEMIES) {
+			if (effUseTargets!.enemy && eff.getTargets() & EFFECT_TARGET_ENEMIES) {
 				this._canTargetEnemy = true;
 			}
 		}
@@ -65,16 +65,11 @@ class Item {
 	
 		
 	public Set<Cell> getEffectiveArea(Cell cell, Cell? from) {
-		return Item.effectiveAreaMemo.apply(this, cell, from) as Set<Cell>;
+		return this.getItemEffectiveArea(cell, from)
 	}
 	protected Set<Cell> getItemEffectiveArea(Cell cell, Cell? from) {
 		// need to be overriden
 	}
-	private static Memoize3 effectiveAreaMemo = new Memoize3(function(Item item, Cell cell, Cell? from) {
-			return item.getItemEffectiveArea(cell, from);
-		}, function(Item item, Cell cell, Cell? from) {
-			return ((from != null) ? from!.id : 614) << 18 | cell.id << 8 | item.areaType;
-	});
 	
 	public Set<AbstractEntity> getSimulationTargets(Cell cell, Cell? from, AbstractEntity caster) {
 		Set<AbstractEntity> targets = <>;

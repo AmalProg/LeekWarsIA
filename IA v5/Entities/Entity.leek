@@ -337,7 +337,7 @@ class AbstractEntity {
 		if (caster instanceof Leek) {
 			PassiveEffect? eff = (caster as Leek).getPassiveItemEffects()[EFFECT_KILL_TO_TP];
 			if (eff != null) {
-				eff!.applyPassiveTo(caster, caster, 0, 1);
+				eff!.applyPassiveTo(caster, caster, caster.getStats(), caster.getStats(), 0, 1);
 			}
 		}
 

@@ -10,7 +10,7 @@ class CellMap {
 	public static final integer yMax = 17;
 		
 	private static final Map<integer, Cell> _cells = [:]; public static Map<integer, Cell> getCells() { return CellMap._cells; }
-	private static final Set<Cell> _occupiedCells = <>;
+	private static final Set<Cell> _occupiedCells = <>; public static Set<Cell> getOccupiedCells() { return CellMap._occupiedCells; }
 	private static string _occupiedCellsHash; public static string getOccupiedCellsHash() { return CellMap._occupiedCellsHash; }
 
 	private constructor() {}

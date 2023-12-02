@@ -15,10 +15,10 @@ class PassiveEffect extends Effect {
 		return null;
 	}
 	
-	public void applyPassiveTo(AbstractEntity target, AbstractEntity caster, integer dist, real|integer triggerValue) {
+	public void applyPassiveTo(AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, real|integer triggerValue) {
 		this._triggerValue = triggerValue;
 		
-		super.applyTo(null, null, target, caster, target.getStats(), caster.getStats(), dist, false);
+		super.applyTo(null, null, target, caster, targetStats, casterStats, dist, false);
 	}
 	
 	protected real getPassiveEffectScore(AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, real|integer triggerValue) {

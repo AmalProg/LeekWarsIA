@@ -78,6 +78,8 @@ class Combo {
 				eff.applyTo(null, null, target, caster, clonedStats, clonedCasterStats, mapGet(aoePerItem, item, 0) as integer, false);
 				if (clonedStats.getLife() <= 0)
 					return true;
+				else if (clonedStats.getPoison() >= clonedStats.getLife() && GAME.timeline.getNextEntityInTeam(target) == target)
+					return true;
 			}
 		}
 

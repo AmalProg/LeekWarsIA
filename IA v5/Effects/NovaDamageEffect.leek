@@ -17,7 +17,7 @@ class NovaDamageEffect extends Effect {
 		if (dmg > 0) {
 			affectedEntityStats.removeMaxLife(dmg);
 			
-			this.tryTriggerPassive(affectedEntity, caster, dmg);
+			this.tryTriggerPassive(affectedEntity, caster, affectedEntityStats, casterStats, dmg);
 		}
 	}
 	

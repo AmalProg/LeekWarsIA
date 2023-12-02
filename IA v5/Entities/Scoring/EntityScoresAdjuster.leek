@@ -7,16 +7,17 @@ class EntityScoresAdjuster {
 	public static real dmgReturn = 1.0;
 	public static real strength = 2.4;
 	public static real power = 1.0;
-	public static real magic = 1.0;
+	public static real magic = 2.4;
 	public static real wisdom = 1.0;
 	public static real resistance = 0.8;
 	public static real agility = 1.2;
 	public static real science = 1.0;
-	public static real poison = 1.0;
+	public static real poison = 1.2;
 	public static real mp = 1.1;
 	public static real tp = 1.3;
 	
 	public real kill;
+	public real ressurect;
 	public real entityType;
 	public real turnOrderNear;
 	public real turnOrderFar;
@@ -72,6 +73,12 @@ class EntityScoresAdjuster {
 			return;
 		}
 		
+		boolean isPotentiallyDead = false;
+		if (entityStats.getPoison() >= entityStats.getLife()) {
+			isPotentiallyDead = true;
+			Debug.log("Is potentially dead : " + this._entity);
+		}
+		
 		/* Turn order */
 		// Si c'est un allié on préfère viser les entités qui jouent après
 		this.turnOrderNear = 1.1 - (0.2 * GAME.timeline.getTurnOrderAfterMe(this._entity) / setSize(GAME.getAllEntities()));
@@ -80,8 +87,13 @@ class EntityScoresAdjuster {
 		/* * */
 		
 		/* Kill */
-		this.kill = 4000.0 * this.entityType * this.turnOrderNear;
+		this.kill = 4000.0 * this.entityType * this.turnOrderNear * (isPotentiallyDead ? 0 : 1);
 		/* * */
+		
+		/* Resurect */
+		this.ressurect = 1000.0;
+		/* * */
+		
 		
 		integer aliveTeamsCount = 0;
 		for (Team team in Team.getTeams()) {
@@ -120,17 +132,17 @@ class EntityScoresAdjuster {
 		/* * */
 		
 		/* Debuff */
-		this.debuffOther = 0.2;
-		this.debuffBuffDamage = 1.3 * this.turnOrderNear;
-		this.debuffBuffMP = 0.3;
-		this.debuffBuffTP = 0.4;
-		this.debuffBuffOtherStats = 0.1;
-		this.debuffDmgReturn = 1.0;
-		this.debuffShackles = 1.0;
+		this.debuffOther = 0.2 * (isPotentiallyDead ? 0 : 1);
+		this.debuffBuffDamage = 1.3 * this.turnOrderNear * (isPotentiallyDead ? 0 : 1);
+		this.debuffBuffMP = 0.3 * (isPotentiallyDead ? 0 : 1);
+		this.debuffBuffTP = 0.4 * (isPotentiallyDead ? 0 : 1);
+		this.debuffBuffOtherStats = 0.1 * (isPotentiallyDead ? 0 : 1);
+		this.debuffDmgReturn = 0.7 * (isPotentiallyDead ? 0 : 1);
+		this.debuffShackles = 0.3 * (isPotentiallyDead ? 0 : 1);
 		
 		Set<AbstractEntity> goodTargets = GAME.me.getTeam()!.getMapInfos().goodTargets;
 		boolean isGoodTarget = setContains(goodTargets, this._entity);
-				
+		
 		real dmgPotentialWithDebuffs = 0.0;
 		real dmgPotential = 0.0;
 		if (setSize(goodTargets) == 0 || isGoodTarget) {
@@ -200,7 +212,7 @@ class EntityScoresAdjuster {
 				}
 			}
 		}
-		this.debuffShield = dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 3 * this.isolation * this.turnOrderFar;
+		this.debuffShield = dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 3 * this.isolation * this.turnOrderFar * (isPotentiallyDead ? 0 : 1);
 		/* * */
 		
 		
@@ -219,7 +231,7 @@ class EntityScoresAdjuster {
 			}
 		}
 
-		this.antidote = 0.5 * this.isolation;
+		this.antidote = 0.5 * this.isolation * (isPotentiallyDead ? 1.5 : 1);
 		if (otherAntidoteCount == 0)
 			this.antidote *= 1.2 * (this.turnOrderNear * this.turnOrderNear);
 		else
@@ -265,7 +277,7 @@ class EntityScoresAdjuster {
 		
 		
 		/* Dmg return */
-		this.dmgReturn = max(0.0, min(1.6, directDamageDanger)) * this.isolation;
+		this.dmgReturn = max(0.0, min(1.6, directDamageDanger)) * this.isolation * (isPotentiallyDead ? 0 : 1);
 		/* * */
 		
 		
@@ -279,25 +291,25 @@ class EntityScoresAdjuster {
 				}
 			}
 		}
-		this.heal = max(1.3, 1.0 + 0.1 * entityAfterNovaDmgItemsOffCooldownCount) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderNear;
+		this.heal = max(1.3, 1.0 + 0.1 * entityAfterNovaDmgItemsOffCooldownCount) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderNear * (isPotentiallyDead ? 1.5 : 1);
 		/* * */
 		
 		
 		/* Buffs */
-		this.buffDamage = 1.0 * this.turnOrderNear;
+		this.buffDamage = 1.0 * this.turnOrderNear * (isPotentiallyDead ? 0 : 1);
 		if (setSize(possibleTargets) == 0)
 			this.buffDamage /= 2;
 		/* * */
 		
 		/* Damage */
-		this.directDmg = 1.0 * max(1.0, min(1.2, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar;
+		this.directDmg = 1.0 * max(1.0, min(1.2, directDamageDanger)) * (isGoodTarget ? 1.15 : 1) * (1 + dmgPotential / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar * (isPotentiallyDead ? 0 : 1);
 		/* * */
 		
-		this.poison = 1.0 * this.isolation * this.turnOrderNear;
-		this.novaDamage = 1.0 * this.isolation * this.turnOrderFar;
+		this.poison = 1.0 * this.isolation * this.turnOrderNear * (isPotentiallyDead ? 0 : 1);
+		this.novaDamage = 1.0 * this.isolation * this.turnOrderFar * (isPotentiallyDead ? 0 : 1);
 		
 		
-		this.vulneAbso = 1.5  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar;
-		this.vulneRel = 1.5  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar;
+		this.vulneAbso = 1.5  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar * (isPotentiallyDead ? 0 : 1);
+		this.vulneRel = 1.5  * (1 + dmgPotentialWithDebuffs / EntityStatsDiviser.maxLife / 12) * this.isolation * this.turnOrderFar * (isPotentiallyDead ? 0 : 1);
 	}
 }

@@ -523,8 +523,8 @@ class EntityStats {
 	}
 	
 	public string string() {
-		return
-			"\n { maxLife : " + this._maxLife +
+		return "\n { name: " + this._entity.getName() +
+			"\n maxLife : " + this._maxLife +
 			"\n life : " + this._life +
 			"\n strength : " + this._strength +
 			"\n wisdom : " + this._wisdom +

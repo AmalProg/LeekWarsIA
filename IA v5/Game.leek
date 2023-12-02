@@ -34,7 +34,7 @@ class Game {
 		this._allEntities = <>;
 		
 		Debug.enabledLog = true;
-		Debug.enabledOp = false;
+		Debug.enabledOp = true;
 		Debug.enabledInfo = false;
 
 		Debug.startOpCount();
@@ -161,11 +161,10 @@ class Game {
 		}
 		this.timeline.update(this._allEntities);
 
-		//for (AbstractEntity entity in this._allEntities) {
-			//Debug.log(entity.getStats());	
-			//Debug.log(entity.getScores().getAdjuster());	
-		//}
-		
+		for (AbstractEntity entity in this._allEntities) {
+			Debug.log(entity.getScores().getAdjuster());	
+		}
+				
 		this._ai.determineActions();
 		
 		this.updateAllStats();

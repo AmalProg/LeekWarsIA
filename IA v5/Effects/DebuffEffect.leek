@@ -23,7 +23,7 @@ class DebuffEffect extends Effect {
 			
 			else if (setContains(Effect.buffEffects, effType) || setContains(Effect.rawBuffEffects, effType)) {
 				if (effType == EFFECT_BUFF_STRENGTH || effType == EFFECT_RAW_BUFF_STRENGTH || effType == EFFECT_RAW_BUFF_MAGIC)
-					effTypeMult = targetScores.getAdjuster().debuffBuffDamage;
+					effTypeMult = -targetScores.getAdjuster().debuffBuffDamage;
 				
 				else if (effType == EFFECT_BUFF_MP || effType == EFFECT_RAW_BUFF_MP)
 					effTypeMult = targetScores.getAdjuster().debuffBuffMP;

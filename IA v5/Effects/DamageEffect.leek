@@ -17,7 +17,7 @@ class DamageEffect extends Effect {
 			affectedEntityStats.removeLife(dmg, EFFECT_DAMAGE);
 			affectedEntity.updateAliveState(caster);
 
-			this.tryTriggerPassive(affectedEntity, caster, dmg);
+			this.tryTriggerPassive(affectedEntity, caster, affectedEntityStats, casterStats, dmg);
 		}
 		if (caster != affectedEntity) {
 			if (dmg > 0)
@@ -27,7 +27,7 @@ class DamageEffect extends Effect {
 				casterStats.removeLife(dmgReturn, EFFECT_DAMAGE);
 				caster.updateAliveState(caster);
 				
-				this.tryTriggerPassive(affectedEntity, caster, dmgReturn);
+				this.tryTriggerPassive(affectedEntity, caster, affectedEntityStats, casterStats, dmgReturn);
 			}
 		}
 	}

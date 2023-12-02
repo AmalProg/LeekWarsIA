@@ -10,13 +10,20 @@ include("Utils/Json");
 
 class AI {
 	public static final integer MAX_DANGER_ITEMS_TESTED_COUNT = 14;
-	public static final integer MIN_SCORE_USEFUL_ACTION = 45;
+	public static final integer MIN_SCORE_USEFUL_ACTION = 50;
 	
 	private AbstractEntity _me;
 	private Set<Team> _teams;
 	private DangerMap _dangerMap;
-	private Array<Action> _everyActions; public void resetEveryActions() { debugC("reseting every actions", COLOR_GREEN) arrayClear(this._everyActions); }
+	private Array<Action> _everyActions;
+	public void resetEveryActions() { 
+		debugC("reseting every actions", COLOR_GREEN) 
+		arrayClear(this._everyActions); 
+		mapClear(this._actionsPerItemTargetsHash);
+		setClear(this._nonDoableActions);
+	}
 	private Array<Action> _actions;
+	private Set<Action> _nonDoableActions; 
 	private Map<string, Set<Action>> _actionsPerItemTargetsHash;
 	private real _highestActionScore;
 	private ActionsManager _actionsManager;
@@ -29,6 +36,7 @@ class AI {
 		this._teams = teams;
 		this._everyActions = [];
 		this._actions = [];
+		this._nonDoableActions = <>;
 		this._actionsPerItemTargetsHash = [:];
 		this._highestActionScore = 0.0;
 		this._actionsManager = new ActionsManager();
@@ -122,7 +130,6 @@ class AI {
 				
 				tryFindKillCombo = false;
 			}
-		
 			
 			Debug.startOpCount();
 			this.calculateActionsScore();
@@ -148,6 +155,8 @@ class AI {
 			boolean useDangerMap = this.doNeedDangerMap();
 			
 			Debug.startOpCount();
+			if (prevChoosenAction != null && prevChoosenAction!.getItem().hasEffectTypeIn(<EFFECT_BUFF_MP, EFFECT_RAW_BUFF_MP, EFFECT_DEBUFF>))
+				setClear(this._nonDoableActions);
 			Action? bestDoableAction = this.filterBestDoableAction(useDangerMap);
 			Debug.stopOpCount("filterBestDoableAction : ");
 			
@@ -175,6 +184,8 @@ class AI {
 			
 			if (bestDoableAction == null)
 				Debug.log("Pas d'action réalisable trouvée");
+			else 
+				prevChoosenAction = bestDoableAction;
 		}
 		
 		for (AbstractEntity entity in GAME.getAllEntities()) {
@@ -303,7 +314,7 @@ class AI {
 	}
 	
 	private boolean needToRecalculateDangerMap(Action? prevChoosenAction) {
-		if (prevChoosenAction == null) return false;
+		if (prevChoosenAction == null) return true;
 		
 		Item item = prevChoosenAction!.getItem();
 		// Si on fait des dégats à une entité, on recalcule
@@ -321,7 +332,6 @@ class AI {
 					return true;
 				}
 			}
-			return true;
 		}
 		return false;
 	}
@@ -701,7 +711,7 @@ class AI {
 		}
 				
 		for (Action action in this._actions) {			
-			if (action.getScore() <= AI.MIN_SCORE_USEFUL_ACTION) continue;
+			if (action.getScore() <= AI.MIN_SCORE_USEFUL_ACTION || setContains(this._nonDoableActions, action)) continue;
 			
 			// Si l'action a déjà été choisie précédement
 			if (this._actionsManager.hasChoosenAction(action.getUniqueId())) {
@@ -741,11 +751,14 @@ class AI {
 				this._actionsManager.addSelfAction(action);
 				return action;
 			}
+				
+			setPut(this._nonDoableActions, action);
 		}
 		
 		// Aucune nouvelle action ne peut être ajouté donc on remet les actions déjà choisie avec les bonnes cellsFrom
 		this._actionsManager.setOrderedOtherAction(doableOtherActions, true);
 
+		
 		return null;
 	}
 
@@ -937,7 +950,6 @@ class AI {
 						Action choosenAction = newOtherActions[i];
 						Action nextChoosenAction = newOtherActions[i+1]
 
-						debug(itemCost + " + " + escapeItemCost + " <= " + this._me.getSimulationEntity().getTP());
 						// Si on a actuellement assez de TP pour faire l'action et qu'on trouve un path
 						if (itemCost + escapeItemCost <= this._me.getSimulationEntity().getTP() && this.findPathsBetweenChoosenActions(choosenAction, nextChoosenAction, useDangerMap)) {
 						this._me.getSimulationEntity().simulateAction(nextChoosenAction);
@@ -1383,15 +1395,12 @@ class AI {
 			for (Effect eff in item.getEffects()) {
 				if (targetCell != null) {
 					integer effType = eff.getType();
-					if (effType == EFFECT_ATTRACT || effType == EFFECT_PUSH || effType == EFFECT_INVERT || effType == EFFECT_TELEPORT) {
-						// c'est différent
-					} else {
-						score += eff.getScoreOnCell(targetCell!.cellTarget, targetCell!.cellFrom, this._me, this._me.getStats(), isCasterHit);
+					
+					score += eff.getScoreOnCell(targetCell!.cellTarget, targetCell!.cellFrom, this._me, this._me.getStats(), isCasterHit);
 
-						// On ajoute le score sur le caster
-						if (isCasterHit) {
-							score += eff.getSelfScore(this._me, this._me.getStats(), action.getHitCasterDist());
-						}
+					// On ajoute le score sur le caster
+					if (isCasterHit) {
+						score += eff.getSelfScore(this._me, this._me.getStats(), action.getHitCasterDist());
 					}
 					
 				} else {
@@ -1470,8 +1479,12 @@ class AI {
 				// ou que je vise un allié mais que l'item n'est pas fait pour ça
 				// ou que je vise un ennemi mais que l'item n'est pas fait pour ça
 				// Alors on passe l'item
-				if (!entity.isEntityAlive() || entity == this._me || (entity.isAnAlly() && !item.canTargetAlly()) || (!entity.isAnAlly() && !item.canTargetEnemy())) continue;
-
+				if (!entity.isEntityAlive() && item.hasEffectType(EFFECT_RESURRECT)) {
+					//Action resuAction = new Action(item, <>, entity.getId() + "|" + 0 + ",", <entity>);									push(this._actions, resuAction);
+					continue;
+				}
+				if (!entity.isEntityAlive() || entity == this._me || (entity.isAnAlly() && !item.canTargetAlly()) || (!entity.isAnAlly() && !item.canTargetEnemy()) || !item.canTarget(entity, this._me)) continue;
+				
 				if (areaType == AREA_LASER_LINE || areaType == AREA_FIRST_INLINE) {
 					Cell entityCell = entity.getCell()!;
 					for (Cell cellFrom in item.getCellsCanMoveToHit(entityCell)) {
@@ -1481,7 +1494,7 @@ class AI {
 				} else if (item.hasEffectType(EFFECT_INVERT)) {
 					Cell entityCell = entity.getCell()!;
 					for (Cell cellFrom in item.getCellsCanMoveToHit(entityCell)) {
-						setPut(cellsToCalcScore, new TargetCell(Item.getCellToHitLaser(item, entityCell, cellFrom)!, cellFrom, entityCell));
+						setPut(cellsToCalcScore, new TargetCell(entityCell, cellFrom, entityCell));
 					}
 					
 				} else {
@@ -1539,7 +1552,7 @@ class AI {
 
 		integer itemId = item.getId();
 		
-		for (string targetsHash : Set<TargetCell> cells in cellsPerTargets) {
+		for (string targetsHash : Set<TargetCell> cells in cellsPerTargets) {			
 			Set<AbstractEntity> targets = <>;
 			for (string targetsDist in split(targetsHash, ",")) {
 				string targetId = split(targetsDist, "|")[0];
@@ -1552,20 +1565,12 @@ class AI {
 			if (!isObligatedToHitSelf) {
 				if (item.hasEffectType(EFFECT_INVERT)) {
 					for (TargetCell targetCell in cells) {
-						Action newAction = new Action();
-						newAction.setItem(item);
-						newAction.setTargetCells(<targetCell>);
-						newAction.setTargetsHash(targetsHash);
-						newAction.setTargets(targets);
+						Action newAction = new Action(item, <targetCell>, targetsHash, targets);
 						push(this._actions, newAction);
 						setPut(this._actionsPerItemTargetsHash[itemTargetsHash]!, newAction);
 					}
 				} else {
-					Action newAction = new Action();
-					newAction.setItem(item);
-					newAction.setTargetCells(cells);
-					newAction.setTargetsHash(targetsHash);
-					newAction.setTargets(targets);
+					Action newAction = new Action(item, cells, targetsHash, targets);
 					push(this._actions, newAction);
 					setPut(this._actionsPerItemTargetsHash[itemTargetsHash]!, newAction);
 				}
@@ -1581,12 +1586,8 @@ class AI {
 						if (entity != null && entity != this._me) continue;
 					}
 					
-					Action newSelfAction = new Action();
-					newSelfAction.setItem(item);
-					newSelfAction.setTargetCells(cells);
 					string newTargetsHash = targetsHash + this._me.getId() + "|"  + dist + ",";
-					newSelfAction.setTargetsHash(newTargetsHash);
-					newSelfAction.setTargets(targets);
+					Action newSelfAction = new Action(item, cells, newTargetsHash, targets);
 					newSelfAction.addTarget(this._me);
 					newSelfAction.setHitCasterDist(dist);
 					push(this._actions, newSelfAction); 
@@ -1601,11 +1602,8 @@ class AI {
 		if (canHitSelf) {
 			Cell myCell = this._me.getCell()!;
 			for (integer dist = item.getMinRange(); dist <= item.getAreaSize(); dist++) {
-				Action newSelfAction = new Action();
-				newSelfAction.setItem(item);
 				string newTargetsHash = this._me.getId() + "|"  + dist + ",";
-				newSelfAction.setTargetsHash(newTargetsHash);					
-				newSelfAction.setTargets(<this._me>);
+				Action newSelfAction = new Action(item, <>, newTargetsHash, <this._me>);
 				newSelfAction.setHitCasterDist(dist);
 				push(this._actions, newSelfAction);
 				string newItemTargetsHash = newTargetsHash + itemId;

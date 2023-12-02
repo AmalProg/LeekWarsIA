@@ -5,8 +5,8 @@ class InvertEffect extends Effect {
 		caster.invert(target, cellFrom!);
 	}
 	
-	protected real getScore(Cell? cellTarget, Cell? cellFrom, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, integer dist, boolean isCasterHit = false) {
-		
+	public real getScoreOnCell(Cell cellTarget, Cell? cellFrom, AbstractEntity caster, EntityStats casterStats, boolean isCasterHit = false, integer statsTurnDelay = 0) {
+		return 0.0;
 	}
 	
 	protected real getEffectScore(real value, AbstractEntity target, AbstractEntity caster, EntityStats targetStats, EntityStats casterStats, Cell? cellTarget) {
