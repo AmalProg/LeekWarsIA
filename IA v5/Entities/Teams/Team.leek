@@ -12,6 +12,7 @@ class Team {
 	private Set<AbstractEntity> _entities; public Set<AbstractEntity> getEntities() { return this._entities; }
 	private Set<Leek> _leeks; public Set<Leek> getLeeks() { return this._leeks; }
 	private Set<Bulb> _bulbs; public Set<Bulb> getBulbs() { return this._bulbs; }
+	private Set<Boss> _bosses; public Set<Boss> getBosses() { return this._bosses; }
 	private Set<AbstractEntity> _alive; public Set<AbstractEntity> getAlive() { return this._alive; }
 	private Set<Leek> _aliveLeeks; public Set<Leek> getAliveLeeks() { return this._aliveLeeks; }
 	private Set<Leek> _deadLeeks; public Set<Leek> getDeadLeeks() { return this._deadLeeks; }
@@ -25,6 +26,7 @@ class Team {
 		this._entities = <>;
 		this._leeks = <>;
 		this._bulbs = <>;
+		this._bosses = <>;
 		this._alive = <>;
 		this._aliveLeeks = <>;
 		this._deadLeeks = <>;
@@ -51,6 +53,11 @@ class Team {
 				if (entity.isEntityAlive()) {
 					setPut(this._alive, entity);
 					setPut(this._bulbs, entity);
+				}
+			} else if (entity instanceof Boss) {
+				if (entity.isEntityAlive()) {
+					setPut(this._alive, entity);
+					setPut(this._bosses, entity);
 				}
 			} else if (entity instanceof Turret) {
 				this._turret = entity as Turret;

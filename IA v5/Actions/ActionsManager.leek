@@ -203,7 +203,7 @@ class ActionsManager {
 	/**
 	 * @params ScoreMap dangerMap : les scores les plus bas seront considéré comme les meilleures cells
 	 **/
-	public void executeChoosenActions(DangerMap dangerMap) {
+	public void executeChoosenActions(AbstractDangerMap dangerMap) {
 		this.clearUsedMovementItems();
 		
 		this.orderSelfActions();

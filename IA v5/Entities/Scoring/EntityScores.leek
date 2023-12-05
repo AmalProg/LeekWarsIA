@@ -24,7 +24,7 @@ class EntityScores {
 	private AbstractEntity _entity;
 	
 	private constructor() {}
-	public constructor(AbstractEntity entity) {
+	public constructor(AbstractEntity entity, EntityScoresAdjuster scoresAdjuster) {
 		this._entity = entity;
 		
 		this.maxLife = 0.0;
@@ -43,7 +43,7 @@ class EntityScores {
 		this.mp = 0.0;
 		this.tp = 0.0;
 		
-		this._scoresAdjuster = new EntityScoresAdjuster(entity);
+		this._scoresAdjuster = scoresAdjuster;
 	}
 		
 	public void updateScoreAdjuster() {		
@@ -130,7 +130,7 @@ class EntityScores {
 	
 	public real getDmgReturnScore(integer dmgReturnAdded, integer dmgReturn = this._entity.getStats().getDmgReturn(), integer abso = this._entity.getStats().getAbso(), integer rel = this._entity.getStats().getRel()) {
 		// \frac{J-0.4d-0.05f}{J}\left(10x-\frac{i}{J}x\right)
-		return 	(EntityStatsDiviser.dmgReturn - 0.4 * rel - 0.05 * abso) / EntityStatsDiviser.dmgReturn * (10 * dmgReturnAdded - dmgReturn / EntityStatsDiviser.dmgReturn) * EntityScoresAdjuster.dmgReturn;
+		return 	(EntityStatsDiviser.dmgReturn - 0.15 * rel - 0.025 * abso) / EntityStatsDiviser.dmgReturn * (10 * dmgReturnAdded - dmgReturn / EntityStatsDiviser.dmgReturn) * EntityScoresAdjuster.dmgReturn;
 	}
 	
 	public real getPoisonScore(integer poison, integer life = this._entity.getStats().getLife()) {

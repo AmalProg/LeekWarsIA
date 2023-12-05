@@ -1,3 +1,51 @@
-debug(getName(0));
-for(var chipId in getChips(0))
-	debug(chipId + " : "+ getChipName(chipId));
+global target;
+global initCell;
+if (getTurn() == 1) {
+	initCell = getCell()
+	for (var entityId in getEnemies()) {
+		if (getName(entityId) == "yellow_crystal")
+			target = entityId;
+	}
+}
+
+if (initCell == 588) {
+	if (getTurn() == 1) {
+		useChip(CHIP_RAGE, getEntity())
+		useChip(CHIP_SEVEN_LEAGUE_BOOTS, getEntity())
+		useChip(CHIP_LEATHER_BOOTS, getEntity())
+		useChip(CHIP_MOTIVATION, getEntity())
+		moveTowardCell(472)
+	}
+	else if (getTurn() == 2) {
+		useChip(CHIP_ADRENALINE, getEntity())
+		useChipOnCell(CHIP_TELEPORTATION, 258)
+		moveTowardCell(187)
+		useChipOnCell(CHIP_INVERSION, 187)
+		useChipOnCell(CHIP_SPARK, 122)
+		useChipOnCell(CHIP_SPARK, 9)
+		useChipOnCell(CHIP_SPARK, 95)
+		useChipOnCell(CHIP_SPARK, 16)
+	}
+	//else if (getTurn() == 2) {
+		//useChip(CHIP_WINGED_BOOTS, getEntity())
+		//useChipOnCell(CHIP_TELEPORTATION, 262)
+		//moveTowardCell(133)
+		//useChipOnCell(CHIP_GRAPPLE, 84)
+		//moveTowardCell(120)
+		//useChipOnCell(CHIP_GRAPPLE, 102)
+	//}
+}
+
+if (initCell == 563) {
+	if (getTurn() == 1) {
+		useChip(CHIP_LEATHER_BOOTS, getEntity())
+		useChip(CHIP_MOTIVATION, getEntity())
+		useChip(CHIP_WINGED_BOOTS, getEntity())
+		moveTowardCell(391)
+	}
+	else if (getTurn() == 2) {
+		useChip(CHIP_ADRENALINE, getEntity())
+		useChipOnCell(CHIP_TELEPORTATION, 187)
+		useChipOnCell(CHIP_INVERSION, 85)
+	}
+}

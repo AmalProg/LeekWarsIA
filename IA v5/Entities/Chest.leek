@@ -7,7 +7,8 @@ class Chest extends AbstractEntity {
 	
 	/** Chests pool **/
 	private static final Map<integer, Chest> chests = [:];
-	public static initChests(Array<integer> entitiesId) {
+	public static Map<integer, Chest> getAll() { return Chest.chests; }
+	public static init(Array<integer> entitiesId) {
 		for (var chestId in entitiesId) {
 			if (getType(chestId) == ENTITY_CHEST) {
 				Chest.chests[chestId] = new Chest(chestId);

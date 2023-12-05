@@ -5,6 +5,7 @@ include("../Items/Chip");
 include("EntityEffect");
 include("Scoring/EntityStatsDiviser");
 include("Scoring/EntityScores");
+include("Scoring/MapInfos/EntityMapInfos");
 include("EntityStats");
 include("SimulationEntity");
 include("Bulb");
@@ -18,6 +19,7 @@ class AbstractEntity {
 	
 	/** entities pool **/
 	protected static final Map<integer, AbstractEntity> entities = [:];
+	public static Map<integer, AbstractEntity> getAll() { return AbstractEntity.entities; }
 	public static AbstractEntity? get(integer id) {
 		return AbstractEntity.entities[id];
 	}
@@ -52,6 +54,7 @@ class AbstractEntity {
 	protected EntityStats _baseStats; public EntityStats getBaseStats() { return this._baseStats; }
 	protected EntityStats _stats; public EntityStats getStats() { return this._stats; }
 	protected EntityScores _scores;	public EntityScores getScores() { return this._scores; }
+	protected EntityMapInfos _mapInfos; public EntityMapInfos getMapInfos() { return this._mapInfos; }
 	
 	protected Array<EntityEffect> _launchedEffects;
 	protected Array<Bulb> _summons;
@@ -77,6 +80,12 @@ class AbstractEntity {
 		
 		this.initStats();
 		this._simulationEntity = new SimulationEntity(this);
+		this.initScores();
+	}
+	
+	protected initScores() {
+		this._scores = new EntityScores(this, new EntityScoresAdjuster(this));
+		this._mapInfos = new EntityMapInfos(this);
 	}
 	
 	private void initStats() {
@@ -120,7 +129,6 @@ class AbstractEntity {
 		this._baseStats = new EntityStats(this);	
 		// les poireaux n'ont pas d'effet de base
 		this._baseStats.removeEffects(this._baseStats.getEffects());
-		this._scores = new EntityScores(this);
 	}
 
 	public static void updateEntitiesStats() {
@@ -168,6 +176,7 @@ class AbstractEntity {
 	}
 	public void updateScores() {
 		this._scores.updateScoreAdjuster();
+		this._mapInfos.update();
 	}
 
 	public static updateSimulationStats() {

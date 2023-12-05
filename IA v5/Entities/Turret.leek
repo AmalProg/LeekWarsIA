@@ -4,7 +4,7 @@ include("Entity");
 class Turret extends AbstractEntity {
 	/** Turrets pool **/
 	private static final Map<integer, Turret> turrets = [:];
-	public static initTurrets(Array<integer> entitiesId) {
+	public static init(Array<integer> entitiesId) {
 		for (integer turretId in entitiesId) {
 			if (getType(turretId) == ENTITY_TURRET) {
 				turrets[turretId] = new Turret(turretId);

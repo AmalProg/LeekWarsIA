@@ -4,7 +4,8 @@ include("../Items/Weapon");
 class Leek extends AbstractEntity {
 	/** leeks pool **/
 	private static final Map<integer, Leek> leeks = [:];
-	public static void initLeeks(Array<integer> entitiesId) {
+	public static Map<integer, Leek> getAll() { return Leek.leeks; }
+	public static void init(Array<integer> entitiesId) {
 		for (integer leekId in entitiesId) {
 			if(getType(leekId) == ENTITY_LEEK) {
 				Leek.leeks[leekId] = new Leek(leekId);
@@ -57,7 +58,8 @@ class Leek extends AbstractEntity {
 		this._equippedWeaponId = getWeapon();
 		super.updateStats();
 		
-		if (GAME.isBR)
+		// On ne gagne de la puissance à la mort d'un poireau qu'en BR
+		if (GAME.fightType == FIGHT_TYPE_BATTLE_ROYALE)
 			this._powerOnDeath = round(10 + 0.5 * this._stats.getPower());
 	}
 	

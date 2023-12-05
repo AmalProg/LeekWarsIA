@@ -1,0 +1,27 @@
+include("EntityMapInfos");
+include("../../Bosses/Fennel/Graal");
+
+class CrystalMapInfos extends EntityMapInfos {	
+	protected Crystal _entity;
+
+	constructor(Crystal entity) {
+		super(entity);
+		
+		this._entity = entity;
+	}
+	
+	protected update() {
+		if (Graal.get() != null && Graal.get()!.isEntityAlive()) {
+			Cell? graalCell = Graal.get()!.getCell();
+			if (graalCell != null && this._entity.getColor() == Crystal.RED) {
+				Area.getLineTillObstacle(this._goodMoveToCells, graalCell!, 0, 36, "N");
+			} else if (graalCell != null && this._entity.getColor() == Crystal.YELLOW) {
+				Area.getLineTillObstacle(this._goodMoveToCells, graalCell!, 0, 36, "E");
+			} else if (graalCell != null && this._entity.getColor() == Crystal.BLUE) {
+				Area.getLineTillObstacle(this._goodMoveToCells, graalCell!, 0, 36, "W");
+			} else if (graalCell != null && this._entity.getColor() == Crystal.GREEN) {
+				Area.getLineTillObstacle(this._goodMoveToCells, graalCell!, 0, 36, "S");
+			}
+		}
+	}
+}

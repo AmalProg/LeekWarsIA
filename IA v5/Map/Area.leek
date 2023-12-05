@@ -52,6 +52,28 @@ class Area {
 	}
 	
 	/**
+	 * Récupère une ligne en prennant en compte la ligne de vue
+	 * 
+	 * @params cell : la cellule initial
+	 * @params distMin : distance minimale de la zone
+	 * @params distMax : distance maximale de la zone
+	 * @params direction : direction ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+	 * 
+	 * @return cells : tableau des cellules
+	 **/
+	public static Set<Cell> getLineTillObstacle(Set<Cell> cells, Cell cell, integer distMin, integer distMax, string direction) {
+		Cell? currentCell = cell;
+		for(integer i = 0; i <= distMax && currentCell != null && !currentCell!.isObstacle(); i += Area.incrementPerDirection[direction]) {
+			if (i >= distMin && !currentCell!.isObstacle()) 
+				setPut(cells, currentCell);
+			
+			currentCell = currentCell![direction] as Cell;
+		}
+		
+		return cells;
+	}
+	
+	/**
 	 * Récupère une zone en forme de +
 	 * 
 	 * @params cell : la cellule initial

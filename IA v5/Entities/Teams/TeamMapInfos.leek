@@ -50,6 +50,7 @@ class TeamMapInfos {
 				setPut(this.goodTargets, enemy);
 			}
 			
+			debug(alliesBarycenterCell + " " + enemyCell)
 			integer distToBarycenter = Cell.getDistance(enemyCell, alliesBarycenterCell);
 			if (distToBarycenter < TeamMapInfos.POSSIBLE_TARGET_DIST) {
 				setPut(this.possibleTargets, enemy);

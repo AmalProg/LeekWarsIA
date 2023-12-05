@@ -1,34 +1,25 @@
+include("AbstractAction");
+include("../Entities/Entity");
 include("../Map/TargetCell");
 include("../Map/MoveCell");
 
-class Action {
-	public static final integer SIMULATING_DEBUG_COLOR = getColor(50, 168, 90);
-	
-	private static integer idCounter = 0;
-	
-	private integer _id;
-	public integer getUniqueId() { return this._id; }
-	
-	private Item _item;
-	public void setItem(Item item) { this._item = item; }
-	public Item getItem() { return this._item; }
-	
-	private Set<TargetCell> _targetCells;
-	public void setTargetCells(Set<TargetCell> cells) { this._targetCells = cells; }
+class BasicAction extends AbstractAction {
+	protected Set<TargetCell> _targetCells;
 	public Set<TargetCell> getTargetCells() { return this._targetCells; }
+	public void setTargetCells(Set<TargetCell> cells) { this._targetCells = cells; }
 	
-	private string _targetsHash;
+	protected string _targetsHash;
 	public void setTargetsHash(string targetsHash) { this._targetsHash = targetsHash; }
 	public string getTargetsHash() { return this._targetsHash; }
 	
-	private Set<AbstractEntity> _targets;
+	protected Set<AbstractEntity> _targets;
 	public void addTarget(AbstractEntity target) { setPut(this._targets, target); }
 	public void setTargets(Set<AbstractEntity> targets) { this._targets = targets; }
 	public Set<AbstractEntity> getTargets() { return this._targets; }
 	
-	private Set<MoveCell> _cellsFrom;
-	public void setCellsFrom(Set<MoveCell> cells) { this._cellsFrom = cells; }
+	protected Set<MoveCell> _cellsFrom;
 	public Set<MoveCell> getCellsFrom() { return this._cellsFrom; }
+	public void setCellsFrom(Set<MoveCell> cells) { this._cellsFrom = cells; }
 	public void clearCellsFrom() { setClear(this._cellsFrom); }
 	public void removeCellsFrom(Set<MoveCell> cells) {
 		for (MoveCell moveCellToRemove in cells) {
@@ -37,114 +28,61 @@ class Action {
 		}
 	}
 	
-	private integer _hitCasterDist;
+	protected integer _hitCasterDist;
 	public void setHitCasterDist(integer dist) { this._hitCasterDist = dist; }
 	public integer getHitCasterDist() { return this._hitCasterDist; }
 	
-	private Item? _teleportItem;
-	public void setTeleportItem(Item? teleportItem) { this._teleportItem = teleportItem; }
-	public Item? getTeleportItem() { return this._teleportItem; }
-	
-	private real _score;
-	public void setScore(real score) { this._score = score; }
-	public real getScore() { return this._score; }
-	
-	
-	private integer _useCount;
-	public void addUse() { this._useCount++; }
-	public integer getUseCount() { return this._useCount; }
 	
 	constructor() {
-		this._id = Action.idCounter++;
+		super();
 		this._targetCells = <>;
 		this._targetsHash = "";
 		this._targets = <>;
 		this._cellsFrom = <>;
 		this._hitCasterDist = -1;
-		this._teleportItem = null;
-		this._score = 0.0;
-		this._useCount = 0;
 	}
-	constructor(Item item, Set<TargetCell> targetCells, string targetsHash, Set<AbstractEntity> targets) {	
-		this._id = Action.idCounter++;
-		this._item = item;
+	constructor(Item item, Set<TargetCell> targetCells, Set<AbstractEntity> targets, string targetsHash) {	
+		super(item);
 		this._targetCells = targetCells;
-		this._targetsHash = targetsHash;
 		this._targets = targets;
+		this._targetsHash = targetsHash;
 		this._cellsFrom = <>;
 		this._hitCasterDist = -1;
-		this._teleportItem = null;
-		this._score = 0.0;
-		this._useCount = 0;
 	}
-	constructor(Action action) {	
-		this._id = action._id;
-		this._item = action._item;
-		this._targetCells = clone(action._targetCells) as Set<TargetCell>;
-		this._targetsHash = action._targetsHash;
-		this._targets = clone(action._targets) as Set<AbstractEntity>;
-		this._cellsFrom = clone(action._cellsFrom) as Set<MoveCell>;
-		this._hitCasterDist = action._hitCasterDist;
-		this._teleportItem = action._teleportItem;
-		this._score = action._score;
-		this._useCount = action._useCount;
+	public AbstractAction clone() {
+		BasicAction clonedAction = new BasicAction();
+		clonedAction._id = this._id;
+		clonedAction._item = this._item;
+		clonedAction._targetCells = clone(this._targetCells) as Set<TargetCell>;
+		clonedAction._targets = clone(this._targets) as Set<AbstractEntity>;
+		clonedAction._targetsHash = this._targetsHash;
+		clonedAction._cellsFrom = clone(this._cellsFrom) as Set<MoveCell>;
+		clonedAction._hitCasterDist = this._hitCasterDist;
+		clonedAction._score = this._score;
+		clonedAction._useCount = this._useCount;
+		return clonedAction;
 	}
-	public Action clone() {
-		return new Action(this);
-	}
+	
 	
 	public void simulate(ActionsManager manager, AbstractEntity caster) {
 		integer useCount = this._useCount;
 		while (useCount-- > 0) {
-			if (!setIsEmpty(this._targetCells)) {
-				MoveCell moveCell = setGetOne(this._cellsFrom) as MoveCell;
-				// On ne se téléporte que à la première réalisation de l'action
-				if (this._teleportItem != null && !manager.isUsedMovementItem(this._teleportItem!)) {
-					manager.addUsedMovementItem(this._teleportItem!);
-
-					moveCell.itemTeleport!.applyOnCell(moveCell.cellToTeleport!, moveCell.cellFromTeleport, caster, 0);
-					caster.simulateItemUse(moveCell.itemTeleport!);
-
-					//Debug.log("Simulating teleport with " + moveCell.itemTeleport + " on " + moveCell.cellToTeleport + " from " + moveCell.cellFromTeleport, Action.SIMULATING_DEBUG_COLOR);
-					//Debug.log("I have " + caster.getStats().getTP() + " tp left");
-				}
-
-				TargetCell targetCell = setGetOne(this._targetCells) as TargetCell;
-				//Debug.log("Simulating " + this + " with caster at dist " + this._hitCasterDist + " for a score of " + this._score, Action.SIMULATING_DEBUG_COLOR);
-				//Debug.log("cellsFrom : " + this._cellsFrom, Action.SIMULATING_DEBUG_COLOR);
-				//Debug.log("targetCells : " + this._targetCells, Action.SIMULATING_DEBUG_COLOR);
-				this._item.applyOnCell(targetCell.cellTarget, targetCell.cellFrom, caster, this._hitCasterDist);
-			} else {
-				//Debug.log("Simulating " + this + " on self for a score of " + this._score, Action.SIMULATING_DEBUG_COLOR);
-				this._item.applyTo(caster, caster, this._hitCasterDist, true);
-			}
+			MoveCell moveCell = setGetOne(this._cellsFrom) as MoveCell;
+			TargetCell targetCell = setGetOne(this._targetCells) as TargetCell;
+			Debug.log("Simulating " + this + " with caster at dist " + this._hitCasterDist + " for a score of " + this._score, Action.SIMULATING_DEBUG_COLOR);
+			Debug.log("cellsFrom : " + this._cellsFrom, Action.SIMULATING_DEBUG_COLOR);
+			Debug.log("targetCells : " + this._targetCells, Action.SIMULATING_DEBUG_COLOR);
+			this._item.applyOnCell(targetCell.cellTarget, targetCell.cellFrom, caster, this._hitCasterDist);
 
 			caster.simulateItemUse(this._item);
-			//Debug.log("I have " + caster.getStats().getTP() + " tp left");
+			Debug.log("I have " + caster.getStats().getTP() + " tp left");
 		}
 	}
 	
 	public void execute(ActionsManager manager, Array<Action> notExecutedSelfActions = [], MoveCell? moveCell = null) {
 		while (this._useCount-- > 0) {
 			if (moveCell != null) {
-				string log = "Moving to " + moveCell!.cell.id;
-
-				// Si on doit utiliser un item de TP
-				if (this._teleportItem != null && !manager.isUsedMovementItem(this._teleportItem!)) {
-					manager.addUsedMovementItem(this._teleportItem!);
-					
-					log += " using tp item " + moveCell!.itemTeleport + " from " + moveCell!.cellFromTeleport + " to " + moveCell!.cellToTeleport;
-					
-					do {
-						manager.tryExecuteSelfActions(notExecutedSelfActions);	
-					} while(moveTowardCell(moveCell!.cellFromTeleport!.id, 1));
-					
-					moveCell!.itemTeleport!.use(moveCell!.cellToTeleport!);
-					// On retire l'item de téléportation pour les prochaines réalisations de l'action
-					this._teleportItem = null;
-				}
-
-				Debug.log(log);
+				Debug.log("Moving to " + moveCell!.cell.id);
 				do {
 					manager.tryExecuteSelfActions(notExecutedSelfActions);	
 				} while(moveTowardCell(moveCell!.cell.id, 1));
@@ -231,26 +169,12 @@ class Action {
 		}
 	}
 	
-	public string string() {
-		string ret = "{id : " + this._id
+	public string string() {	
+		return "{id : " + this._id
 			+ ", item : " + this._item
-			//+ "cellsTo : " + this._targetCells + "\n"
 			+ ", score : " + this._score
 			+ ", useCount : " + this._useCount
-			+ ", targetsHash : " + this._targetsHash;
-		
-		if (this._teleportItem != null) {
-			ret += ", teleportItem : " + this._teleportItem;
-		}
-		if (this._hitCasterDist != -1) {
-			ret += ", distHitTarget : " + this._hitCasterDist;
-		}
-		//if (!setIsEmpty(this._targetCells)) {
-			//ret += ", one target cell : " + setGetOne(this._targetCells);
-		//}
-		
-		ret += "}";
-		
-		return ret;
+			+ ", targetsHash : " + this._targetsHash
+			+ "}";
 	}
 }

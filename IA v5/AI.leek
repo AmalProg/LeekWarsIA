@@ -2,7 +2,10 @@ include("ZombIA");
 include("Entities/Teams/Team");
 include("Items/Item");
 include("Actions/Action");
-include("Map/DangerMap");
+include("Map/DangerMaps/BossNasuDangerMap");
+include("Map/DangerMaps/BossFennelDangerMap");
+include("Map/DangerMaps/BossPumpkinDangerMap");
+include("Map/DangerMaps/FarmerDangerMap");
 include("Map/TargetCell");
 include("Actions/ActionsManager");
 include("Utils/RegistersManager");
@@ -14,7 +17,7 @@ class AI {
 	
 	private AbstractEntity _me;
 	private Set<Team> _teams;
-	private DangerMap _dangerMap;
+	private AbstractDangerMap _dangerMap;
 	private Array<Action> _everyActions;
 	public void resetEveryActions() { 
 		debugC("reseting every actions", COLOR_GREEN) 
@@ -31,7 +34,7 @@ class AI {
 	private JsonObject _itemsScoreStats;
 	private real _highHighMeanScore;
 	
-	constructor(AbstractEntity me, Set<Team> teams) {
+	constructor(AbstractEntity me, Set<Team> teams, integer fightType, integer bossFightType) {
 		this._me = me;
 		this._teams = teams;
 		this._everyActions = [];
@@ -48,7 +51,16 @@ class AI {
 			this.initItemsScoresRegister();
 		}
 		
-		this._dangerMap = new DangerMap(me, this._highHighMeanScore);
+		if (fightType == FIGHT_TYPE_BOSS) {
+			if (bossFightType == Game.FIGHT_TYPE_BOSS_NASU)
+				this._dangerMap = new BossNasuDangerMap(me, this._highHighMeanScore);
+			else if (bossFightType == Game.FIGHT_TYPE_BOSS_FENNEL)
+				this._dangerMap = new BossFennelDangerMap(me, this._highHighMeanScore);
+			else if (bossFightType == Game.FIGHT_TYPE_BOSS_PUMPKIN)
+				this._dangerMap = new BossPumpkinDangerMap(me, this._highHighMeanScore);
+		} else {
+			this._dangerMap = new FarmerDangerMap(me, this._highHighMeanScore);
+		}
 	}
 	
 	/**
@@ -144,18 +156,18 @@ class AI {
 			}
 			
 			//Debug.log("Actions possible found : " + count(this._actions));
-			integer i = 0;
-			for (Action action in this._actions) {
-				Debug.log(action, getColor(175, 175, 175));
+			//integer i = 0;
+			//for (Action action in this._actions) {
+				//Debug.log(action, getColor(175, 175, 175));
 				
-				i++;
-				if (i > 15) break;
-			}
+				//i++;
+				//if (i > 15) break;
+			//}
 			
 			boolean useDangerMap = this.doNeedDangerMap();
 			
 			Debug.startOpCount();
-			if (prevChoosenAction != null && prevChoosenAction!.getItem().hasEffectTypeIn(<EFFECT_BUFF_MP, EFFECT_RAW_BUFF_MP, EFFECT_DEBUFF>))
+			if (prevChoosenAction != null && prevChoosenAction!.getItem().hasEffectTypeIn(<EFFECT_BUFF_MP, EFFECT_RAW_BUFF_MP, EFFECT_DEBUFF>) && this.needToRecalculateDangerMap(prevChoosenAction))
 				setClear(this._nonDoableActions);
 			Action? bestDoableAction = this.filterBestDoableAction(useDangerMap);
 			Debug.stopOpCount("filterBestDoableAction : ");
@@ -710,7 +722,9 @@ class AI {
 				setPut(alreadyUsedMovementItem, action.getTeleportItem());
 		}
 				
-		for (Action action in this._actions) {			
+		for (Action action in this._actions) {
+			// Si on a consommé trop d'opérations, on courcicuite avant de crasher
+			if (getOperations() > getMaxOperations() * 0.9) break;
 			if (action.getScore() <= AI.MIN_SCORE_USEFUL_ACTION || setContains(this._nonDoableActions, action)) continue;
 			
 			// Si l'action a déjà été choisie précédement
@@ -1419,7 +1433,7 @@ class AI {
 	private void generateActions() {
 		for (Item item in this._me.getOffCooldownItems()) {
 			// On passe l'item si c'est un item pour ce téléporter ou pour summoner
-			if (setContains(item.getEffectsTypeList(), EFFECT_TELEPORT) || setContains(item.getEffectsTypeList(), EFFECT_SUMMON)) continue;
+			if (setContains(item.getEffectsTypeList(), EFFECT_TELEPORT) || setContains(item.getEffectsTypeList(), EFFECT_SUMMON) || setContains(item.getEffectsTypeList(), EFFECT_ATTRACT)) continue;
 			
 			var cost = item.getCost();
 			// si ce n'est pas l'arme qu'on a actuellement ça coûte 1 de plus
@@ -1457,7 +1471,6 @@ class AI {
 			
 			push(actions, action);
 		}
-		debug("tp : " + this._me.getStats().getTP())
 		
 		this._actions = actions;
 	}

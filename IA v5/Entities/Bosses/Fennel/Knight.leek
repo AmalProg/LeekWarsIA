@@ -1,0 +1,25 @@
+include("../../Boss");
+
+class Knight extends Boss {
+	public static final real ENTITY_TYPE_MULT = 0.0;
+	
+	/** Knights pool **/
+	private static final Map<integer, Knight> knights = [:];
+	public static init(Array<integer> entitiesId) {
+		for (integer entityId in entitiesId) {
+			if (getType(entityId) == 5 && contains(getName(entityId)!, "fennel_knight")) {
+				Knight.knights[entityId] = new Knight(entityId);
+				Boss.bosses[entityId] = Knight.knights[entityId];
+				AbstractEntity.entities[entityId] = Knight.knights[entityId];
+			}
+		}
+	}
+	public static Knight? get(integer id) {
+		return Knight.knights[id];
+	}
+	/** fin pool **/
+
+	constructor(integer id) {
+		super(id);
+	}
+}

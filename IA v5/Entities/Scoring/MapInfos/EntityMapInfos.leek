@@ -1,0 +1,16 @@
+include("../../Entity");
+
+class EntityMapInfos {
+	protected Set<Cell> _goodMoveToCells;
+	protected AbstractEntity _entity;
+	
+	private constructor() {}
+	constructor(AbstractEntity entity) {
+		this._goodMoveToCells = <>;
+		this._entity = entity;
+	}
+	
+	protected update() {
+		
+	}
+}

@@ -1,5 +1,6 @@
 include("../Utils/Debug")
 include("Leek");
+include("../States/State");
 
 class EntityStats {
 	private integer _maxLife; 
@@ -32,7 +33,8 @@ class EntityStats {
 	private real _powerMult; public real getPowerMult() { return this._powerMult; }
 	
 	private Set<EntityEffect> _effects; public Set<EntityEffect> getEffects() { return this._effects; }	
-	
+	private Set<State> _states; public Set<State> getStates() { return this._states; }	
+
 	private AbstractEntity _entity;
 	
 	constructor(AbstractEntity entity) {
@@ -96,10 +98,14 @@ class EntityStats {
 		for (Array<boolean|integer> effect in getEffects(entityId)!) {
 			setPut(this._effects, EntityEffect(effect));
 		}
-		
 		for (EntityEffect eff in this.getPoisonEffects()) {
 			this._poison += eff.getValue();
 		}
+		
+		this._states = <>;
+		//for (Array<boolean|integer> state in getStates(entityId)!) {
+			//setPut(this._states, new State(state));
+		//}
 		
 		this.updateMults();
 	}
@@ -112,6 +118,10 @@ class EntityStats {
 		this._scienceMult = (1 + (this._science >= -100 ? this._science : -1) / 100);
 		this._magicMult = (1 + (this._magic >= -100 ? this._magic : -1) / 100);
 		this._powerMult = (1 + (this._power >= -100 ? this._power : -1) / 100);	
+	}
+	
+	public addState(integer type, integer turns, integer itemId,  AbstractEntity target) {
+		
 	}
 	
 	public addEffect(Function<EntityStats, integer => void>? statsFct, integer type, integer value, AbstractEntity caster, integer turns, boolean critical, integer itemId, AbstractEntity target, integer modifiers) {
@@ -155,6 +165,22 @@ class EntityStats {
 			effect.remove(this);
 		}
 		setClear(this._effects);
+	}
+	
+	/**
+	 * Test si l'état est présent sur l'entité, corespondant au type donné
+	 * 
+	 * @param state : l'état recherché
+	 * 
+	 * @return true si l'entité est affecté par l'état
+	 * 
+	 **/
+	public boolean hasStateType(integer stateType) {
+		for (State state in this._states) {
+			if (state.getType() == stateType)
+				return true;
+		}
+		return false;
 	}
 	
 	/**

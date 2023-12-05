@@ -1,0 +1,50 @@
+include("../ScoreMap");
+
+class AbstractDangerMap {
+	protected ScoreMap _itemsScoreMap;
+	protected ScoreMap _scoreMap;
+	protected Map<AbstractEntity, Map<Item, Set<Cell>>> _cellsPerDangerItemPerEntity;
+	protected AbstractEntity _targetedEntity;
+	
+	protected real _referenceScorePerDist;
+	
+	constructor(AbstractEntity targetedEntity, real refScorePerDist) {
+		this._targetedEntity = targetedEntity;
+		this._cellsPerDangerItemPerEntity = [:];
+		this._scoreMap = new ScoreMap(<>, 0.0);
+		this._itemsScoreMap = new ScoreMap(<>, 0.0);
+		
+		this._referenceScorePerDist = refScorePerDist;
+	}
+	
+	public real getScore(Cell cell) {
+		return this._scoreMap.getScore(cell);	
+	}
+	
+	private real getLowestDangerScoreAccessible(AccessibleCells accCells) {
+		real lowestDangerScoreAccessible = 999999.0;
+		for (Cell cell in accCells.getCells()) {
+			if (this.getScore(cell) < lowestDangerScoreAccessible)
+				lowestDangerScoreAccessible = this.getScore(cell);
+		}
+		return lowestDangerScoreAccessible;
+	}
+	
+	/**
+	 * Initialise la map de danger
+	 **/
+	private void initDangerItemMap() {
+		Debug.error("Function initDangerItemMap from AbstractDangerMap need to be overriden " + this.class);
+	}
+	
+	/**
+	 * Calcul le score de danger pour chaque cell de la map
+	 **/
+	private void calculateDangerMap() {
+		Debug.error("Function calculateDangerMap from AbstractDangerMap need to be overriden " + this.class);
+	}
+	
+	public void debugMap() {
+		this._scoreMap.debugMap();	
+	}
+}

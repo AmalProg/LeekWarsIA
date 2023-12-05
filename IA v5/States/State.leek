@@ -1,0 +1,18 @@
+include("../Entities/Entity");
+include("../Items/Item");
+
+class State {
+	public static final integer STATE_INVULNERABLE = 3;
+	
+	protected integer _type; public integer getType() { return _type; }
+	protected integer _turns; public integer getTurns() { return _turns; }
+	protected Item _item; public Item getItem() { return _item; }
+	protected AbstractEntity _caster; public AbstractEntity getCaster() { return _caster; }
+	
+	protected constructor(integer type, integer turns, Item item, AbstractEntity caster) {
+		this._type = type;
+		this._turns = turns;
+		this._item = item;
+		this._caster = caster;
+	}
+}

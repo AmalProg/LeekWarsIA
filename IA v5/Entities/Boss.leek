@@ -1,0 +1,29 @@
+include("Entity");
+
+class Boss extends AbstractEntity {	
+	public static final real ENTITY_TYPE_MULT = 1.0;
+
+	/** Bosses pool **/
+	protected static final Map<integer, Boss> bosses = [:];
+	public static Map<integer, Boss> getAll() { return Boss.bosses; }
+	public static init(Array<integer> entitiesId) {
+		for (var bossId in entitiesId) {
+			if (getType(bossId) == 5) {
+				Boss.bosses[bossId] = new Boss(bossId);
+				AbstractEntity.entities[bossId] = Boss.bosses[bossId];
+			}
+		}
+	}
+	public static Boss? get(integer id) {
+		return Boss.bosses[id];
+	}
+	/** fin bosses pool **/
+
+	constructor(integer id) {
+		super(id);
+	}
+	
+	protected void updateStats() {
+		super.updateStats();
+	}
+}

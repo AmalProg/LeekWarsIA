@@ -1,0 +1,40 @@
+include("../Items/Item")
+
+class AbstractAction {
+	private static integer idCounter = 0;
+	
+	protected integer _id;
+	public integer getUniqueId() { return this._id; }
+	
+	protected Item _item;
+	public Item getItem() { return this._item; }
+	public void setItem(Item item) { this._item = item; }
+	
+	protected real _score;
+	public real getScore() { return this._score; }
+	public void setScore(real score) { this._score = score; }
+	
+	protected integer _useCount;
+	public integer getUseCount() { return this._useCount; }
+	public void addUse() { this._useCount++; }
+	
+	constructor() {
+		this._id = Action.idCounter++;
+		this._score = 0.0;
+		this._useCount = 0;
+	}
+	constructor(Item item) {
+		this._id = Action.idCounter++;
+		this._item = item;
+		this._score = 0.0;
+		this._useCount = 0;
+	}
+	public AbstractAction clone() {
+		AbstractAction clonedAction = new AbstractAction();
+		clonedAction._id = this._id;
+		clonedAction._item = this._item;
+		clonedAction._score = this._score;
+		clonedAction._useCount = this._useCount;
+		return clonedAction;
+	}
+}

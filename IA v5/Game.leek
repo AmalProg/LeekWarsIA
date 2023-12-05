@@ -1,10 +1,6 @@
 include("Utils/Debug");
 include("Map/CellMap");
-include("Entities/Leek");
-include("Entities/Bulb");
-include("Entities/Chest");
-include("Entities/Turret");
-include("Entities/Timeline");
+include("Entities/EntitiesImports");
 include("AI");
 include("Utils/Register");
 include("Items/Combo");
@@ -12,12 +8,17 @@ include("Items/Combo");
 global Game GAME = Game.getInstance();
 
 class Game {
+	public static final integer FIGHT_TYPE_BOSS_NASU = 0;
+	public static final integer FIGHT_TYPE_BOSS_FENNEL = 1;
+	public static final integer FIGHT_TYPE_BOSS_PUMPKIN = 2;
+	
 	public final AbstractEntity me;
 	public final Timeline timeline;
 	private Set<Team> _teams;
 	private Set<AbstractEntity> _allEntities; public Set<AbstractEntity> getAllEntities() { return _allEntities; }
 	private AI _ai;
-	public final boolean isBR;
+	public final integer fightType;
+	public final integer bossFightType;
 	public final integer leeksPerTeamCount;
 	public final integer allEntitiesCount;
 	
@@ -49,11 +50,27 @@ class Game {
 		EntityEffect.initStatsFctPerType();
 		Debug.stopOpCount("init statics : ");
 
-		this.isBR = getFightType() == FIGHT_TYPE_BATTLE_ROYALE;
-
+		this.fightType = getFightType();
+		
+		if (this.fightType == FIGHT_TYPE_BOSS) {
+			this.bossFightType = 0;
+			if (getMapType() == 8)
+				this.bossFightType = Game.FIGHT_TYPE_BOSS_NASU;
+			else if (getMapType() == 9)
+				this.bossFightType = Game.FIGHT_TYPE_BOSS_FENNEL;
+			else if (getMapType() == 10)
+				this.bossFightType = Game.FIGHT_TYPE_BOSS_PUMPKIN;
+		}
+		
 		Debug.startOpCount();
 		this._teams = <>;
-		if (this.isBR) {
+		if (this.fightType == FIGHT_TYPE_BOSS) {
+			if (this.bossFightType == Game.FIGHT_TYPE_BOSS_FENNEL) {
+				initBossFennelFight();	
+			} else {
+				
+			}
+		} else if (this.fightType == FIGHT_TYPE_BATTLE_ROYALE) {
 			initBRTeams();
 		} else {
 			initTeams()
@@ -66,68 +83,104 @@ class Game {
 
 			Debug.log(me);
 			
-			this._ai = new AI(this.me, this._teams);
+			this._ai = new AI(this.me, this._teams, this.fightType, this.bossFightType);
 		} else {
 			Debug.error("me is null");
 		}
 		
 		this.timeline = new Timeline(this._allEntities, this.me);
-		
+		  
 		this.leeksPerTeamCount = setSize(this.me.getTeam()!.getLeeks());
 	}
-	private void initBRTeams() {
-		for (integer entityId in getEnemies()) {
-			Leek.initLeeks([entityId]);
-			Bulb.initBulbs([entityId]);
-			Chest.initChests([entityId]);
-
-			AbstractEntity? entity = AbstractEntity.get(entityId);
-			if (entity != null) {
-				setPut(this._teams, new Team(<entity!>));
-			}
-			
-			setPut(this._allEntities, AbstractEntity.get(entityId));
+	
+	/**
+	 * Initialise le combat contre le Boss Fenouil
+	 **/
+	private void initBossFennelFight() {
+		Array<integer> allies = [];
+		Array<integer> enemies = [];
+		for (integer entityId in getAllies()) {
+			push(allies, entityId);
 		}
-
-		Leek.initLeeks([getEntity()]);
-		Leek? me = Leek.get(getEntity());
-		if (me != null) {
-			setPut(this._teams, new Team(<me!>));
-				   
-			setPut(this._allEntities, me);
+		for (integer entityId in getEnemies()) {
+			if (contains(getName(entityId)!, "crystal"))
+				push(allies, entityId);
+			else
+				push(enemies, entityId);
+		}
+		Crystal.init(getEnemies());
+		initMyTeam(allies);
+		
+		
+		King.init(getEnemies());
+		Knight.init(getEnemies());
+		Scribe.init(getEnemies());
+		Squire.init(getEnemies());
+		Graal.init(getEnemies());
+		initEnemyTeam(enemies);
+	}
+	
+	private void initBRTeams() {
+		initMyTeam(getAllies());
+		
+		Leek.init(getEnemies());
+		Bulb.init(getEnemies());
+		Chest.init(getEnemies());
+		for (Leek leek in Leek.getAll()) {
+			setPut(this._teams, new Team(<leek>));
+			setPut(this._allEntities, leek);
+		}
+		for (Bulb bulb in Bulb.getAll()) {
+			bulb.getBulbSummoner().getTeam()!.add(bulb);
+			setPut(this._allEntities, bulb);
+		}
+		for (Chest chest in Chest.getAll()) {
+			setPut(this._teams, new Team(<chest>));
+			setPut(this._allEntities, chest);
 		}
 	}
 	private void initTeams() {
-		Leek.initLeeks(getAllies());
-		Bulb.initBulbs(getAllies());
-		Turret.initTurrets(getAllies());
-		Set<AbstractEntity> allies = <>;
-		for (integer entityId in getAllies()) {
-			setPut(allies, AbstractEntity.get(entityId));
-			
-			setPut(this._allEntities, AbstractEntity.get(entityId));
-		}
-		setPut(this._teams, new Team(allies));
-
-		Leek.initLeeks(getEnemies());
-		Bulb.initBulbs(getEnemies());
-		Chest.initChests(getEnemies());
-		Turret.initTurrets(getEnemies());
+		initMyTeam(getAllies());
+		initEnemyTeam(getEnemies());
+	}
+	
+	private void initEnemyTeam(Array<integer> entities) {
+		Leek.init(entities);
+		Bulb.init(entities);
+		Chest.init(entities);
+		Turret.init(entities);
 		Set<AbstractEntity> ennemies = <>;
-		for (integer entityId in getEnemies()) {
+		for (integer entityId in entities) {
 			AbstractEntity? entity = AbstractEntity.get(entityId);
 			if (entity != null) {
-				if (!(entity instanceof Chest)) {
-					setPut(ennemies, entity);
-				} else {
+				if (entity instanceof Chest) {
 					// Chests are in their own Team
 					setPut(this._teams, new Team(<entity!>));
+				} else {
+					setPut(ennemies, entity);
 				}
 			}
 			
 			setPut(this._allEntities, AbstractEntity.get(entityId));
 		}
-		setPut(this._teams, new Team(ennemies));
+		setPut(this._teams, new Team(ennemies));	
+	}
+	
+	private void initMyTeam(Array<integer> entities) {
+		Leek.init(entities);
+		Bulb.init(entities);
+		Turret.init(entities);
+		Set<AbstractEntity> allies = <>;
+		for (integer entityId in entities) {
+			AbstractEntity? entity = AbstractEntity.get(entityId);
+			if (entity != null) {
+				setPut(allies, entity);
+				setPut(this._allEntities, entity);
+			} else {
+				Debug.error("Entity was null " + entityId);			
+			}
+		}
+		setPut(this._teams, new Team(allies));
 	}
 	
 	public void updateAllStats() {
@@ -136,8 +189,8 @@ class Game {
 	
 	public void startTurn() {		
 		// Les bulbes peuvent apparaitre à n'importe quel tour, pas seulement au début
-		Bulb.initBulbs(getEnemies());
-		Bulb.initBulbs(getAllies());
+		Bulb.init(getEnemies());
+		Bulb.init(getAllies());
 		this.updateAllStats();
 		this.me.clearAccessibleCellsWithItem();
 
@@ -162,6 +215,7 @@ class Game {
 		this.timeline.update(this._allEntities);
 
 		for (AbstractEntity entity in this._allEntities) {
+			Debug.log(entity.getName());
 			Debug.log(entity.getScores().getAdjuster());	
 		}
 				

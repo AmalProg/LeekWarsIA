@@ -1,0 +1,7 @@
+include("Effect");
+
+class AddStateEffect extends Effect {
+	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, EntityStats casterStats, Cell? cellTarget) {
+		affectedEntityStats.addState(round(value), this._turns, this._item.getId(), caster);
+	}
+}

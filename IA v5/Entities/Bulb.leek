@@ -4,7 +4,8 @@ include("Entity");
 class Bulb extends AbstractEntity { 
 	/** Bulbs pool **/
 	private static final Map<integer, Bulb> bulbs = [:];
-	public static void initBulbs(Array<integer> entitiesId) {
+	public static Map<integer, Bulb> getAll() { return Bulb.bulbs; }
+	public static void init(Array<integer> entitiesId) {
 		Set<Bulb> deadBulbs = <>;
 		for (Bulb bulb in Bulb.bulbs) {
 			if (mapGet(AbstractEntity.entities, bulb._id, null) == null) {
@@ -68,8 +69,9 @@ class Bulb extends AbstractEntity {
 	
 	protected void updateStats() {
 		super.updateStats();
-
-		if (GAME.isBR)
+		
+		// On ne gagne de la puissance à la mort d'un bulbe qu'en BR
+		if (GAME.fightType == FIGHT_TYPE_BATTLE_ROYALE)
 			this._powerOnDeath = round(2 + 0.5 * this._stats.getPower());
 	}
 	

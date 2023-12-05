@@ -1,0 +1,25 @@
+include("../../Boss");
+
+class Squire extends Boss {
+	public static final real ENTITY_TYPE_MULT = 0.0;
+	
+	/** Squires pool **/
+	private static final Map<integer, Squire> squires = [:];
+	public static init(Array<integer> entitiesId) {
+		for (integer entityId in entitiesId) {
+			if (getType(entityId) == 5 && contains(getName(entityId)!, "fennel_squire")) {
+				Squire.squires[entityId] = new Squire(entityId);
+				Boss.bosses[entityId] = Squire.squires[entityId];
+				AbstractEntity.entities[entityId] = Squire.squires[entityId];
+			}
+		}
+	}
+	public static Squire? get(integer id) {
+		return Squire.squires[id];
+	}
+	/** fin pool **/
+
+	constructor(integer id) {
+		super(id);
+	}
+}
