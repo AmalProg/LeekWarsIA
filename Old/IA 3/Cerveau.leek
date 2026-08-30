@@ -22,3 +22,6 @@ ia.end();
 
 Debug.logC("Operations ce tour : " + getOperations(), getColor(220, 120, 220));
 
+// Fun
+if (getTP())
+    say("Il fait bon d'être un poireau par les temps qui courent ! 🎶")

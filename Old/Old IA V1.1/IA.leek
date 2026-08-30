@@ -16,3 +16,6 @@ game.turn();
 
 debugC(getOperations(), COLOR_BLUE); 
 
+// Fun
+if (getTP())
+    say("Il fait bon d'être un poireau par les temps qui courent ! ??")
