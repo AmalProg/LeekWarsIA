@@ -1,7 +1,0 @@
-include("Game");
-include("Utils/Debug");
-
-GAME.startTurn();
-
-Debug.log(getUsedRAM() + " / " + getMaxRAM());
-Debug.log("Operations this turn : " + getOperations() + " / " + getMaxOperations());

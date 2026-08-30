@@ -1,7 +1,0 @@
-include("Effect");
-
-class SummonEffect extends Effect {
-	protected void apply(real value, AbstractEntity caster, AbstractEntity affectedEntity, EntityStats affectedEntityStats, EntityStats casterStats, Cell? cellTarget) {
-		// Invoc bulb
-	}
-}

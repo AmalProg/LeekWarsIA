@@ -1,5 +1,0 @@
-include("Action");
-
-class ResurrectAction extends Action {
-	
-}
